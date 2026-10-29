@@ -1,0 +1,6 @@
+{
+  "name": "Mais Açaí SJP",
+  "description": "Cardápio digital e delivery do Mais Açaí (desde 2016, São José dos Pinhais - PR): açaís, combos, milkshakes e kits, com carrinho inteligente, pagamento via PIX, pedido pelo WhatsApp e painel administrativo com PDV.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,1201 @@
+import React, { useState, useEffect } from "react";
+import confetti from "canvas-confetti";
+import { supabase } from '../lib/supabase';
+import { CartItem } from "../types";
+import { hapticLight, hapticMedium, hapticSuccess } from "../utils/haptics";
+import {
+  RESTAURANT_WHATSAPP_PHONE,
+  ALL_MENU_ITEMS,
+  NEIGHBORHOOD_DELIVERY_FEES,
+} from "../data/menu";
+import { useBusinessHours } from '../hooks/useBusinessHours';
+import { 
+  ShoppingBag, 
+  Plus, 
+  Minus, 
+  X, 
+  Check, 
+  MapPin, 
+  ArrowLeft, 
+  ArrowRight, 
+  Trash2, 
+  Clock, 
+  AlertCircle,
+  Phone,
+  User,
+  FileText,
+  Sparkles
+} from "lucide-react";
+import { useAnalytics } from '../hooks/useAnalytics';
+import { getCashbackConfig, getCustomerCashbackBalance, applyOrderCashback, DEFAULT_CASHBACK_PERCENT } from '../utils/cashback';
+
+interface CartProps {
+  items: CartItem[];
+  onUpdateQuantity: (id: string, delta: number) => void;
+  onRemoveItem: (id: string) => void;
+  onClearCart: () => void;
+  onAddToCart: (item: CartItem) => void;
+  isOpen: boolean; // Used for mobile modal
+  onClose: () => void; // Used for mobile modal
+}
+
+export default function Cart({
+  items,
+  onUpdateQuantity,
+  onRemoveItem,
+  onClearCart,
+  onAddToCart,
+  isOpen,
+  onClose,
+}: CartProps) {
+  const { trackEvent } = useAnalytics();
+
+  // Navigation Steps: 'items' (Meu Pedido) | 'checkout' (Dados de Entrega & Pagamento)
+  const [currentStep, setCurrentStep] = useState<'items' | 'checkout'>('items');
+  const [showNifInput, setShowNifInput] = useState(false);
+
+  // Dismiss on ESC when mobile cart drawer is open
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
+  // Form State
+  const [name, setName] = useState("");
+  const [telefone, setTelefone] = useState("");
+  const [morada, setMorada] = useState("");
+  const [zona, setZona] = useState("");
+  const [nif, setNif] = useState("");
+  const [orderType, setOrderType] = useState<"Delivery" | "Takeaway">("Delivery");
+  const [pagamento, setPagamento] = useState("PIX");
+  const [trocoPara, setTrocoPara] = useState("");
+
+  const [hasShownParty, setHasShownParty] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [whatsappUrl, setWhatsappUrl] = useState("");
+  const [savedOrderId, setSavedOrderId] = useState<number | null>(null);
+  const [savedTrackingCode, setSavedTrackingCode] = useState<string | null>(null);
+
+  const [zonesFees, setZonesFees] = useState<Record<string, number>>(NEIGHBORHOOD_DELIVERY_FEES || {});
+  const [minDeliveryOrder, setMinDeliveryOrder] = useState(30);
+  const [deliveryTimeEstimate, setDeliveryTimeEstimate] = useState('45 a 75 min');
+  const [pickupTimeEstimate, setPickupTimeEstimate] = useState('20 a 30 min');
+
+  // Cashback States
+  const [cashbackConfig, setCashbackConfig] = useState<{ enabled: boolean; percent: number }>({
+    enabled: true,
+    percent: DEFAULT_CASHBACK_PERCENT
+  });
+  const [customerCashbackBalance, setCustomerCashbackBalance] = useState<number>(0);
+  const [useCashback, setUseCashback] = useState(false);
+  const [loadingCashback, setLoadingCashback] = useState(false);
+
+  useEffect(() => {
+    getCashbackConfig().then(cfg => setCashbackConfig(cfg));
+  }, []);
+
+  useEffect(() => {
+    const clean = (telefone || '').replace(/\D/g, '');
+    if (clean.length < 10) {
+      setCustomerCashbackBalance(0);
+      setUseCashback(false);
+      return;
+    }
+    let isCurrent = true;
+    setLoadingCashback(true);
+    const timer = setTimeout(async () => {
+      const bal = await getCustomerCashbackBalance(clean);
+      if (isCurrent) {
+        setCustomerCashbackBalance(bal);
+        setLoadingCashback(false);
+      }
+    }, 350);
+    return () => {
+      isCurrent = false;
+      clearTimeout(timer);
+    };
+  }, [telefone]);
+
+  // Load saved customer checkout details from localStorage (Memory for fast re-orders)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('customer_checkout_data');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.name) setName(parsed.name);
+        if (parsed.telefone) setTelefone(parsed.telefone);
+        if (parsed.morada) setMorada(parsed.morada);
+        if (parsed.zona) setZona(parsed.zona);
+        if (parsed.nif) {
+          setNif(parsed.nif);
+          setShowNifInput(true);
+        }
+        if (parsed.orderType) setOrderType(parsed.orderType);
+        if (parsed.pagamento) setPagamento(parsed.pagamento);
+      }
+    } catch (e) {
+      console.warn('[Cart] Error reading localStorage customer data', e);
+    }
+  }, []);
+
+  // Save changes to localStorage
+  const saveCustomerData = (updates: Partial<{
+    name: string;
+    telefone: string;
+    morada: string;
+    zona: string;
+    nif: string;
+    orderType: "Delivery" | "Takeaway";
+    pagamento: string;
+  }>) => {
+    try {
+      const current = {
+        name,
+        telefone,
+        morada,
+        zona,
+        nif,
+        orderType,
+        pagamento,
+        ...updates
+      };
+      localStorage.setItem('customer_checkout_data', JSON.stringify(current));
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  // Reset to step 1 if cart becomes empty
+  useEffect(() => {
+    if (items.length === 0 && currentStep === 'checkout') {
+      setCurrentStep('items');
+    }
+  }, [items.length, currentStep]);
+
+  useEffect(() => {
+    const loadDeliverySettings = async () => {
+      try {
+        const { data: zones, error: zonesError } = await supabase
+          .from('delivery_zones')
+          .select('name, fee')
+          .eq('is_active', true)
+          .order('sort_order');
+        if (zonesError) throw zonesError;
+        if (zones && zones.length > 0) {
+          const map: Record<string, number> = {};
+          zones.forEach((z: any) => { map[z.name] = Number(z.fee); });
+          setZonesFees(map);
+        }
+
+        const { data: settingsRows, error: settingsError } = await supabase
+          .from('settings')
+          .select('key, value')
+          .in('key', ['delivery_min_order', 'delivery_time_estimate', 'pickup_time_estimate']);
+        if (settingsError) throw settingsError;
+        settingsRows?.forEach((row: any) => {
+          if (row.key === 'delivery_min_order') setMinDeliveryOrder(Number(row.value));
+          if (row.key === 'delivery_time_estimate') setDeliveryTimeEstimate(row.value);
+          if (row.key === 'pickup_time_estimate') setPickupTimeEstimate(row.value);
+        });
+      } catch (err) {
+        console.warn('[Cart] Não foi possível carregar zonas/configurações do Supabase, usando valores padrão.', err);
+      }
+    };
+    loadDeliverySettings();
+  }, []);
+
+  const subtotal = items.reduce(
+    (acc, item) => acc + item.priceCalculated * item.quantity,
+    0,
+  );
+  const totalItemCount = items.reduce((acc, item) => acc + item.quantity, 0);
+
+  let deliveryFee = 0;
+  if (orderType === "Delivery") {
+    deliveryFee = zonesFees[zona] !== undefined ? zonesFees[zona] : (NEIGHBORHOOD_DELIVERY_FEES[zona] || 0);
+  }
+
+  const rawTotal = subtotal + deliveryFee;
+  const cashbackDiscount = (cashbackConfig.enabled && useCashback && customerCashbackBalance > 0)
+    ? Math.min(customerCashbackBalance, rawTotal)
+    : 0;
+  const total = Math.max(0, Number((rawTotal - cashbackDiscount).toFixed(2)));
+  const earnedCashback = cashbackConfig.enabled
+    ? Number((Math.max(0, subtotal - cashbackDiscount) * (cashbackConfig.percent / 100)).toFixed(2))
+    : 0;
+  const businessStatus = useBusinessHours();
+
+  const handleCheckout = async () => {
+    trackEvent('initiate_checkout', { total_value: total, item_count: items.length });
+    setFormError(null);
+    const errors: string[] = [];
+
+    if (!businessStatus.isOpen) {
+      errors.push("Estamos fechados no momento. Poderá finalizar o pedido durante o nosso horário de funcionamento.");
+    }
+
+    if (orderType === "Delivery" && subtotal < minDeliveryOrder) {
+      errors.push(`O valor mínimo para entrega é de R$${minDeliveryOrder.toFixed(2)}.`);
+    }
+    if (!name.trim()) {
+      errors.push("Por favor, preencha o seu nome.");
+    }
+    if (orderType === "Delivery") {
+      if (!morada.trim()) {
+        errors.push("Por favor, preencha a endereço de entrega.");
+      }
+      if (!zona.trim()) {
+        errors.push("Por favor, selecione a zona/freguesia de entrega.");
+      }
+    }
+
+    if (errors.length > 0) {
+      setFormError(errors.join("\n"));
+      return;
+    }
+
+    setIsSubmitting(true);
+    const orderNumber = Math.floor(1000 + Math.random() * 9000);
+
+    let newOrderId = null;
+    let orderSavedSuccessfully = false;
+    try {
+      const { data: activeSession } = await supabase
+        .from('cash_sessions')
+        .select('id')
+        .eq('status', 'aberto')
+        .maybeSingle();
+
+      const { data, error } = await supabase.from('orders').insert([{
+        cash_session_id: activeSession ? activeSession.id : null,
+        customer_name: name,
+        customer_phone: telefone,
+        order_type: orderType,
+        payment_method: pagamento,
+        status: 'Pendente',
+        total_amount: total,
+        delivery_address: orderType === 'Delivery' ? morada : null,
+        delivery_zone: orderType === 'Delivery' ? zona : null,
+        change_for: pagamento === 'Dinheiro' ? trocoPara : null,
+        nif: nif.trim() ? nif : null,
+        notes: cashbackDiscount > 0 ? `[Desconto Cashback: R$ ${cashbackDiscount.toFixed(2)}]` : null,
+        items: items.map(item => {
+          let itemName = item.menuItem.name;
+          if (item.isHalfAndHalf && item.halfAndHalfFlavor) {
+            itemName = `1/2 ${item.menuItem.name} e 1/2 ${item.halfAndHalfFlavor.name}`;
+          }
+          if (item.size) {
+            itemName += ` (${item.size === "G" ? "Gr" : item.size === "M" ? "Md" : "Pq"})`;
+          }
+          const extrasTotalPrice = (item.extras || []).reduce((sum, e) => sum + e.price, 0);
+          return {
+            name: itemName,
+            category: item.menuItem.category,
+            quantity: item.quantity,
+            priceCalculated: item.priceCalculated,
+            basePrice: item.priceCalculated - extrasTotalPrice,
+            extras: item.extras || [],
+            notes: item.notes || ""
+          };
+        })
+      }]).select();
+
+      if (error) throw error;
+      if (data && data.length > 0) {
+        newOrderId = data[0].id;
+        setSavedOrderId(newOrderId);
+        setSavedTrackingCode(data[0].tracking_code);
+        orderSavedSuccessfully = true;
+
+        try {
+          if (telefone) {
+            const { data: existingCustomer } = await supabase
+              .from('customers')
+              .select('id, total_orders, total_spent')
+              .eq('phone', telefone)
+              .maybeSingle();
+
+            if (existingCustomer) {
+              await supabase.from('customers').update({
+                name,
+                total_orders: (existingCustomer.total_orders || 0) + 1,
+                total_spent: (Number(existingCustomer.total_spent) || 0) + total,
+                last_order_at: new Date().toISOString(),
+              }).eq('id', existingCustomer.id);
+            } else {
+              await supabase.from('customers').insert([{
+                phone: telefone,
+                name,
+                total_orders: 1,
+                total_spent: total,
+                last_order_at: new Date().toISOString(),
+              }]);
+            }
+
+            // Atualiza saldo de fidelidade/cashback do cliente
+            if (earnedCashback > 0 || cashbackDiscount > 0) {
+              try {
+                await applyOrderCashback(telefone, earnedCashback, cashbackDiscount, newOrderId);
+                setCustomerCashbackBalance(prev => Math.max(0, Number((prev - cashbackDiscount + earnedCashback).toFixed(2))));
+                setUseCashback(false);
+              } catch (cbErr) {
+                console.warn('[Cart] Aviso ao processar cashback:', cbErr);
+              }
+            }
+          }
+        } catch (custErr) {
+          console.warn('[Cart] Não foi possível atualizar o cadastro do cliente (CRM):', custErr);
+        }
+      }
+    } catch (err) {
+      console.error("Error saving order:", err);
+    } finally {
+      setIsSubmitting(false);
+    }
+
+    if (!orderSavedSuccessfully) {
+      setFormError("Não foi possível registrar o seu pedido agora. Verifique a conexão e tente novamente.");
+      return;
+    }
+
+    let text = `-----------------------------------\n`;
+    text += `           MAIS AÇAÍ\n`;
+    text += `-----------------------------------\n`;
+    text += `Pedido Nº: ${newOrderId || orderNumber}\n`;
+    text += `Tipo: ${orderType === "Delivery" ? "Entrega" : "Retirada"}\n\n`;
+
+    text += `[CLIENTE]\n`;
+    text += `Nome: ${name}\n`;
+    text += `Telefone: ${telefone}\n`;
+    if (nif.trim()) {
+      text += `CPF: ${nif}\n`;
+    }
+    text += `\n`;
+
+    if (orderType === "Delivery") {
+      text += `[ENDEREÇO DE ENTREGA]\n`;
+      text += `Endereço: ${morada}\n`;
+      text += `Complemento: ${zona}\n`;
+      text += `-----------------------------------\n`;
+      text += `🛵 Tempo est. de entrega:\n   ${deliveryTimeEstimate}\n`;
+    } else {
+      text += `-----------------------------------\n`;
+      text += `⏱️ Tempo est. de prep:\n   ${pickupTimeEstimate}\n`;
+    }
+
+    const orderDateObj = new Date();
+    const dateStr = orderDateObj.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+    const timeStr = orderDateObj.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
+
+    text += `-----------------------------------\n`;
+    text += `[ITENS DO PEDIDO]\n`;
+    text += `Data: ${dateStr} Hora: ${timeStr}\n\n`;
+
+    const sortedItems = [...items].sort((a, b) => {
+      const catA = (a.menuItem.category || "").toLowerCase();
+      const catB = (b.menuItem.category || "").toLowerCase();
+      const getWeight = (cat: string) => {
+        if (cat.includes('copo') || cat.includes('barca') || cat.includes('fondue')) return 1;
+        if (cat.includes('milk') || cat.includes('shake')) return 2;
+        if (cat.includes('bebida')) return 3;
+        return 4;
+      };
+      return getWeight(catA) - getWeight(catB);
+    });
+
+    sortedItems.forEach((item) => {
+      let desc = item.menuItem.name;
+      if (item.isHalfAndHalf && item.halfAndHalfFlavor) {
+        desc = `1/2 ${item.menuItem.name} e 1/2 ${item.halfAndHalfFlavor.name}`;
+      }
+      if (item.size)
+        desc += ` (${item.size})`;
+      
+      const extrasTotalPrice = (item.extras || []).reduce((sum, e) => sum + e.price, 0);
+      const basePrice = item.priceCalculated - extrasTotalPrice;
+      const priceStr = `R$ ${(basePrice * item.quantity).toFixed(2)}`;
+      text += `*${item.quantity}x* ${desc} (${priceStr})\n`;
+      
+      if (item.extras && item.extras.length > 0) {
+        item.extras.forEach((extra) => {
+          text += `   + ${extra.name} (+ R$ ${(extra.price * item.quantity).toFixed(2)})\n`;
+        });
+        text += `   *Subtotal item: R$ ${(item.priceCalculated * item.quantity).toFixed(2)}*\n`;
+      }
+      if (item.notes) {
+        text += `   📝 Obs: ${item.notes}\n`;
+      }
+      text += `\n`;
+    });
+
+    text += `-----------------------------------\n`;
+    text += `*Subtotal: R$ ${subtotal.toFixed(2)}*\n`;
+    if (orderType === "Delivery") {
+      text += `Taxa Entrega (${zona || 'SJP'}): R$ ${deliveryFee.toFixed(2)}\n`;
+    }
+    if (cashbackDiscount > 0) {
+      text += `Desconto Cashback: -R$ ${cashbackDiscount.toFixed(2)}\n`;
+    }
+    text += `*TOTAL: R$ ${total.toFixed(2)}*\n`;
+
+    if (cashbackConfig.enabled) {
+      text += `-----------------------------------\n`;
+      text += `🎁 FIDELIDADE & CASHBACK (${cashbackConfig.percent}%)\n`;
+      if (cashbackDiscount > 0) {
+        text += `Desconto Cashback Utilizado: -R$ ${cashbackDiscount.toFixed(2)}\n`;
+      }
+      text += `Cashback Ganho Hoje: +R$ ${earnedCashback.toFixed(2)}\n`;
+      const nextBal = Math.max(0, customerCashbackBalance - cashbackDiscount + earnedCashback);
+      text += `Saldo Disponível Próximo Pedido: R$ ${nextBal.toFixed(2)}\n`;
+    }
+
+    text += `-----------------------------------\n`;
+    text += `[PAGAMENTO]\n`;
+    text += `Forma: ${pagamento}\n`;
+    if (pagamento === "Dinheiro" && trocoPara) {
+      text += `Troco para: R$ ${trocoPara}\n`;
+    }
+    if (pagamento.includes("Cartão")) {
+      text += `(Levar maquininha de cartão)\n`;
+    }
+    text += `-----------------------------------`;
+
+    const encoded = encodeURIComponent(text);
+    const wappUrl = `https://wa.me/${RESTAURANT_WHATSAPP_PHONE}?text=${encoded}`;
+
+    trackEvent('purchase', { total_value: total, order_id: newOrderId || orderNumber });
+    window.open(wappUrl, "_blank");
+
+    setWhatsappUrl(wappUrl);
+    setIsSuccess(true);
+    onClearCart();
+  };
+
+  // SUCCESS SCREEN
+  if (isSuccess) {
+    const successActionButtons = (
+      <div className="w-full max-w-xs mx-auto flex flex-col gap-2.5 mt-3">
+        {savedOrderId && (
+          <a
+            href={`/track/${savedTrackingCode}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full bg-[#4d0471] hover:bg-[#3b0257] text-white font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 text-xs shadow-sm transition-all cursor-pointer"
+          >
+            🔍 Acompanhar Pedido
+          </a>
+        )}
+        <a
+          href={whatsappUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => {
+            onClearCart();
+            setIsSuccess(false);
+            onClose();
+          }}
+          className="w-full bg-[#25D366] hover:bg-[#1EBE5D] text-white font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 text-xs shadow-sm transition-all animate-pulse cursor-pointer"
+        >
+          📲 Abrir WhatsApp do Pedido
+        </a>
+        <button
+          onClick={() => {
+            setIsSuccess(false);
+            setCurrentStep('items');
+            onClose();
+          }}
+          className="text-[11px] text-gray-500 hover:text-gray-800 font-medium text-center py-1 cursor-pointer"
+        >
+          Voltar ao Cardápio
+        </button>
+      </div>
+    );
+
+    return (
+      <>
+        {/* Desktop Inline Cart */}
+        <div className="hidden lg:block sticky top-28 w-full z-10">
+          <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-xs flex flex-col items-center justify-center text-center">
+            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-2.5">
+              <Check className="w-6 h-6 text-green-600" />
+            </div>
+            <h2 className="text-base font-black text-gray-800 mb-0.5">Pedido Gerado!</h2>
+            <p className="text-gray-500 text-xs mb-1">O seu pedido foi enviado com sucesso.</p>
+            {successActionButtons}
+          </div>
+        </div>
+
+        {/* Mobile Modal Cart */}
+        {isOpen && (
+          <div className="lg:hidden fixed inset-0 z-50 flex flex-col justify-end">
+            <div
+              className="absolute inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
+              onClick={onClose}
+            />
+            <div className="relative bg-white w-full rounded-t-3xl overflow-hidden shadow-2xl flex flex-col items-center justify-center p-6 text-center">
+              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-2.5">
+                <Check className="w-6 h-6 text-green-600" />
+              </div>
+              <h2 className="text-base font-black text-gray-800 mb-0.5">Pedido Gerado!</h2>
+              <p className="text-gray-500 text-xs mb-1">O seu pedido foi enviado com sucesso.</p>
+              {successActionButtons}
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }
+
+  // MAIN CART CONTENT (ULTRA-COMPACT, ELEGANT, HIGH-CONVERSION)
+  const CartContent = (
+    <div className="bg-white lg:border border-gray-200 lg:rounded-2xl shadow-xs flex flex-col w-full relative">
+      
+      {/* HEADER WITH DISCREET STEP TABS */}
+      <div className="bg-white border-b border-gray-100 p-3 shrink-0">
+        <div className="flex justify-between items-center mb-2">
+          <div className="flex items-center gap-1.5">
+            <ShoppingBag className="w-4 h-4 text-[#4d0471]" />
+            <h2 className="text-[13px] font-black uppercase tracking-wide text-gray-800">
+              {currentStep === 'items' ? 'Meu Pedido' : 'Entrega & Pagamento'}
+            </h2>
+            <span className="bg-gray-100 text-gray-600 text-[10px] font-bold px-1.5 py-0.2 rounded-full">
+              {totalItemCount}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1">
+            {items.length > 0 && currentStep === 'items' && (
+              <button
+                onClick={onClearCart}
+                className="text-[10px] text-gray-400 hover:text-red-600 font-semibold px-1.5 py-0.5 rounded transition-colors flex items-center gap-1 cursor-pointer"
+                title="Limpar carrinho"
+              >
+                <Trash2 className="w-3 h-3" />
+                <span>Limpar</span>
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="lg:hidden p-1 text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-100 cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* COMPACT STEP SWITCHER */}
+        {items.length > 0 && (
+          <div className="grid grid-cols-2 gap-1 bg-gray-100 p-0.5 rounded-lg text-[11px] font-bold">
+            <button
+              type="button"
+              onClick={() => setCurrentStep('items')}
+              className={`py-1 px-2 rounded-md transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                currentStep === 'items'
+                  ? 'bg-white text-[#4d0471] shadow-xs'
+                  : 'text-gray-500 hover:text-gray-900'
+              }`}
+            >
+              <span>1. Itens ({totalItemCount})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (items.length > 0) setCurrentStep('checkout');
+              }}
+              className={`py-1 px-2 rounded-md transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                currentStep === 'checkout'
+                  ? 'bg-[#4d0471] text-white shadow-xs'
+                  : 'text-gray-500 hover:text-gray-900'
+              }`}
+            >
+              <span>2. Entrega ➔</span>
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* EMPTY CART STATE */}
+      {items.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
+          <div className="w-10 h-10 rounded-full bg-gray-50 border border-dashed border-gray-200 flex items-center justify-center mb-2">
+            <ShoppingBag className="w-5 h-5 text-gray-300" />
+          </div>
+          <h3 className="font-bold text-gray-700 text-xs mb-0.5">Seu carrinho está vazio</h3>
+          <p className="text-gray-400 text-[11px] max-w-[220px] mb-3">
+            Adicione itens do cardápio para fazer o seu pedido!
+          </p>
+          <button
+            onClick={onClose}
+            className="lg:hidden bg-[#4d0471] text-white text-[11px] font-bold py-1.5 px-4 rounded-lg hover:bg-[#3b0257] transition-colors cursor-pointer"
+          >
+            Ver Cardápio
+          </button>
+        </div>
+      ) : (
+        <>
+          {/* BODY AREA - COMPACT & NATURAL */}
+          <div className="p-3 space-y-2.5">
+            
+            {/* ======================================================== */}
+            {/* STEP 1: COMPACT ITEMS REVIEW */}
+            {/* ======================================================== */}
+            {currentStep === 'items' && (
+              <div className="space-y-2.5 animate-in fade-in duration-150">
+                {/* ITEMS LIST (MAX 380px, scrollable only if many items) */}
+                <div className="max-h-[300px] overflow-y-auto overscroll-contain pr-1 custom-scrollbar space-y-1.5 divide-y divide-gray-100">
+                  {items.map((item) => (
+                    <div
+                      key={item.id}
+                      className="pt-1.5 first:pt-0"
+                    >
+                      <div className="flex justify-between items-start gap-1.5 text-xs">
+                        <div className="flex-1 min-w-0">
+                          <span className="font-extrabold text-gray-800">
+                            {item.quantity}x{" "}
+                            {item.isHalfAndHalf && item.halfAndHalfFlavor
+                              ? `1/2 ${item.menuItem.name} + 1/2 ${item.halfAndHalfFlavor.name}`
+                              : item.menuItem.name}
+                          </span>
+                          {item.size && (
+                            <span className="ml-1 text-[10px] font-semibold text-gray-500 bg-gray-100 px-1 py-0.2 rounded">
+                              {item.size}
+                            </span>
+                          )}
+
+                          {/* Extras */}
+                          {item.extras && item.extras.length > 0 && (
+                            <div className="text-[10px] text-gray-500 mt-0.5">
+                              {item.extras.map((ex) => `+ ${ex.name} (R$${ex.price.toFixed(2)})`).join(', ')}
+                            </div>
+                          )}
+
+                          {/* Notes */}
+                          {item.notes && (
+                            <div className="text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded mt-0.5 truncate max-w-[240px]">
+                              Obs: {item.notes}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Price */}
+                        <span className="font-black text-[#4d0471] shrink-0 text-xs">
+                          R$ {(item.priceCalculated * item.quantity).toFixed(2)}
+                        </span>
+                      </div>
+
+                      {/* Stepper + Remover in one compact row */}
+                      <div className="flex justify-between items-center mt-1">
+                        <div className="flex items-center border border-gray-200 rounded-md bg-white overflow-hidden">
+                          <button
+                            onClick={() => onUpdateQuantity(item.id, -1)}
+                            className="px-1.5 py-0.5 text-gray-500 hover:text-[#4d0471] hover:bg-gray-50 transition-colors cursor-pointer"
+                          >
+                            <Minus className="w-2.5 h-2.5" />
+                          </button>
+                          <span className="text-[11px] font-bold px-1.5 text-gray-800 min-w-4 text-center">
+                            {item.quantity}
+                          </span>
+                          <button
+                            onClick={() => onUpdateQuantity(item.id, 1)}
+                            className="px-1.5 py-0.5 text-gray-500 hover:text-[#4d0471] hover:bg-gray-50 transition-colors cursor-pointer"
+                          >
+                            <Plus className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
+
+                        <button
+                          onClick={() => onRemoveItem(item.id)}
+                          className="text-[10px] text-gray-400 hover:text-red-600 transition-colors cursor-pointer"
+                        >
+                          Remover
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* DISCREET UPSELL CHIP */}
+                {(() => {
+                  const hasBebida = items.some((i) => i.menuItem.category === "bebidas");
+                  if (!hasBebida) {
+                    const sug = ALL_MENU_ITEMS.find((m) => m.id === "b-1");
+                    if (sug) {
+                      return (
+                        <div className="bg-gray-50 border border-gray-200/80 rounded-lg px-2 py-1.5 flex items-center justify-between text-[11px]">
+                          <span className="text-gray-600 truncate">
+                            🥤 Coca-Cola por <strong>R${(sug.priceSingle || 0).toFixed(2)}</strong>?
+                          </span>
+                          <button
+                            onClick={() =>
+                              onAddToCart({
+                                id: Date.now().toString(),
+                                menuItem: sug,
+                                quantity: 1,
+                                priceCalculated: sug.priceSingle || 0,
+                              })
+                            }
+                            className="text-[10px] bg-white border border-emerald-500 text-emerald-700 font-bold px-2 py-0.5 rounded hover:bg-emerald-50 transition-colors shrink-0 ml-1.5 cursor-pointer"
+                          >
+                            + Adicionar
+                          </button>
+                        </div>
+                      );
+                    }
+                  }
+                  return null;
+                })()}
+
+                {/* STEP 1 FOOTER & CTA */}
+                <div className="pt-2 border-t border-gray-100 space-y-2">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-gray-500 font-medium">Subtotal dos itens:</span>
+                    <span className="font-black text-[#4d0471] text-sm">R$ {subtotal.toFixed(2)}</span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormError(null);
+                      setCurrentStep('checkout');
+                    }}
+                    disabled={!businessStatus.isOpen}
+                    className={`w-full font-bold py-2.5 px-3 rounded-xl transition-all flex justify-center items-center gap-1.5 text-xs shadow-xs cursor-pointer ${
+                      !businessStatus.isOpen
+                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                        : 'bg-[#4d0471] hover:bg-[#3b0257] active:scale-[0.99] text-white'
+                    }`}
+                  >
+                    {!businessStatus.isOpen ? (
+                      <>
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>Loja Fechada no Momento</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Avançar para Entrega</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ======================================================== */}
+            {/* STEP 2: ULTRA-COMPACT CHECKOUT FORM */}
+            {/* ======================================================== */}
+            {currentStep === 'checkout' && (
+              <div className="space-y-2.5 animate-in fade-in duration-150">
+                
+                {/* BACK LINK + RESUMO EM 1 LINHA */}
+                <div className="flex items-center justify-between text-[11px] pb-1 border-b border-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep('items')}
+                    className="font-bold text-[#4d0471] hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <ArrowLeft className="w-3 h-3" />
+                    <span>Editar itens</span>
+                  </button>
+                  <span className="text-gray-500 font-medium">
+                    {totalItemCount} {totalItemCount === 1 ? 'item' : 'itens'} • Subtotal: R${subtotal.toFixed(2)}
+                  </span>
+                </div>
+
+                {/* ENTREGA VS RETIRADA (COMPACT 28px ROW) */}
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOrderType("Delivery");
+                      saveCustomerData({ orderType: "Delivery" });
+                    }}
+                    className={`py-1.5 px-2 rounded-lg font-bold text-[11px] transition-all flex items-center justify-center gap-1 border cursor-pointer ${
+                      orderType === "Delivery"
+                        ? "bg-[#4d0471] text-white border-[#4d0471] shadow-xs"
+                        : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                    }`}
+                  >
+                    <span>🛵 Entrega ({deliveryTimeEstimate})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOrderType("Takeaway");
+                      saveCustomerData({ orderType: "Takeaway" });
+                    }}
+                    className={`py-1.5 px-2 rounded-lg font-bold text-[11px] transition-all flex items-center justify-center gap-1 border cursor-pointer ${
+                      orderType === "Takeaway"
+                        ? "bg-[#4d0471] text-white border-[#4d0471] shadow-xs"
+                        : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                    }`}
+                  >
+                    <span>🛍️ Retirada ({pickupTimeEstimate})</span>
+                  </button>
+                </div>
+
+                {/* FORM FIELDS */}
+                <div className="space-y-2">
+                  {/* Nome & WhatsApp em 2 colunas compactas */}
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-600 mb-0.5 flex items-center gap-0.5 uppercase">
+                        <User className="w-2.5 h-2.5 text-[#4d0471]" />
+                        <span>Nome *</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Seu nome"
+                        value={name}
+                        onChange={(e) => {
+                          setName(e.target.value);
+                          saveCustomerData({ name: e.target.value });
+                        }}
+                        className="w-full h-8 bg-gray-50/50 focus:bg-white border border-gray-200 focus:border-[#4d0471] rounded-lg px-2 text-xs outline-none transition-colors"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-600 mb-0.5 flex items-center gap-0.5 uppercase">
+                        <Phone className="w-2.5 h-2.5 text-[#4d0471]" />
+                        <span>WhatsApp *</span>
+                      </label>
+                      <input
+                        type="tel"
+                        placeholder="9xx xxx xxx"
+                        value={telefone}
+                        onChange={(e) => {
+                          setTelefone(e.target.value);
+                          saveCustomerData({ telefone: e.target.value });
+                        }}
+                        className="w-full h-8 bg-gray-50/50 focus:bg-white border border-gray-200 focus:border-[#4d0471] rounded-lg px-2 text-xs outline-none transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Se Entrega: Morada & Zona */}
+                  {orderType === "Delivery" && (
+                    <div className="space-y-1.5 bg-red-50/30 p-2 rounded-lg border border-red-100">
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-600 mb-0.5 flex items-center gap-0.5 uppercase">
+                          <MapPin className="w-2.5 h-2.5 text-[#4d0471]" />
+                          <span>Endereço Completo *</span>
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Rua, número, andar / apto"
+                          value={morada}
+                          onChange={(e) => {
+                            setMorada(e.target.value);
+                            saveCustomerData({ morada: e.target.value });
+                          }}
+                          className="w-full h-8 bg-white border border-gray-200 focus:border-[#4d0471] rounded-lg px-2 text-xs outline-none transition-colors"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-600 mb-0.5 uppercase">
+                          Bairro para Entrega (SJP) *
+                        </label>
+                        <select
+                          value={zona}
+                          onChange={(e) => {
+                            setZona(e.target.value);
+                            saveCustomerData({ zona: e.target.value });
+                          }}
+                          className="w-full h-8 bg-white border border-gray-200 focus:border-[#4d0471] rounded-lg px-2 text-xs outline-none font-medium transition-colors"
+                        >
+                          <option value="">Selecione o bairro em SJP...</option>
+                          {Object.keys(zonesFees).map((z) => (
+                            <option key={z} value={z}>
+                              {z} ({zonesFees[z] === 0 ? "Taxa Grátis" : `+R$ ${zonesFees[z].toFixed(2)}`})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Formas de Pagamento: PIX, Crédito, Débito e Dinheiro */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-600 mb-1 uppercase tracking-wider">
+                      Forma de Pagamento
+                    </label>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPagamento("PIX");
+                          saveCustomerData({ pagamento: "PIX" });
+                        }}
+                        className={`h-7 px-2 rounded-lg font-bold text-[11px] transition-all flex items-center justify-center gap-1 border cursor-pointer ${
+                          pagamento === "PIX"
+                            ? "bg-[#4d0471] text-white border-[#4d0471] shadow-2xs"
+                            : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                        }`}
+                      >
+                        <span>📱 PIX</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPagamento("Cartão de Crédito");
+                          saveCustomerData({ pagamento: "Cartão de Crédito" });
+                        }}
+                        className={`h-7 px-2 rounded-lg font-bold text-[11px] transition-all flex items-center justify-center gap-1 border cursor-pointer ${
+                          pagamento === "Cartão de Crédito"
+                            ? "bg-[#4d0471] text-white border-[#4d0471] shadow-2xs"
+                            : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                        }`}
+                      >
+                        <span>💳 Crédito</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPagamento("Cartão de Débito");
+                          saveCustomerData({ pagamento: "Cartão de Débito" });
+                        }}
+                        className={`h-7 px-2 rounded-lg font-bold text-[11px] transition-all flex items-center justify-center gap-1 border cursor-pointer ${
+                          pagamento === "Cartão de Débito"
+                            ? "bg-[#4d0471] text-white border-[#4d0471] shadow-2xs"
+                            : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                        }`}
+                      >
+                        <span>💳 Débito</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPagamento("Dinheiro");
+                          saveCustomerData({ pagamento: "Dinheiro" });
+                        }}
+                        className={`h-7 px-2 rounded-lg font-bold text-[11px] transition-all flex items-center justify-center gap-1 border cursor-pointer ${
+                          pagamento === "Dinheiro"
+                            ? "bg-[#4d0471] text-white border-[#4d0471] shadow-2xs"
+                            : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                        }`}
+                      >
+                        <span>💵 Dinheiro</span>
+                      </button>
+                    </div>
+
+                    {(pagamento === "Cartão de Crédito" || pagamento === "Cartão de Débito") && (
+                      <div className="mt-1.5 p-1.5 bg-purple-50 border border-purple-200 rounded-lg text-[10.5px] text-[#4d0471] font-semibold flex items-center gap-1.5">
+                        <span>💳</span>
+                        <span>Levamos a maquininha de cartão até você!</span>
+                      </div>
+                    )}
+
+                    {pagamento === "Dinheiro" && (
+                      <div className="mt-1.5 flex items-center gap-1.5">
+                        <span className="text-[10px] font-semibold text-gray-600">Troco para quanto?</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="Ex: 50"
+                          value={trocoPara}
+                          onChange={(e) => setTrocoPara(e.target.value)}
+                          className="h-7 w-24 bg-white border border-gray-200 focus:border-[#4d0471] rounded-lg px-2 text-xs outline-none"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* CPF opcional na nota */}
+                  <div className="pt-0.5">
+                    {!showNifInput && !nif ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowNifInput(true)}
+                        className="text-[10px] text-gray-400 hover:text-gray-700 flex items-center gap-0.5 cursor-pointer"
+                      >
+                        <FileText className="w-2.5 h-2.5" />
+                        <span>+ Adicionar CPF na nota (opcional)</span>
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="text"
+                          placeholder="CPF na nota (opcional)"
+                          value={nif}
+                          onChange={(e) => {
+                            setNif(e.target.value);
+                            saveCustomerData({ nif: e.target.value });
+                          }}
+                          className="h-7 w-full bg-white border border-gray-200 focus:border-[#4d0471] rounded-lg px-2 text-xs outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNif("");
+                            setShowNifInput(false);
+                            saveCustomerData({ nif: "" });
+                          }}
+                          className="text-gray-400 hover:text-gray-600 text-xs p-1"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  {/* PROGRAMA DE CASHBACK / FIDELIDADE */}
+                  {cashbackConfig.enabled && (
+                    <div className="space-y-1.5 pt-1">
+                      {customerCashbackBalance > 0 && (
+                        <div className="bg-amber-50/90 border border-amber-300 rounded-xl p-2.5 transition-all shadow-2xs">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className="w-6 h-6 rounded-full bg-amber-500 text-stone-950 flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
+                                R$
+                              </div>
+                              <div className="min-w-0">
+                                <span className="text-[11px] font-extrabold text-stone-900 block truncate">
+                                  Cashback Disponível
+                                </span>
+                                <span className="text-[10px] text-amber-800 font-semibold block">
+                                  Saldo: <strong>R$ {customerCashbackBalance.toFixed(2)}</strong>
+                                </span>
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => setUseCashback(!useCashback)}
+                              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer border ${
+                                useCashback
+                                  ? 'bg-amber-500 text-stone-950 border-amber-600 shadow-2xs'
+                                  : 'bg-white text-stone-800 border-amber-300 hover:bg-amber-100/60'
+                              }`}
+                            >
+                              {useCashback ? '✓ Aplicado' : 'Abater Saldo'}
+                            </button>
+                          </div>
+
+                          {useCashback && (
+                            <div className="mt-1.5 pt-1.5 border-t border-amber-200/60 flex items-center justify-between text-[10px] text-emerald-800 font-bold">
+                              <span>Desconto no pedido:</span>
+                              <span>- R$ {cashbackDiscount.toFixed(2)}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {earnedCashback > 0 && (
+                        <div className="flex items-center justify-between px-2.5 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-lg text-[10px] text-amber-900">
+                          <div className="flex items-center gap-1.5">
+                            <Sparkles className="w-3 h-3 text-amber-600" />
+                            <span>Cashback ganho hoje ({cashbackConfig.percent}%):</span>
+                          </div>
+                          <span className="font-black text-amber-700">+ R$ {earnedCashback.toFixed(2)}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* STEP 2 FOOTER & FINAL CTA */}
+                <div className="pt-2 border-t border-gray-100 space-y-2">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-gray-500">
+                      {orderType === "Delivery" ? (
+                        <>Taxa entrega: <strong className="text-emerald-600">{deliveryFee === 0 ? 'GRÁTIS' : `R$${deliveryFee.toFixed(2)}`}</strong></>
+                      ) : (
+                        'Retirada no balcão'
+                      )}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-gray-500 font-medium">Total:</span>
+                      <span className="font-black text-[#4d0471] text-base">R$ {total.toFixed(2)}</span>
+                    </div>
+                  </div>
+
+                  {cashbackDiscount > 0 && (
+                    <div className="flex justify-between items-center text-xs text-amber-900 bg-amber-50/90 px-2.5 py-1 rounded-lg border border-amber-200">
+                      <span className="font-semibold flex items-center gap-1">
+                        <span>Desconto Cashback:</span>
+                      </span>
+                      <span className="font-extrabold text-emerald-700">- R$ {cashbackDiscount.toFixed(2)}</span>
+                    </div>
+                  )}
+
+                  {formError && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 p-2 rounded-lg text-[11px] font-semibold whitespace-pre-line flex items-center gap-1.5">
+                      <AlertCircle className="w-3.5 h-3.5 text-red-600 shrink-0" />
+                      <div>{formError}</div>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleCheckout}
+                    disabled={isSubmitting || !businessStatus.isOpen}
+                    className={`w-full font-black py-2.5 px-3 rounded-xl transition-all flex justify-center items-center gap-1.5 text-xs shadow-xs cursor-pointer ${
+                      isSubmitting || !businessStatus.isOpen
+                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                        : 'bg-[#25D366] hover:bg-[#1EBE5D] active:scale-[0.99] text-white shadow-emerald-700/20'
+                    }`}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>Enviando pedido...</span>
+                      </>
+                    ) : !businessStatus.isOpen ? (
+                      <>
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>Loja Fechada no Momento</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Confirmar e Enviar Pedido</span>
+                        <span>📱</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+
+  return (
+    <>
+      {/* Desktop Inline Cart */}
+      <div className="hidden lg:block sticky top-28 w-full z-10">
+        {CartContent}
+      </div>
+
+      {/* Mobile Modal Cart */}
+      {isOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 flex flex-col justify-end">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
+            onClick={onClose}
+          />
+          <div className="relative bg-white w-full max-h-[85vh] rounded-t-3xl overflow-y-auto shadow-2xl flex flex-col p-2">
+            {CartContent}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}

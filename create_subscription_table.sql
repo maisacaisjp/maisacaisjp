@@ -1,0 +1,1 @@
+-- Tabela descontinuada. O sistema Mais Açaí é de uso próprio e exclusivo.

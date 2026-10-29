@@ -1,0 +1,205 @@
+import React, { useState } from 'react';
+import { Plus, Flame } from "lucide-react";
+import { MenuItem } from "../types";
+import { getStoreDate } from "../utils/date";
+import { findImageForProduct } from "../utils/imageResolver";
+import { hapticLight } from "../utils/haptics";
+
+interface MenuItemCardProps {
+  item: MenuItem & { isMaisPedido?: boolean; groupOverride?: string };
+  catId: string;
+  failedImage: boolean;
+  onImageError: () => void;
+  onClick: () => void;
+  onZoom: (src: string) => void;
+}
+
+const MenuItemCard: React.FC<MenuItemCardProps> = ({
+
+  item,
+  catId,
+  failedImage,
+  onImageError,
+  onClick,
+  onZoom,
+}) => {
+  const prices = [];
+  if (item.priceP) prices.push(`330ml R$ ${item.priceP.toFixed(2).replace('.', ',')}`);
+  if (item.priceM) prices.push(`440ml R$ ${item.priceM.toFixed(2).replace('.', ',')}`);
+  if (item.priceG) prices.push(`550ml R$ ${item.priceG.toFixed(2).replace('.', ',')}`);
+  if (item.priceBig) prices.push(`770ml R$ ${item.priceBig.toFixed(2).replace('.', ',')}`);
+  if (item.priceSuperBig) prices.push(`1L R$ ${item.priceSuperBig.toFixed(2).replace('.', ',')}`);
+
+  let priceDisplay: React.ReactNode = null;
+  if (prices.length > 2) {
+    priceDisplay = (
+      <span className="font-medium text-gray-900 text-[15px]">
+        A partir de R$ {(item.priceP || item.priceM || item.priceG || item.priceSingle || 0).toFixed(2).replace('.', ',')}
+      </span>
+    );
+  } else if (prices.length > 0) {
+    priceDisplay = (
+      <span className="font-medium text-gray-900 text-[13px] tracking-tight">
+        {prices.join(" • ")}
+      </span>
+    );
+  } else {
+    priceDisplay = (
+      <span className="font-medium text-gray-900 text-[15px]">
+        R$ {(item.priceSingle || 0).toFixed(2).replace('.', ',')}
+      </span>
+    );
+  }
+
+  const [imgAttempt, setImgAttempt] = React.useState(0);
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const exts = ['.png', '.jpg', '.jpeg', '.webp'];
+
+  const handleCardClick = () => {
+    hapticLight();
+    onClick();
+  };
+
+  let photoSrc = item.imageUrl ? item.imageUrl.replace(/^\//, '') : "";
+  if (photoSrc === 'none') {
+    photoSrc = "";
+  } else if (!photoSrc) {
+    const autoImage = findImageForProduct(item);
+    if (autoImage) photoSrc = autoImage.replace(/^\//, '');
+  }
+
+  // If it's a dynamic path without http, let's allow it to try extensions
+  const getDisplaySrc = () => {
+    if (!photoSrc) return "";
+    if (photoSrc.startsWith('http')) return imgAttempt > 0 ? '' : photoSrc;
+    let base = photoSrc;
+
+    // Remove extension if we are going to try others
+    if (imgAttempt > 0) {
+      base = base.replace(/\.(png|jpe?g|webp)$/i, '');
+      return `/${base}${exts[imgAttempt - 1]}`;
+    }
+    return `/${base}`;
+  };
+
+  const currentSrc = getDisplaySrc();
+  const hasPhoto = !!currentSrc && !failedImage;
+
+  if (item.id.startsWith('promo-dia-da-pizza') || catId === 'promocoes') {
+    return (
+      <div
+        onClick={handleCardClick}
+        className="w-full h-full flex flex-col overflow-hidden rounded-xl cursor-pointer group shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200 bg-white active:scale-[0.99]"
+      >
+        {hasPhoto && (
+          <div className="w-full aspect-[4/5] overflow-hidden bg-stone-100 relative flex items-center justify-center">
+            {!imgLoaded && !failedImage && (
+              <div className="absolute inset-0 bg-stone-200 animate-pulse" />
+            )}
+            <img
+              src={currentSrc}
+              alt={item.name}
+              loading="lazy"
+              decoding="async"
+              onLoad={() => setImgLoaded(true)}
+              className={`w-full h-full object-contain object-center transition-all duration-300 ${imgLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-95'} group-hover:scale-105`}
+              onError={() => {
+                if (imgAttempt < exts.length) {
+                  setImgAttempt(prev => prev + 1);
+                } else {
+                  onImageError();
+                }
+              }}
+            />
+          </div>
+        )}
+        <div className="p-4 flex flex-col flex-1">
+          <h3 className={`font-bold ${catId === "mais-pedidos" ? "text-[14px]" : "text-[16px]"} text-gray-900 mb-1 leading-tight`}>
+            {item.name}
+          </h3>
+          <p className={`${catId === "mais-pedidos" ? "text-[11px]" : "text-[13px]"} text-gray-500 line-clamp-3 leading-relaxed mb-4`}>
+            {item.ingredients}
+          </p>
+          <div className="mt-auto flex items-center justify-between">
+            <span className="font-extrabold text-gray-900 text-lg">
+              R$ {(item.priceSingle || item.priceM || item.priceG || item.priceP || 0).toFixed(2)}
+            </span>
+            <span className="text-[#4d0471] font-bold text-sm hover:underline">
+              Pedir Agora
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      onClick={handleCardClick}
+      className={`${catId === "promocoes" ? "bg-[#4d0471]/5 border-[#4d0471]" : (catId === "menu-do-dia" && item.dayOfWeek === getStoreDate().getDay() ? "bg-green-50 border-green-500" : "bg-white border-gray-200")} border rounded-xl p-3 sm:p-4 flex items-start justify-between gap-3 sm:gap-4 cursor-pointer hover:shadow-md active:scale-[0.99] transition-all duration-200 group relative bg-white`}
+    >
+      {catId === "promocoes" && (
+        <div className="absolute top-0 right-0 bg-[#4d0471] text-white text-[9px] sm:text-[10px] font-bold px-2.5 py-0.5 sm:py-1 rounded-bl-lg uppercase tracking-wider z-10">
+          Destaque
+        </div>
+      )}
+      {catId === "menu-do-dia" && item.dayOfWeek === getStoreDate().getDay() && (
+        <div className="absolute top-0 right-0 bg-green-600 text-white text-[9px] sm:text-[10px] font-bold px-2.5 py-0.5 sm:py-1 rounded-bl-lg uppercase tracking-wider z-10 shadow-sm animate-pulse flex items-center gap-1">
+          <Flame className="w-3 h-3 text-white fill-white" />
+          <span>HOJE</span>
+        </div>
+      )}
+      {item.isMaisPedido && catId === "mais-pedidos" && (
+        <div className="absolute top-0 right-0 bg-[#4d0471] text-white text-[9px] sm:text-[10px] font-extrabold px-2.5 py-0.5 sm:py-1 rounded-bl-lg uppercase tracking-wider z-10 flex items-center gap-1 shadow-xs">
+          <Flame className="w-3 h-3 text-[#fdde58] fill-[#fdde58]" />
+          <span>MAIS VENDIDOS</span>
+        </div>
+      )}
+      <div className={`flex-1 flex flex-col justify-between h-full ${hasPhoto ? "min-h-[92px] sm:min-h-[112px]" : "min-h-[76px] sm:min-h-[88px]"}`}>
+        <div>
+          <h3
+            className={`font-bold ${catId === "promocoes" ? "text-base sm:text-lg text-[#4d0471]" : catId === "mais-pedidos" ? "text-xs sm:text-[13px] text-gray-900" : "text-sm sm:text-[15px] text-gray-900"} mb-0.5 sm:mb-1 break-words pr-1.5 leading-snug`}
+          >
+            {item.name}
+          </h3>
+          <p
+            className={`${catId === "mais-pedidos" ? "text-[10.5px] sm:text-[11px]" : "text-[11.5px] sm:text-[13px]"} ${catId === "promocoes" ? "text-gray-700 font-medium" : "text-gray-500"} line-clamp-2 leading-relaxed pr-1.5 mt-0.5`}
+          >
+            {item.ingredients}
+          </p>
+        </div>
+        <div className="mt-2.5 sm:mt-4 flex justify-between items-center pr-1.5">
+          {priceDisplay}
+          <button className="w-6 h-6 sm:w-7 sm:h-7 bg-[#4d0471]/10 text-[#4d0471] hover:bg-[#4d0471] hover:text-white rounded-full flex items-center justify-center transition-colors shrink-0">
+            <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          </button>
+        </div>
+      </div>
+      {/* Foto do produto Estilo iFood Compacto com Shimmer e Carregamento Rápido */}
+      {hasPhoto && (
+        <div className="w-[92px] h-[92px] sm:w-[112px] sm:h-[112px] shrink-0 rounded-xl overflow-hidden bg-stone-100 border border-gray-200 shadow-2xs relative flex items-center justify-center">
+          {!imgLoaded && !failedImage && (
+            <div className="absolute inset-0 bg-stone-200 animate-pulse" />
+          )}
+          <img
+            src={currentSrc}
+            alt={item.name}
+            loading="lazy"
+            decoding="async"
+            onLoad={() => setImgLoaded(true)}
+            className={`w-full h-full object-cover transition-all duration-300 ${imgLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-95'} group-hover:scale-105`}
+            onError={() => {
+              if (imgAttempt < exts.length) {
+                setImgAttempt(prev => prev + 1);
+              } else {
+                onImageError();
+              }
+            }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default MenuItemCard;
