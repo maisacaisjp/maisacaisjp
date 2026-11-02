@@ -236,6 +236,16 @@ export default function MenuManager() {
     if (error) {
       setFeedback("Erro ao salvar: " + error.message);
     } else {
+      // Sincroniza com a tabela 'extras' caso seja um adicional ou comece com 'ex-'
+      if (editingItem.category === 'adicionais' || dbItem.id.startsWith('ex-')) {
+        await supabase.from('extras').upsert({
+          id: dbItem.id,
+          name: dbItem.name,
+          price: parseNum(editingItem.price_single) || 0,
+          is_active: !pausedItems.includes(dbItem.id)
+        }, { onConflict: 'id' });
+      }
+
       setFeedback("Salvo com sucesso!");
       setIsModalOpen(false);
       loadData();
@@ -247,6 +257,8 @@ export default function MenuManager() {
   const handleDelete = async (id: string) => {
     if (window.confirm("Tem certeza que deseja excluir este item?")) {
       await supabase.from('menu_items').delete().eq('id', id);
+      await supabase.from('extras').delete().eq('id', id);
+      await supabase.from('paused_items').delete().eq('id', id);
       loadData();
     }
   };
@@ -257,9 +269,11 @@ export default function MenuManager() {
       if (isPaused) {
         setPausedItems(prev => prev.filter(id => id !== itemId));
         await supabase.from('paused_items').delete().eq('id', itemId);
+        await supabase.from('extras').update({ is_active: true }).eq('id', itemId);
       } else {
         setPausedItems(prev => [...prev, itemId]);
         await supabase.from('paused_items').upsert({ id: itemId }, { onConflict: 'id' });
+        await supabase.from('extras').update({ is_active: false }).eq('id', itemId);
       }
     } catch(e) {
       console.error(e);
@@ -276,6 +290,9 @@ export default function MenuManager() {
       setItems(prev => prev.map(item => item.id === itemId ? { ...item, [field]: numVal } : item));
       const { error } = await supabase.from('menu_items').update({ [field]: numVal }).eq('id', itemId);
       if(error) throw error;
+      if (field === 'price_single' || itemId.startsWith('ex-')) {
+        await supabase.from('extras').update({ price: numVal }).eq('id', itemId);
+      }
     } catch(e) {
       console.error(e);
       loadData(); // revert on error
@@ -283,11 +300,13 @@ export default function MenuManager() {
   };
 
   const openNewModal = () => {
+    const defaultCat = activeCategory !== 'all' ? activeCategory : (categories[0]?.id || '');
+    const isExtra = defaultCat === 'adicionais';
     setEditingItem({
-      id: `item-${Date.now()}`,
+      id: isExtra ? `ex-${Date.now()}` : `item-${Date.now()}`,
       name: '',
-      ingredients: '',
-      category: categories[0]?.id || '',
+      ingredients: isExtra ? 'Adicional para copos de açaí e combos' : '',
+      category: defaultCat,
       price_single: '',
       price_p: '',
       price_m: '',
@@ -319,7 +338,7 @@ export default function MenuManager() {
               Puxar Cardápio Inicial (Migrar)
             </button>
           )}
-          <button onClick={openNewModal} className="px-4 py-2.5 bg-[#fdde58] text-stone-950 font-bold rounded-lg text-sm hover:bg-[#e2c23f] transition-colors flex items-center gap-2 border border-[#d8ba39] cursor-pointer shadow-sm">
+          <button onClick={openNewModal} className="px-4 py-2.5 bg-[#6a2092] text-white font-bold rounded-lg text-sm hover:bg-[#521872] transition-colors flex items-center gap-2 border border-[#521872] cursor-pointer shadow-sm">
             <Plus size={16} /> Novo Produto
           </button>
         </div>
@@ -337,7 +356,7 @@ export default function MenuManager() {
         <div className="flex overflow-x-auto gap-1.5 pb-2 scrollbar-hide flex-1">
           <button 
             onClick={() => setActiveCategory('all')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all duration-200 active:scale-95 cursor-pointer ${activeCategory === 'all' ? 'bg-[#1C1917] text-[#D4AF6A] shadow-md' : 'bg-[#FAFAF9] text-[#78716C] border border-[#E7E5E1] hover:bg-gray-100'}`}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all duration-200 active:scale-95 cursor-pointer ${activeCategory === 'all' ? 'bg-[#6a2092] text-white shadow-md' : 'bg-[#FAFAF9] text-[#78716C] border border-[#E7E5E1] hover:bg-gray-100'}`}
           >
             Todos os Produtos
           </button>
@@ -345,7 +364,7 @@ export default function MenuManager() {
             <button 
               key={cat.id}
               onClick={() => setActiveCategory(cat.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all duration-200 active:scale-95 cursor-pointer ${activeCategory === cat.id ? 'bg-[#1C1917] text-[#D4AF6A] shadow-md' : 'bg-[#FAFAF9] text-[#78716C] border border-[#E7E5E1] hover:bg-gray-100'}`}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all duration-200 active:scale-95 cursor-pointer ${activeCategory === cat.id ? 'bg-[#6a2092] text-white shadow-md' : 'bg-[#FAFAF9] text-[#78716C] border border-[#E7E5E1] hover:bg-gray-100'}`}
             >
               {cat.name}
             </button>
@@ -360,7 +379,7 @@ export default function MenuManager() {
             placeholder="Buscar produto..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-stone-300 bg-white text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#fdde58] focus:border-[#fdde58] shadow-sm transition-all"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-stone-300 bg-white text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#6a2092]/20 focus:border-[#6a2092] shadow-sm transition-all"
           />
         </div>
       </div>
@@ -407,7 +426,7 @@ export default function MenuManager() {
                           type="text" 
                           defaultValue={item.price_single}
                           onBlur={(e) => handleQuickPriceEdit(item.id, 'price_single', e.target.value)}
-                          className="w-16 px-2 py-1 text-sm font-mono font-bold border border-stone-200 rounded-md focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none"
+                          className="w-16 px-2 py-1 text-sm font-mono font-bold border border-stone-200 rounded-md focus:border-[#6a2092] focus:ring-1 focus:ring-[#6a2092]/20 outline-none"
                         />
                       </div>
                     ) : (
@@ -416,21 +435,21 @@ export default function MenuManager() {
                           <span className="text-[9px] font-mono text-stone-400">Peq</span>
                           <div className="flex items-center gap-0.5">
                             <span className="text-stone-400 font-mono text-xs">R$</span>
-                            <input type="text" defaultValue={item.price_p} onBlur={(e) => handleQuickPriceEdit(item.id, 'price_p', e.target.value)} className="w-12 px-1.5 py-0.5 text-xs font-mono font-bold border border-stone-200 rounded-md outline-none focus:border-amber-500" />
+                            <input type="text" defaultValue={item.price_p} onBlur={(e) => handleQuickPriceEdit(item.id, 'price_p', e.target.value)} className="w-12 px-1.5 py-0.5 text-xs font-mono font-bold border border-stone-200 rounded-md outline-none focus:border-[#6a2092]" />
                           </div>
                         </div>
                         <div className="flex flex-col">
                           <span className="text-[9px] font-mono text-stone-400">Méd</span>
                           <div className="flex items-center gap-0.5">
                             <span className="text-stone-400 font-mono text-xs">R$</span>
-                            <input type="text" defaultValue={item.price_m} onBlur={(e) => handleQuickPriceEdit(item.id, 'price_m', e.target.value)} className="w-12 px-1.5 py-0.5 text-xs font-mono font-bold border border-stone-200 rounded-md outline-none focus:border-amber-500" />
+                            <input type="text" defaultValue={item.price_m} onBlur={(e) => handleQuickPriceEdit(item.id, 'price_m', e.target.value)} className="w-12 px-1.5 py-0.5 text-xs font-mono font-bold border border-stone-200 rounded-md outline-none focus:border-[#6a2092]" />
                           </div>
                         </div>
                         <div className="flex flex-col">
                           <span className="text-[9px] font-mono text-stone-400">Grd</span>
                           <div className="flex items-center gap-0.5">
                             <span className="text-stone-400 font-mono text-xs">R$</span>
-                            <input type="text" defaultValue={item.price_g} onBlur={(e) => handleQuickPriceEdit(item.id, 'price_g', e.target.value)} className="w-12 px-1.5 py-0.5 text-xs font-mono font-bold border border-stone-200 rounded-md outline-none focus:border-amber-500" />
+                            <input type="text" defaultValue={item.price_g} onBlur={(e) => handleQuickPriceEdit(item.id, 'price_g', e.target.value)} className="w-12 px-1.5 py-0.5 text-xs font-mono font-bold border border-stone-200 rounded-md outline-none focus:border-[#6a2092]" />
                           </div>
                         </div>
                       </div>
@@ -592,35 +611,35 @@ export default function MenuManager() {
                             <label className="block text-[9.5px] font-mono font-bold text-stone-600 uppercase">Pequena (P)</label>
                             <div className="flex items-center gap-0.5">
                               <span className="text-xs font-mono font-bold text-stone-400">R$</span>
-                              <input type="number" step="0.01" value={editingItem.price_p ?? ''} onChange={e => setEditingItem({...editingItem, price_p: e.target.value})} placeholder="0.00" className="w-full bg-white px-2 py-1 text-xs font-mono font-bold border border-stone-300 rounded focus:border-amber-500 outline-none" />
+                              <input type="number" step="0.01" value={editingItem.price_p ?? ''} onChange={e => setEditingItem({...editingItem, price_p: e.target.value})} placeholder="0.00" className="w-full bg-white px-2 py-1 text-xs font-mono font-bold border border-stone-300 rounded focus:border-[#6a2092] outline-none" />
                             </div>
                           </div>
                           <div className="p-2 rounded-lg bg-stone-50 border border-stone-200 space-y-1">
                             <label className="block text-[9.5px] font-mono font-bold text-stone-600 uppercase">Média (M)</label>
                             <div className="flex items-center gap-0.5">
                               <span className="text-xs font-mono font-bold text-stone-400">R$</span>
-                              <input type="number" step="0.01" value={editingItem.price_m ?? ''} onChange={e => setEditingItem({...editingItem, price_m: e.target.value})} placeholder="0.00" className="w-full bg-white px-2 py-1 text-xs font-mono font-bold border border-stone-300 rounded focus:border-amber-500 outline-none" />
+                              <input type="number" step="0.01" value={editingItem.price_m ?? ''} onChange={e => setEditingItem({...editingItem, price_m: e.target.value})} placeholder="0.00" className="w-full bg-white px-2 py-1 text-xs font-mono font-bold border border-stone-300 rounded focus:border-[#6a2092] outline-none" />
                             </div>
                           </div>
                           <div className="p-2 rounded-lg bg-amber-50/50 border border-amber-300 space-y-1">
                             <label className="block text-[9.5px] font-mono font-bold text-amber-900 uppercase">Grande (G) *</label>
                             <div className="flex items-center gap-0.5">
                               <span className="text-xs font-mono font-bold text-amber-700">R$</span>
-                              <input type="number" step="0.01" value={editingItem.price_g ?? ''} onChange={e => setEditingItem({...editingItem, price_g: e.target.value})} placeholder="0.00" className="w-full bg-white px-2 py-1 text-xs font-mono font-bold border border-amber-400 rounded focus:border-amber-600 outline-none" />
+                              <input type="number" step="0.01" value={editingItem.price_g ?? ''} onChange={e => setEditingItem({...editingItem, price_g: e.target.value})} placeholder="0.00" className="w-full bg-white px-2 py-1 text-xs font-mono font-bold border border-amber-400 rounded focus:border-[#6a2092] outline-none" />
                             </div>
                           </div>
                           <div className="p-2 rounded-lg bg-stone-50 border border-stone-200 space-y-1">
                             <label className="block text-[9.5px] font-mono font-bold text-stone-600 uppercase">Big (Família)</label>
                             <div className="flex items-center gap-0.5">
                               <span className="text-xs font-mono font-bold text-stone-400">R$</span>
-                              <input type="number" step="0.01" value={editingItem.price_big ?? ''} onChange={e => setEditingItem({...editingItem, price_big: e.target.value})} placeholder="0.00" className="w-full bg-white px-2 py-1 text-xs font-mono font-bold border border-stone-300 rounded focus:border-amber-500 outline-none" />
+                              <input type="number" step="0.01" value={editingItem.price_big ?? ''} onChange={e => setEditingItem({...editingItem, price_big: e.target.value})} placeholder="0.00" className="w-full bg-white px-2 py-1 text-xs font-mono font-bold border border-stone-300 rounded focus:border-[#6a2092] outline-none" />
                             </div>
                           </div>
                           <div className="p-2 rounded-lg bg-stone-50 border border-stone-200 space-y-1">
                             <label className="block text-[9.5px] font-mono font-bold text-stone-600 uppercase">Super Big (GG)</label>
                             <div className="flex items-center gap-0.5">
                               <span className="text-xs font-mono font-bold text-stone-400">R$</span>
-                              <input type="number" step="0.01" value={editingItem.price_super_big ?? ''} onChange={e => setEditingItem({...editingItem, price_super_big: e.target.value})} placeholder="0.00" className="w-full bg-white px-2 py-1 text-xs font-mono font-bold border border-stone-300 rounded focus:border-amber-500 outline-none" />
+                              <input type="number" step="0.01" value={editingItem.price_super_big ?? ''} onChange={e => setEditingItem({...editingItem, price_super_big: e.target.value})} placeholder="0.00" className="w-full bg-white px-2 py-1 text-xs font-mono font-bold border border-stone-300 rounded focus:border-[#6a2092] outline-none" />
                             </div>
                           </div>
                         </div>
@@ -655,7 +674,7 @@ export default function MenuManager() {
 
               <div className="pt-2 flex justify-between items-center border-t border-stone-100">
                 <label className="flex items-center gap-2 text-xs text-[#1C1917] font-bold cursor-pointer">
-                  <input type="checkbox" checked={editingItem.is_bestseller || false} onChange={e => setEditingItem({...editingItem, is_bestseller: e.target.checked})} className="w-4 h-4 accent-[#d8ba39] rounded cursor-pointer" />
+                  <input type="checkbox" checked={editingItem.is_bestseller || false} onChange={e => setEditingItem({...editingItem, is_bestseller: e.target.checked})} className="w-4 h-4 accent-[#6a2092] rounded cursor-pointer" />
                   🌟 Destaque
                 </label>
 
@@ -663,7 +682,7 @@ export default function MenuManager() {
                   <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 rounded-md font-bold text-xs bg-stone-100 hover:bg-stone-200 text-stone-700 transition-colors cursor-pointer border border-stone-200">
                     Cancelar
                   </button>
-                  <button type="submit" className="px-5 py-2 rounded-md font-bold text-xs bg-[#fdde58] hover:bg-[#e2c23f] text-stone-950 shadow-sm transition-all active:translate-y-px cursor-pointer flex items-center gap-1.5 border border-[#d8ba39]">
+                  <button type="submit" className="px-5 py-2 rounded-md font-bold text-xs bg-[#6a2092] hover:bg-[#521872] text-white shadow-sm transition-all active:translate-y-px cursor-pointer flex items-center gap-1.5 border border-[#521872]">
                     <Save size={14} /> Salvar
                   </button>
                 </div>

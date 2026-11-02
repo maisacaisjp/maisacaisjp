@@ -208,7 +208,7 @@ export default function RecipeManager({ menuItems }: RecipeManagerProps) {
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-stone-200/90 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="p-2 rounded-xl bg-[#fdde58] text-stone-950 font-bold shadow-2xs border border-[#d8ba39]">
+            <span className="p-2 rounded-xl bg-[#6a2092] text-white font-bold shadow-2xs border border-[#521872]">
               <Layers size={18} />
             </span>
             <h1 className="text-lg sm:text-xl font-bold tracking-tight text-stone-900">
@@ -241,7 +241,7 @@ export default function RecipeManager({ menuItems }: RecipeManagerProps) {
 
           <button
             onClick={() => handleOpenNewRecipe()}
-            className="h-8.5 px-3.5 bg-[#fdde58] hover:bg-[#ffe677] text-stone-950 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer border border-[#d8ba39]"
+            className="h-8.5 px-3.5 bg-[#6a2092] hover:bg-[#521872] text-white font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer border border-[#521872]"
           >
             <ChefHat size={14} className="text-stone-950" />
             <span>Nova Ficha Técnica</span>
@@ -257,11 +257,11 @@ export default function RecipeManager({ menuItems }: RecipeManagerProps) {
           onClick={() => setActiveTab('dashboard')}
           className={`flex-1 sm:flex-none h-8 px-4 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
             activeTab === 'dashboard'
-              ? 'bg-stone-900 text-white shadow-2xs'
+              ? 'bg-[#6a2092] text-white shadow-2xs'
               : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
           }`}
         >
-          <TrendingUp size={13} className={activeTab === 'dashboard' ? 'text-[#fdde58]' : ''} />
+          <TrendingUp size={13} className={activeTab === 'dashboard' ? 'text-white' : ''} />
           <span>Dashboard CMV & Lucro</span>
         </button>
 
@@ -269,11 +269,11 @@ export default function RecipeManager({ menuItems }: RecipeManagerProps) {
           onClick={() => setActiveTab('recipes')}
           className={`flex-1 sm:flex-none h-8 px-4 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
             activeTab === 'recipes'
-              ? 'bg-stone-900 text-white shadow-2xs'
+              ? 'bg-[#6a2092] text-white shadow-2xs'
               : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
           }`}
         >
-          <IceCream size={13} className={activeTab === 'recipes' ? 'text-[#fdde58]' : ''} />
+          <IceCream size={13} className={activeTab === 'recipes' ? 'text-white' : ''} />
           <span>Fichas Técnicas ({recipes.length})</span>
         </button>
 
@@ -281,11 +281,11 @@ export default function RecipeManager({ menuItems }: RecipeManagerProps) {
           onClick={() => setActiveTab('ingredients')}
           className={`flex-1 sm:flex-none h-8 px-4 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
             activeTab === 'ingredients'
-              ? 'bg-stone-900 text-white shadow-2xs'
+              ? 'bg-[#6a2092] text-white shadow-2xs'
               : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
           }`}
         >
-          <Package size={13} className={activeTab === 'ingredients' ? 'text-[#fdde58]' : ''} />
+          <Package size={13} className={activeTab === 'ingredients' ? 'text-white' : ''} />
           <span>Insumos & Matérias-Primas ({ingredients.length})</span>
         </button>
       </div>
@@ -823,7 +823,7 @@ export default function RecipeManager({ menuItems }: RecipeManagerProps) {
                 </button>
                 <button
                   type="submit"
-                  className="h-8 px-4 bg-[#fdde58] hover:bg-[#ffe677] text-stone-950 font-bold text-xs rounded-xl shadow-2xs cursor-pointer border border-[#d8ba39]"
+                  className="h-8 px-4 bg-[#6a2092] hover:bg-[#521872] text-white font-bold text-xs rounded-xl shadow-2xs cursor-pointer border border-[#521872]"
                 >
                   Salvar Insumo
                 </button>
@@ -1103,7 +1103,7 @@ export default function RecipeManager({ menuItems }: RecipeManagerProps) {
                   <button
                     type="button"
                     onClick={handleSaveRecipe}
-                    className="h-8.5 px-4 bg-[#fdde58] hover:bg-[#ffe677] text-stone-950 font-bold text-xs rounded-xl shadow-2xs cursor-pointer border border-[#d8ba39]"
+                    className="h-8.5 px-4 bg-[#6a2092] hover:bg-[#521872] text-white font-bold text-xs rounded-xl shadow-2xs cursor-pointer border border-[#521872]"
                   >
                     Salvar Ficha Técnica
                   </button>

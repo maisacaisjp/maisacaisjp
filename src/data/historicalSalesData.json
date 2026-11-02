@@ -1,0 +1,1425 @@
+{
+  "totalGeral": {
+    "faturamentoTotal": 1173253.59,
+    "pedidosTotal": 30235,
+    "ticketMedioGeral": 38.8,
+    "canais": {
+      "entrega": {
+        "faturamento": 103784.14,
+        "pedidos": 2085
+      },
+      "mesas": {
+        "faturamento": 746872.66,
+        "pedidos": 20402
+      },
+      "balcao": {
+        "faturamento": 322596.79,
+        "pedidos": 7748
+      }
+    },
+    "pagamentos": {
+      "cartao": 835914.51,
+      "dinheiro": 181306.78,
+      "pix": 151064.08,
+      "outros": 6781.83
+    }
+  },
+  "anos": [
+    {
+      "ano": 2020,
+      "pedidos": {
+        "total": 4230,
+        "entrega": 990,
+        "mesas": 1288,
+        "balcao": 1952
+      },
+      "faturamento": {
+        "total": 140427.0,
+        "entrega": 37863.0,
+        "mesas": 39560.0,
+        "balcao": 63004.0
+      },
+      "pagamentos": {
+        "cartao": 90492.21,
+        "dinheiro": 46911.0,
+        "pix": 0.0,
+        "outros": 4970.5
+      },
+      "semestres": [
+        {
+          "id": "2020-S1",
+          "arquivo": "1 sem 2020.xlsx",
+          "inicio": "01/01/2020",
+          "fim": "30/06/2020",
+          "ano": 2020,
+          "semestre": 1,
+          "label": "1º Semestre 2020",
+          "labelCurto": "1S/20",
+          "pedidos": {
+            "total": 415,
+            "entrega": 241,
+            "mesas": 56,
+            "balcao": 118
+          },
+          "faturamento": {
+            "total": 15300.0,
+            "entrega": 9378.0,
+            "mesas": 1700.0,
+            "balcao": 4222.0
+          },
+          "pagamentos": {
+            "cartao": 10044.0,
+            "cartaoCredito": 1466.0,
+            "cartaoDebito": 5968.0,
+            "dinheiro": 4787.0,
+            "pix": 0.0,
+            "voucher": 300.0,
+            "online": 501.0,
+            "taxaEntrega": 1273.0
+          },
+          "ticketMedio": 36.87
+        },
+        {
+          "id": "2020-S2",
+          "arquivo": "relatoriogeral (1).xlsx",
+          "inicio": "01/07/2020",
+          "fim": "31/12/2020",
+          "ano": 2020,
+          "semestre": 2,
+          "label": "2º Semestre 2020",
+          "labelCurto": "2S/20",
+          "pedidos": {
+            "total": 3815,
+            "entrega": 749,
+            "mesas": 1232,
+            "balcao": 1834
+          },
+          "faturamento": {
+            "total": 125127.0,
+            "entrega": 28485.0,
+            "mesas": 37860.0,
+            "balcao": 58782.0
+          },
+          "pagamentos": {
+            "cartao": 80448.21,
+            "cartaoCredito": 16598.5,
+            "cartaoDebito": 62214.21,
+            "dinheiro": 42124.0,
+            "pix": 0.0,
+            "voucher": 1635.5,
+            "online": 2534.0,
+            "taxaEntrega": 3406.0
+          },
+          "ticketMedio": 32.8
+        }
+      ],
+      "ticketMedio": 33.2
+    },
+    {
+      "ano": 2021,
+      "pedidos": {
+        "total": 6233,
+        "entrega": 603,
+        "mesas": 3523,
+        "balcao": 2107
+      },
+      "faturamento": {
+        "total": 213378.7,
+        "entrega": 24914.9,
+        "mesas": 114556.0,
+        "balcao": 73907.8
+      },
+      "pagamentos": {
+        "cartao": 153232.05,
+        "dinheiro": 52047.4,
+        "pix": 6826.8,
+        "outros": 1275.45
+      },
+      "semestres": [
+        {
+          "id": "2021-S1",
+          "arquivo": "relatoriogeral (2).xlsx",
+          "inicio": "01/01/2021",
+          "fim": "30/06/2021",
+          "ano": 2021,
+          "semestre": 1,
+          "label": "1º Semestre 2021",
+          "labelCurto": "1S/21",
+          "pedidos": {
+            "total": 2864,
+            "entrega": 482,
+            "mesas": 1061,
+            "balcao": 1321
+          },
+          "faturamento": {
+            "total": 95705.7,
+            "entrega": 20285.9,
+            "mesas": 31527.0,
+            "balcao": 43892.8
+          },
+          "pagamentos": {
+            "cartao": 65363.55,
+            "cartaoCredito": 14423.65,
+            "cartaoDebito": 50939.9,
+            "dinheiro": 28011.9,
+            "pix": 1458.8,
+            "voucher": 0.0,
+            "online": 874.45,
+            "taxaEntrega": 1386.0
+          },
+          "ticketMedio": 33.42
+        },
+        {
+          "id": "2021-S2",
+          "arquivo": "relatoriogeral (3).xlsx",
+          "inicio": "01/07/2021",
+          "fim": "31/12/2021",
+          "ano": 2021,
+          "semestre": 2,
+          "label": "2º Semestre 2021",
+          "labelCurto": "2S/21",
+          "pedidos": {
+            "total": 3369,
+            "entrega": 121,
+            "mesas": 2462,
+            "balcao": 786
+          },
+          "faturamento": {
+            "total": 117673.0,
+            "entrega": 4629.0,
+            "mesas": 83029.0,
+            "balcao": 30015.0
+          },
+          "pagamentos": {
+            "cartao": 87868.5,
+            "cartaoCredito": 15947.5,
+            "cartaoDebito": 71716.0,
+            "dinheiro": 24035.5,
+            "pix": 5368.0,
+            "voucher": 0.0,
+            "online": 401.0,
+            "taxaEntrega": 265.0
+          },
+          "ticketMedio": 34.93
+        }
+      ],
+      "ticketMedio": 34.23
+    },
+    {
+      "ano": 2022,
+      "pedidos": {
+        "total": 3335,
+        "entrega": 0,
+        "mesas": 2907,
+        "balcao": 428
+      },
+      "faturamento": {
+        "total": 110302.0,
+        "entrega": 0.0,
+        "mesas": 90859.0,
+        "balcao": 19443.0
+      },
+      "pagamentos": {
+        "cartao": 84289.0,
+        "dinheiro": 20845.0,
+        "pix": 4833.0,
+        "outros": 315.0
+      },
+      "semestres": [
+        {
+          "id": "2022-S1",
+          "arquivo": "relatoriogeral (4).xlsx",
+          "inicio": "01/01/2022",
+          "fim": "30/06/2022",
+          "ano": 2022,
+          "semestre": 1,
+          "label": "1º Semestre 2022",
+          "labelCurto": "1S/22",
+          "pedidos": {
+            "total": 3335,
+            "entrega": 0,
+            "mesas": 2907,
+            "balcao": 428
+          },
+          "faturamento": {
+            "total": 110302.0,
+            "entrega": 0.0,
+            "mesas": 90859.0,
+            "balcao": 19443.0
+          },
+          "pagamentos": {
+            "cartao": 84289.0,
+            "cartaoCredito": 22464.0,
+            "cartaoDebito": 61598.0,
+            "dinheiro": 20845.0,
+            "pix": 4833.0,
+            "voucher": 0.0,
+            "online": 315.0,
+            "taxaEntrega": 0.0
+          },
+          "ticketMedio": 33.07
+        }
+      ],
+      "ticketMedio": 33.07
+    },
+    {
+      "ano": 2023,
+      "pedidos": {
+        "total": 5649,
+        "entrega": 101,
+        "mesas": 4960,
+        "balcao": 588
+      },
+      "faturamento": {
+        "total": 210742.91,
+        "entrega": 7951.71,
+        "mesas": 175730.4,
+        "balcao": 27060.8
+      },
+      "pagamentos": {
+        "cartao": 155240.3,
+        "dinheiro": 23612.1,
+        "pix": 31860.51,
+        "outros": 0.0
+      },
+      "semestres": [
+        {
+          "id": "2023-S1",
+          "arquivo": "relatoriogeral (6).xlsx",
+          "inicio": "01/01/2023",
+          "fim": "30/06/2023",
+          "ano": 2023,
+          "semestre": 1,
+          "label": "1º Semestre 2023",
+          "labelCurto": "1S/23",
+          "pedidos": {
+            "total": 2731,
+            "entrega": 29,
+            "mesas": 2394,
+            "balcao": 308
+          },
+          "faturamento": {
+            "total": 101703.9,
+            "entrega": 1863.2,
+            "mesas": 85220.9,
+            "balcao": 14619.8
+          },
+          "pagamentos": {
+            "cartao": 77442.4,
+            "cartaoCredito": 18751.9,
+            "cartaoDebito": 58690.5,
+            "dinheiro": 12258.0,
+            "pix": 11973.5,
+            "voucher": 0.0,
+            "online": 0.0,
+            "taxaEntrega": 204.1
+          },
+          "ticketMedio": 37.24
+        },
+        {
+          "id": "2023-S2",
+          "arquivo": "relatoriogeral (7).xlsx",
+          "inicio": "01/07/2023",
+          "fim": "31/12/2023",
+          "ano": 2023,
+          "semestre": 2,
+          "label": "2º Semestre 2023",
+          "labelCurto": "2S/23",
+          "pedidos": {
+            "total": 2918,
+            "entrega": 72,
+            "mesas": 2566,
+            "balcao": 280
+          },
+          "faturamento": {
+            "total": 109039.01,
+            "entrega": 6088.51,
+            "mesas": 90509.5,
+            "balcao": 12441.0
+          },
+          "pagamentos": {
+            "cartao": 77797.9,
+            "cartaoCredito": 21558.2,
+            "cartaoDebito": 56239.7,
+            "dinheiro": 11354.1,
+            "pix": 19887.01,
+            "voucher": 0.0,
+            "online": 0.0,
+            "taxaEntrega": 497.8
+          },
+          "ticketMedio": 37.37
+        }
+      ],
+      "ticketMedio": 37.31
+    },
+    {
+      "ano": 2024,
+      "pedidos": {
+        "total": 4833,
+        "entrega": 83,
+        "mesas": 4147,
+        "balcao": 603
+      },
+      "faturamento": {
+        "total": 202609.85,
+        "entrega": 7480.82,
+        "mesas": 163924.76,
+        "balcao": 31204.27
+      },
+      "pagamentos": {
+        "cartao": 144573.93,
+        "dinheiro": 16878.54,
+        "pix": 40899.4,
+        "outros": 167.98
+      },
+      "semestres": [
+        {
+          "id": "2024-S1",
+          "arquivo": "relatoriogeral (8).xlsx",
+          "inicio": "01/01/2024",
+          "fim": "30/06/2024",
+          "ano": 2024,
+          "semestre": 1,
+          "label": "1º Semestre 2024",
+          "labelCurto": "1S/24",
+          "pedidos": {
+            "total": 2472,
+            "entrega": 43,
+            "mesas": 2156,
+            "balcao": 273
+          },
+          "faturamento": {
+            "total": 99147.25,
+            "entrega": 3641.29,
+            "mesas": 81660.2,
+            "balcao": 13845.76
+          },
+          "pagamentos": {
+            "cartao": 70309.04,
+            "cartaoCredito": 20262.02,
+            "cartaoDebito": 50047.02,
+            "dinheiro": 9850.26,
+            "pix": 18897.95,
+            "voucher": 0.0,
+            "online": 0.0,
+            "taxaEntrega": 445.58
+          },
+          "ticketMedio": 40.11
+        },
+        {
+          "id": "2024-S2",
+          "arquivo": "relatoriogeral (9).xlsx",
+          "inicio": "01/07/2024",
+          "fim": "31/12/2024",
+          "ano": 2024,
+          "semestre": 2,
+          "label": "2º Semestre 2024",
+          "labelCurto": "2S/24",
+          "pedidos": {
+            "total": 2361,
+            "entrega": 40,
+            "mesas": 1991,
+            "balcao": 330
+          },
+          "faturamento": {
+            "total": 103462.6,
+            "entrega": 3839.53,
+            "mesas": 82264.56,
+            "balcao": 17358.51
+          },
+          "pagamentos": {
+            "cartao": 74264.89,
+            "cartaoCredito": 24153.42,
+            "cartaoDebito": 50111.47,
+            "dinheiro": 7028.28,
+            "pix": 22001.45,
+            "voucher": 0.0,
+            "online": 167.98,
+            "taxaEntrega": 403.52
+          },
+          "ticketMedio": 43.82
+        }
+      ],
+      "ticketMedio": 41.92
+    },
+    {
+      "ano": 2025,
+      "pedidos": {
+        "total": 4345,
+        "entrega": 229,
+        "mesas": 2728,
+        "balcao": 1388
+      },
+      "faturamento": {
+        "total": 210371.12,
+        "entrega": 18945.82,
+        "mesas": 120654.4,
+        "balcao": 70770.9
+      },
+      "pagamentos": {
+        "cartao": 148553.62,
+        "dinheiro": 15594.98,
+        "pix": 46219.52,
+        "outros": 52.9
+      },
+      "semestres": [
+        {
+          "id": "2025-S1",
+          "arquivo": "relatoriogeral (10).xlsx",
+          "inicio": "01/01/2025",
+          "fim": "30/06/2025",
+          "ano": 2025,
+          "semestre": 1,
+          "label": "1º Semestre 2025",
+          "labelCurto": "1S/25",
+          "pedidos": {
+            "total": 2035,
+            "entrega": 109,
+            "mesas": 1470,
+            "balcao": 456
+          },
+          "faturamento": {
+            "total": 95522.0,
+            "entrega": 8992.3,
+            "mesas": 63046.2,
+            "balcao": 23483.5
+          },
+          "pagamentos": {
+            "cartao": 69283.8,
+            "cartaoCredito": 22057.4,
+            "cartaoDebito": 47173.5,
+            "dinheiro": 7178.9,
+            "pix": 19056.3,
+            "voucher": 52.9,
+            "online": 0.0,
+            "taxaEntrega": 1226.1
+          },
+          "ticketMedio": 46.94
+        },
+        {
+          "id": "2025-S2",
+          "arquivo": "relatoriogeral (11).xlsx",
+          "inicio": "01/07/2025",
+          "fim": "31/12/2025",
+          "ano": 2025,
+          "semestre": 2,
+          "label": "2º Semestre 2025",
+          "labelCurto": "2S/25",
+          "pedidos": {
+            "total": 2310,
+            "entrega": 120,
+            "mesas": 1258,
+            "balcao": 932
+          },
+          "faturamento": {
+            "total": 114849.12,
+            "entrega": 9953.52,
+            "mesas": 57608.2,
+            "balcao": 47287.4
+          },
+          "pagamentos": {
+            "cartao": 79269.82,
+            "cartaoCredito": 25844.55,
+            "cartaoDebito": 53425.27,
+            "dinheiro": 8416.08,
+            "pix": 27163.22,
+            "voucher": 0.0,
+            "online": 0.0,
+            "taxaEntrega": 1299.0
+          },
+          "ticketMedio": 49.72
+        }
+      ],
+      "ticketMedio": 48.42
+    },
+    {
+      "ano": 2026,
+      "pedidos": {
+        "total": 1610,
+        "entrega": 79,
+        "mesas": 849,
+        "balcao": 682
+      },
+      "faturamento": {
+        "total": 85422.01,
+        "entrega": 6627.89,
+        "mesas": 41588.1,
+        "balcao": 37206.02
+      },
+      "pagamentos": {
+        "cartao": 59533.4,
+        "dinheiro": 5417.76,
+        "pix": 20424.85,
+        "outros": 0.0
+      },
+      "semestres": [
+        {
+          "id": "2026-S1",
+          "arquivo": "relatoriogeral (12).xlsx",
+          "inicio": "01/01/2026",
+          "fim": "30/06/2026",
+          "ano": 2026,
+          "semestre": 1,
+          "label": "1º Semestre 2026",
+          "labelCurto": "1S/26",
+          "pedidos": {
+            "total": 1610,
+            "entrega": 79,
+            "mesas": 849,
+            "balcao": 682
+          },
+          "faturamento": {
+            "total": 85422.01,
+            "entrega": 6627.89,
+            "mesas": 41588.1,
+            "balcao": 37206.02
+          },
+          "pagamentos": {
+            "cartao": 59533.4,
+            "cartaoCredito": 20251.11,
+            "cartaoDebito": 39282.29,
+            "dinheiro": 5417.76,
+            "pix": 20424.85,
+            "voucher": 0.0,
+            "online": 0.0,
+            "taxaEntrega": 981.21
+          },
+          "ticketMedio": 53.06
+        }
+      ],
+      "ticketMedio": 53.06
+    }
+  ],
+  "semestres": [
+    {
+      "id": "2020-S1",
+      "arquivo": "1 sem 2020.xlsx",
+      "inicio": "01/01/2020",
+      "fim": "30/06/2020",
+      "ano": 2020,
+      "semestre": 1,
+      "label": "1º Semestre 2020",
+      "labelCurto": "1S/20",
+      "pedidos": {
+        "total": 415,
+        "entrega": 241,
+        "mesas": 56,
+        "balcao": 118
+      },
+      "faturamento": {
+        "total": 15300.0,
+        "entrega": 9378.0,
+        "mesas": 1700.0,
+        "balcao": 4222.0
+      },
+      "pagamentos": {
+        "cartao": 10044.0,
+        "cartaoCredito": 1466.0,
+        "cartaoDebito": 5968.0,
+        "dinheiro": 4787.0,
+        "pix": 0.0,
+        "voucher": 300.0,
+        "online": 501.0,
+        "taxaEntrega": 1273.0
+      },
+      "ticketMedio": 36.87
+    },
+    {
+      "id": "2020-S2",
+      "arquivo": "relatoriogeral (1).xlsx",
+      "inicio": "01/07/2020",
+      "fim": "31/12/2020",
+      "ano": 2020,
+      "semestre": 2,
+      "label": "2º Semestre 2020",
+      "labelCurto": "2S/20",
+      "pedidos": {
+        "total": 3815,
+        "entrega": 749,
+        "mesas": 1232,
+        "balcao": 1834
+      },
+      "faturamento": {
+        "total": 125127.0,
+        "entrega": 28485.0,
+        "mesas": 37860.0,
+        "balcao": 58782.0
+      },
+      "pagamentos": {
+        "cartao": 80448.21,
+        "cartaoCredito": 16598.5,
+        "cartaoDebito": 62214.21,
+        "dinheiro": 42124.0,
+        "pix": 0.0,
+        "voucher": 1635.5,
+        "online": 2534.0,
+        "taxaEntrega": 3406.0
+      },
+      "ticketMedio": 32.8
+    },
+    {
+      "id": "2021-S1",
+      "arquivo": "relatoriogeral (2).xlsx",
+      "inicio": "01/01/2021",
+      "fim": "30/06/2021",
+      "ano": 2021,
+      "semestre": 1,
+      "label": "1º Semestre 2021",
+      "labelCurto": "1S/21",
+      "pedidos": {
+        "total": 2864,
+        "entrega": 482,
+        "mesas": 1061,
+        "balcao": 1321
+      },
+      "faturamento": {
+        "total": 95705.7,
+        "entrega": 20285.9,
+        "mesas": 31527.0,
+        "balcao": 43892.8
+      },
+      "pagamentos": {
+        "cartao": 65363.55,
+        "cartaoCredito": 14423.65,
+        "cartaoDebito": 50939.9,
+        "dinheiro": 28011.9,
+        "pix": 1458.8,
+        "voucher": 0.0,
+        "online": 874.45,
+        "taxaEntrega": 1386.0
+      },
+      "ticketMedio": 33.42
+    },
+    {
+      "id": "2021-S2",
+      "arquivo": "relatoriogeral (3).xlsx",
+      "inicio": "01/07/2021",
+      "fim": "31/12/2021",
+      "ano": 2021,
+      "semestre": 2,
+      "label": "2º Semestre 2021",
+      "labelCurto": "2S/21",
+      "pedidos": {
+        "total": 3369,
+        "entrega": 121,
+        "mesas": 2462,
+        "balcao": 786
+      },
+      "faturamento": {
+        "total": 117673.0,
+        "entrega": 4629.0,
+        "mesas": 83029.0,
+        "balcao": 30015.0
+      },
+      "pagamentos": {
+        "cartao": 87868.5,
+        "cartaoCredito": 15947.5,
+        "cartaoDebito": 71716.0,
+        "dinheiro": 24035.5,
+        "pix": 5368.0,
+        "voucher": 0.0,
+        "online": 401.0,
+        "taxaEntrega": 265.0
+      },
+      "ticketMedio": 34.93
+    },
+    {
+      "id": "2022-S1",
+      "arquivo": "relatoriogeral (4).xlsx",
+      "inicio": "01/01/2022",
+      "fim": "30/06/2022",
+      "ano": 2022,
+      "semestre": 1,
+      "label": "1º Semestre 2022",
+      "labelCurto": "1S/22",
+      "pedidos": {
+        "total": 3335,
+        "entrega": 0,
+        "mesas": 2907,
+        "balcao": 428
+      },
+      "faturamento": {
+        "total": 110302.0,
+        "entrega": 0.0,
+        "mesas": 90859.0,
+        "balcao": 19443.0
+      },
+      "pagamentos": {
+        "cartao": 84289.0,
+        "cartaoCredito": 22464.0,
+        "cartaoDebito": 61598.0,
+        "dinheiro": 20845.0,
+        "pix": 4833.0,
+        "voucher": 0.0,
+        "online": 315.0,
+        "taxaEntrega": 0.0
+      },
+      "ticketMedio": 33.07
+    },
+    {
+      "id": "2023-S1",
+      "arquivo": "relatoriogeral (6).xlsx",
+      "inicio": "01/01/2023",
+      "fim": "30/06/2023",
+      "ano": 2023,
+      "semestre": 1,
+      "label": "1º Semestre 2023",
+      "labelCurto": "1S/23",
+      "pedidos": {
+        "total": 2731,
+        "entrega": 29,
+        "mesas": 2394,
+        "balcao": 308
+      },
+      "faturamento": {
+        "total": 101703.9,
+        "entrega": 1863.2,
+        "mesas": 85220.9,
+        "balcao": 14619.8
+      },
+      "pagamentos": {
+        "cartao": 77442.4,
+        "cartaoCredito": 18751.9,
+        "cartaoDebito": 58690.5,
+        "dinheiro": 12258.0,
+        "pix": 11973.5,
+        "voucher": 0.0,
+        "online": 0.0,
+        "taxaEntrega": 204.1
+      },
+      "ticketMedio": 37.24
+    },
+    {
+      "id": "2023-S2",
+      "arquivo": "relatoriogeral (7).xlsx",
+      "inicio": "01/07/2023",
+      "fim": "31/12/2023",
+      "ano": 2023,
+      "semestre": 2,
+      "label": "2º Semestre 2023",
+      "labelCurto": "2S/23",
+      "pedidos": {
+        "total": 2918,
+        "entrega": 72,
+        "mesas": 2566,
+        "balcao": 280
+      },
+      "faturamento": {
+        "total": 109039.01,
+        "entrega": 6088.51,
+        "mesas": 90509.5,
+        "balcao": 12441.0
+      },
+      "pagamentos": {
+        "cartao": 77797.9,
+        "cartaoCredito": 21558.2,
+        "cartaoDebito": 56239.7,
+        "dinheiro": 11354.1,
+        "pix": 19887.01,
+        "voucher": 0.0,
+        "online": 0.0,
+        "taxaEntrega": 497.8
+      },
+      "ticketMedio": 37.37
+    },
+    {
+      "id": "2024-S1",
+      "arquivo": "relatoriogeral (8).xlsx",
+      "inicio": "01/01/2024",
+      "fim": "30/06/2024",
+      "ano": 2024,
+      "semestre": 1,
+      "label": "1º Semestre 2024",
+      "labelCurto": "1S/24",
+      "pedidos": {
+        "total": 2472,
+        "entrega": 43,
+        "mesas": 2156,
+        "balcao": 273
+      },
+      "faturamento": {
+        "total": 99147.25,
+        "entrega": 3641.29,
+        "mesas": 81660.2,
+        "balcao": 13845.76
+      },
+      "pagamentos": {
+        "cartao": 70309.04,
+        "cartaoCredito": 20262.02,
+        "cartaoDebito": 50047.02,
+        "dinheiro": 9850.26,
+        "pix": 18897.95,
+        "voucher": 0.0,
+        "online": 0.0,
+        "taxaEntrega": 445.58
+      },
+      "ticketMedio": 40.11
+    },
+    {
+      "id": "2024-S2",
+      "arquivo": "relatoriogeral (9).xlsx",
+      "inicio": "01/07/2024",
+      "fim": "31/12/2024",
+      "ano": 2024,
+      "semestre": 2,
+      "label": "2º Semestre 2024",
+      "labelCurto": "2S/24",
+      "pedidos": {
+        "total": 2361,
+        "entrega": 40,
+        "mesas": 1991,
+        "balcao": 330
+      },
+      "faturamento": {
+        "total": 103462.6,
+        "entrega": 3839.53,
+        "mesas": 82264.56,
+        "balcao": 17358.51
+      },
+      "pagamentos": {
+        "cartao": 74264.89,
+        "cartaoCredito": 24153.42,
+        "cartaoDebito": 50111.47,
+        "dinheiro": 7028.28,
+        "pix": 22001.45,
+        "voucher": 0.0,
+        "online": 167.98,
+        "taxaEntrega": 403.52
+      },
+      "ticketMedio": 43.82
+    },
+    {
+      "id": "2025-S1",
+      "arquivo": "relatoriogeral (10).xlsx",
+      "inicio": "01/01/2025",
+      "fim": "30/06/2025",
+      "ano": 2025,
+      "semestre": 1,
+      "label": "1º Semestre 2025",
+      "labelCurto": "1S/25",
+      "pedidos": {
+        "total": 2035,
+        "entrega": 109,
+        "mesas": 1470,
+        "balcao": 456
+      },
+      "faturamento": {
+        "total": 95522.0,
+        "entrega": 8992.3,
+        "mesas": 63046.2,
+        "balcao": 23483.5
+      },
+      "pagamentos": {
+        "cartao": 69283.8,
+        "cartaoCredito": 22057.4,
+        "cartaoDebito": 47173.5,
+        "dinheiro": 7178.9,
+        "pix": 19056.3,
+        "voucher": 52.9,
+        "online": 0.0,
+        "taxaEntrega": 1226.1
+      },
+      "ticketMedio": 46.94
+    },
+    {
+      "id": "2025-S2",
+      "arquivo": "relatoriogeral (11).xlsx",
+      "inicio": "01/07/2025",
+      "fim": "31/12/2025",
+      "ano": 2025,
+      "semestre": 2,
+      "label": "2º Semestre 2025",
+      "labelCurto": "2S/25",
+      "pedidos": {
+        "total": 2310,
+        "entrega": 120,
+        "mesas": 1258,
+        "balcao": 932
+      },
+      "faturamento": {
+        "total": 114849.12,
+        "entrega": 9953.52,
+        "mesas": 57608.2,
+        "balcao": 47287.4
+      },
+      "pagamentos": {
+        "cartao": 79269.82,
+        "cartaoCredito": 25844.55,
+        "cartaoDebito": 53425.27,
+        "dinheiro": 8416.08,
+        "pix": 27163.22,
+        "voucher": 0.0,
+        "online": 0.0,
+        "taxaEntrega": 1299.0
+      },
+      "ticketMedio": 49.72
+    },
+    {
+      "id": "2026-S1",
+      "arquivo": "relatoriogeral (12).xlsx",
+      "inicio": "01/01/2026",
+      "fim": "30/06/2026",
+      "ano": 2026,
+      "semestre": 1,
+      "label": "1º Semestre 2026",
+      "labelCurto": "1S/26",
+      "pedidos": {
+        "total": 1610,
+        "entrega": 79,
+        "mesas": 849,
+        "balcao": 682
+      },
+      "faturamento": {
+        "total": 85422.01,
+        "entrega": 6627.89,
+        "mesas": 41588.1,
+        "balcao": 37206.02
+      },
+      "pagamentos": {
+        "cartao": 59533.4,
+        "cartaoCredito": 20251.11,
+        "cartaoDebito": 39282.29,
+        "dinheiro": 5417.76,
+        "pix": 20424.85,
+        "voucher": 0.0,
+        "online": 0.0,
+        "taxaEntrega": 981.21
+      },
+      "ticketMedio": 53.06
+    }
+  ],
+  "historicoMensal": [
+    {
+      "mes": "2020-01",
+      "faturamento": 2550.0,
+      "pedidos": 69,
+      "obs": "Importado do 1º Semestre 2020"
+    },
+    {
+      "mes": "2020-02",
+      "faturamento": 2550.0,
+      "pedidos": 69,
+      "obs": "Importado do 1º Semestre 2020"
+    },
+    {
+      "mes": "2020-03",
+      "faturamento": 2550.0,
+      "pedidos": 69,
+      "obs": "Importado do 1º Semestre 2020"
+    },
+    {
+      "mes": "2020-04",
+      "faturamento": 2550.0,
+      "pedidos": 69,
+      "obs": "Importado do 1º Semestre 2020"
+    },
+    {
+      "mes": "2020-05",
+      "faturamento": 2550.0,
+      "pedidos": 69,
+      "obs": "Importado do 1º Semestre 2020"
+    },
+    {
+      "mes": "2020-06",
+      "faturamento": 2550.0,
+      "pedidos": 70,
+      "obs": "Importado do 1º Semestre 2020"
+    },
+    {
+      "mes": "2020-07",
+      "faturamento": 20854.5,
+      "pedidos": 636,
+      "obs": "Importado do 2º Semestre 2020"
+    },
+    {
+      "mes": "2020-08",
+      "faturamento": 20854.5,
+      "pedidos": 636,
+      "obs": "Importado do 2º Semestre 2020"
+    },
+    {
+      "mes": "2020-09",
+      "faturamento": 20854.5,
+      "pedidos": 636,
+      "obs": "Importado do 2º Semestre 2020"
+    },
+    {
+      "mes": "2020-10",
+      "faturamento": 20854.5,
+      "pedidos": 636,
+      "obs": "Importado do 2º Semestre 2020"
+    },
+    {
+      "mes": "2020-11",
+      "faturamento": 20854.5,
+      "pedidos": 636,
+      "obs": "Importado do 2º Semestre 2020"
+    },
+    {
+      "mes": "2020-12",
+      "faturamento": 20854.5,
+      "pedidos": 635,
+      "obs": "Importado do 2º Semestre 2020"
+    },
+    {
+      "mes": "2021-01",
+      "faturamento": 15950.95,
+      "pedidos": 477,
+      "obs": "Importado do 1º Semestre 2021"
+    },
+    {
+      "mes": "2021-02",
+      "faturamento": 15950.95,
+      "pedidos": 477,
+      "obs": "Importado do 1º Semestre 2021"
+    },
+    {
+      "mes": "2021-03",
+      "faturamento": 15950.95,
+      "pedidos": 477,
+      "obs": "Importado do 1º Semestre 2021"
+    },
+    {
+      "mes": "2021-04",
+      "faturamento": 15950.95,
+      "pedidos": 477,
+      "obs": "Importado do 1º Semestre 2021"
+    },
+    {
+      "mes": "2021-05",
+      "faturamento": 15950.95,
+      "pedidos": 477,
+      "obs": "Importado do 1º Semestre 2021"
+    },
+    {
+      "mes": "2021-06",
+      "faturamento": 15950.95,
+      "pedidos": 479,
+      "obs": "Importado do 1º Semestre 2021"
+    },
+    {
+      "mes": "2021-07",
+      "faturamento": 19612.17,
+      "pedidos": 562,
+      "obs": "Importado do 2º Semestre 2021"
+    },
+    {
+      "mes": "2021-08",
+      "faturamento": 19612.17,
+      "pedidos": 562,
+      "obs": "Importado do 2º Semestre 2021"
+    },
+    {
+      "mes": "2021-09",
+      "faturamento": 19612.17,
+      "pedidos": 562,
+      "obs": "Importado do 2º Semestre 2021"
+    },
+    {
+      "mes": "2021-10",
+      "faturamento": 19612.17,
+      "pedidos": 562,
+      "obs": "Importado do 2º Semestre 2021"
+    },
+    {
+      "mes": "2021-11",
+      "faturamento": 19612.17,
+      "pedidos": 562,
+      "obs": "Importado do 2º Semestre 2021"
+    },
+    {
+      "mes": "2021-12",
+      "faturamento": 19612.15,
+      "pedidos": 559,
+      "obs": "Importado do 2º Semestre 2021"
+    },
+    {
+      "mes": "2022-01",
+      "faturamento": 18383.67,
+      "pedidos": 556,
+      "obs": "Importado do 1º Semestre 2022"
+    },
+    {
+      "mes": "2022-02",
+      "faturamento": 18383.67,
+      "pedidos": 556,
+      "obs": "Importado do 1º Semestre 2022"
+    },
+    {
+      "mes": "2022-03",
+      "faturamento": 18383.67,
+      "pedidos": 556,
+      "obs": "Importado do 1º Semestre 2022"
+    },
+    {
+      "mes": "2022-04",
+      "faturamento": 18383.67,
+      "pedidos": 556,
+      "obs": "Importado do 1º Semestre 2022"
+    },
+    {
+      "mes": "2022-05",
+      "faturamento": 18383.67,
+      "pedidos": 556,
+      "obs": "Importado do 1º Semestre 2022"
+    },
+    {
+      "mes": "2022-06",
+      "faturamento": 18383.65,
+      "pedidos": 555,
+      "obs": "Importado do 1º Semestre 2022"
+    },
+    {
+      "mes": "2023-01",
+      "faturamento": 16950.65,
+      "pedidos": 455,
+      "obs": "Importado do 1º Semestre 2023"
+    },
+    {
+      "mes": "2023-02",
+      "faturamento": 16950.65,
+      "pedidos": 455,
+      "obs": "Importado do 1º Semestre 2023"
+    },
+    {
+      "mes": "2023-03",
+      "faturamento": 16950.65,
+      "pedidos": 455,
+      "obs": "Importado do 1º Semestre 2023"
+    },
+    {
+      "mes": "2023-04",
+      "faturamento": 16950.65,
+      "pedidos": 455,
+      "obs": "Importado do 1º Semestre 2023"
+    },
+    {
+      "mes": "2023-05",
+      "faturamento": 16950.65,
+      "pedidos": 455,
+      "obs": "Importado do 1º Semestre 2023"
+    },
+    {
+      "mes": "2023-06",
+      "faturamento": 16950.65,
+      "pedidos": 456,
+      "obs": "Importado do 1º Semestre 2023"
+    },
+    {
+      "mes": "2023-07",
+      "faturamento": 18173.17,
+      "pedidos": 486,
+      "obs": "Importado do 2º Semestre 2023"
+    },
+    {
+      "mes": "2023-08",
+      "faturamento": 18173.17,
+      "pedidos": 486,
+      "obs": "Importado do 2º Semestre 2023"
+    },
+    {
+      "mes": "2023-09",
+      "faturamento": 18173.17,
+      "pedidos": 486,
+      "obs": "Importado do 2º Semestre 2023"
+    },
+    {
+      "mes": "2023-10",
+      "faturamento": 18173.17,
+      "pedidos": 486,
+      "obs": "Importado do 2º Semestre 2023"
+    },
+    {
+      "mes": "2023-11",
+      "faturamento": 18173.17,
+      "pedidos": 486,
+      "obs": "Importado do 2º Semestre 2023"
+    },
+    {
+      "mes": "2023-12",
+      "faturamento": 18173.16,
+      "pedidos": 488,
+      "obs": "Importado do 2º Semestre 2023"
+    },
+    {
+      "mes": "2024-01",
+      "faturamento": 16524.54,
+      "pedidos": 412,
+      "obs": "Importado do 1º Semestre 2024"
+    },
+    {
+      "mes": "2024-02",
+      "faturamento": 16524.54,
+      "pedidos": 412,
+      "obs": "Importado do 1º Semestre 2024"
+    },
+    {
+      "mes": "2024-03",
+      "faturamento": 16524.54,
+      "pedidos": 412,
+      "obs": "Importado do 1º Semestre 2024"
+    },
+    {
+      "mes": "2024-04",
+      "faturamento": 16524.54,
+      "pedidos": 412,
+      "obs": "Importado do 1º Semestre 2024"
+    },
+    {
+      "mes": "2024-05",
+      "faturamento": 16524.54,
+      "pedidos": 412,
+      "obs": "Importado do 1º Semestre 2024"
+    },
+    {
+      "mes": "2024-06",
+      "faturamento": 16524.55,
+      "pedidos": 412,
+      "obs": "Importado do 1º Semestre 2024"
+    },
+    {
+      "mes": "2024-07",
+      "faturamento": 17243.77,
+      "pedidos": 394,
+      "obs": "Importado do 2º Semestre 2024"
+    },
+    {
+      "mes": "2024-08",
+      "faturamento": 17243.77,
+      "pedidos": 394,
+      "obs": "Importado do 2º Semestre 2024"
+    },
+    {
+      "mes": "2024-09",
+      "faturamento": 17243.77,
+      "pedidos": 394,
+      "obs": "Importado do 2º Semestre 2024"
+    },
+    {
+      "mes": "2024-10",
+      "faturamento": 17243.77,
+      "pedidos": 394,
+      "obs": "Importado do 2º Semestre 2024"
+    },
+    {
+      "mes": "2024-11",
+      "faturamento": 17243.77,
+      "pedidos": 394,
+      "obs": "Importado do 2º Semestre 2024"
+    },
+    {
+      "mes": "2024-12",
+      "faturamento": 17243.75,
+      "pedidos": 391,
+      "obs": "Importado do 2º Semestre 2024"
+    },
+    {
+      "mes": "2025-01",
+      "faturamento": 15920.33,
+      "pedidos": 339,
+      "obs": "Importado do 1º Semestre 2025"
+    },
+    {
+      "mes": "2025-02",
+      "faturamento": 15920.33,
+      "pedidos": 339,
+      "obs": "Importado do 1º Semestre 2025"
+    },
+    {
+      "mes": "2025-03",
+      "faturamento": 15920.33,
+      "pedidos": 339,
+      "obs": "Importado do 1º Semestre 2025"
+    },
+    {
+      "mes": "2025-04",
+      "faturamento": 15920.33,
+      "pedidos": 339,
+      "obs": "Importado do 1º Semestre 2025"
+    },
+    {
+      "mes": "2025-05",
+      "faturamento": 15920.33,
+      "pedidos": 339,
+      "obs": "Importado do 1º Semestre 2025"
+    },
+    {
+      "mes": "2025-06",
+      "faturamento": 15920.35,
+      "pedidos": 340,
+      "obs": "Importado do 1º Semestre 2025"
+    },
+    {
+      "mes": "2025-07",
+      "faturamento": 19141.52,
+      "pedidos": 385,
+      "obs": "Importado do 2º Semestre 2025"
+    },
+    {
+      "mes": "2025-08",
+      "faturamento": 19141.52,
+      "pedidos": 385,
+      "obs": "Importado do 2º Semestre 2025"
+    },
+    {
+      "mes": "2025-09",
+      "faturamento": 19141.52,
+      "pedidos": 385,
+      "obs": "Importado do 2º Semestre 2025"
+    },
+    {
+      "mes": "2025-10",
+      "faturamento": 19141.52,
+      "pedidos": 385,
+      "obs": "Importado do 2º Semestre 2025"
+    },
+    {
+      "mes": "2025-11",
+      "faturamento": 19141.52,
+      "pedidos": 385,
+      "obs": "Importado do 2º Semestre 2025"
+    },
+    {
+      "mes": "2025-12",
+      "faturamento": 19141.52,
+      "pedidos": 385,
+      "obs": "Importado do 2º Semestre 2025"
+    },
+    {
+      "mes": "2026-01",
+      "faturamento": 14237.0,
+      "pedidos": 268,
+      "obs": "Importado do 1º Semestre 2026"
+    },
+    {
+      "mes": "2026-02",
+      "faturamento": 14237.0,
+      "pedidos": 268,
+      "obs": "Importado do 1º Semestre 2026"
+    },
+    {
+      "mes": "2026-03",
+      "faturamento": 14237.0,
+      "pedidos": 268,
+      "obs": "Importado do 1º Semestre 2026"
+    },
+    {
+      "mes": "2026-04",
+      "faturamento": 14237.0,
+      "pedidos": 268,
+      "obs": "Importado do 1º Semestre 2026"
+    },
+    {
+      "mes": "2026-05",
+      "faturamento": 14237.0,
+      "pedidos": 268,
+      "obs": "Importado do 1º Semestre 2026"
+    },
+    {
+      "mes": "2026-06",
+      "faturamento": 14237.01,
+      "pedidos": 270,
+      "obs": "Importado do 1º Semestre 2026"
+    }
+  ]
+}

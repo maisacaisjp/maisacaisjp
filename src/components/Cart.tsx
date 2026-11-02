@@ -294,7 +294,14 @@ export default function Cart({
             itemName = `1/2 ${item.menuItem.name} e 1/2 ${item.halfAndHalfFlavor.name}`;
           }
           if (item.size) {
-            itemName += ` (${item.size === "G" ? "Gr" : item.size === "M" ? "Md" : "Pq"})`;
+            const sizeMap: Record<string, string> = {
+              'P': '330ml',
+              'M': '440ml',
+              'G': '550ml',
+              'Big': '770ml',
+              'Super Big': '1 Litro'
+            };
+            itemName += ` (${sizeMap[item.size] || item.size})`;
           }
           const extrasTotalPrice = (item.extras || []).reduce((sum, e) => sum + e.price, 0);
           return {
@@ -417,8 +424,16 @@ export default function Cart({
       if (item.isHalfAndHalf && item.halfAndHalfFlavor) {
         desc = `1/2 ${item.menuItem.name} e 1/2 ${item.halfAndHalfFlavor.name}`;
       }
-      if (item.size)
-        desc += ` (${item.size})`;
+      if (item.size) {
+        const sizeMap: Record<string, string> = {
+          'P': '330ml',
+          'M': '440ml',
+          'G': '550ml',
+          'Big': '770ml',
+          'Super Big': '1 Litro'
+        };
+        desc += ` (${sizeMap[item.size] || item.size})`;
+      }
       
       const extrasTotalPrice = (item.extras || []).reduce((sum, e) => sum + e.price, 0);
       const basePrice = item.priceCalculated - extrasTotalPrice;

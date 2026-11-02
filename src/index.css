@@ -183,3 +183,76 @@ body {
   }
 }
 
+
+/* Módulo Financeiro (gestor) */
+@layer components {
+  .fin-campo {
+    @apply w-full rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-sm text-stone-900 outline-none transition focus:border-[#6a2092] focus:ring-2 focus:ring-[#6a2092]/15;
+  }
+  .fin-tabela {
+    @apply w-full text-sm;
+  }
+  .fin-tabela th {
+    @apply px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-stone-500 border-b border-stone-200 whitespace-nowrap;
+  }
+  .fin-tabela td {
+    @apply px-2 py-1.5 border-b border-stone-100 align-middle;
+  }
+  .fin-num {
+    @apply text-right tabular-nums whitespace-nowrap;
+  }
+  .fin-tabela th.fin-num {
+    @apply text-right;
+  }
+}
+
+/* Financeiro no celular: cada linha da tabela vira um cartão (sem rolagem lateral) */
+@media (max-width: 767px) {
+  .fin-tabela,
+  .fin-tabela tbody,
+  .fin-tabela tfoot {
+    display: block;
+    width: 100%;
+  }
+  .fin-tabela thead {
+    display: none;
+  }
+  .fin-tabela tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem 0.75rem;
+    margin-bottom: 0.5rem;
+    padding: 0.75rem;
+    border: 1px solid #e7e5e4;
+    border-radius: 0.75rem;
+    background: #fff;
+  }
+  .fin-tabela td {
+    display: block;
+    width: auto !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    text-align: left !important;
+  }
+  .fin-tabela td:empty {
+    display: none;
+  }
+  .fin-tabela td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.15rem;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #78716c;
+  }
+  .fin-tabela td.fin-cheio {
+    grid-column: 1 / -1;
+  }
+  .fin-tabela td.fin-acao {
+    grid-column: 1 / -1;
+    justify-self: end;
+  }
+}

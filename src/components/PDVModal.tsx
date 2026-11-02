@@ -1027,7 +1027,7 @@ export default function PDVModal({
                   ? 'bg-purple-600 text-white border-purple-700 shadow-xs'
                   : 'bg-purple-50 text-purple-800 border-purple-200 hover:bg-purple-100 hover:text-purple-900 font-extrabold';
               } else if (isActive) {
-                buttonStyle = 'bg-[var(--pdv-brand)] text-stone-950 border-[#d8ba39] shadow-xs';
+                buttonStyle = 'bg-[var(--pdv-brand)] text-white border-[#521872] shadow-xs';
               } else {
                 buttonStyle = 'bg-[var(--pdv-surface)] text-[var(--pdv-text-secondary)] border-[var(--pdv-border)] hover:bg-[var(--pdv-surface-hover)] hover:text-[var(--pdv-text-primary)]';
               }
@@ -1214,21 +1214,21 @@ export default function PDVModal({
                   value={customerName}
                   onChange={e => setCustomerName(e.target.value)}
                   placeholder="Nome do Cliente *"
-                  className="w-full h-7 px-2 bg-white border border-stone-300 rounded-md text-[11px] font-bold text-stone-900 focus:border-amber-500 focus:ring-1 focus:ring-amber-100 focus:outline-none transition-all placeholder:text-stone-400 placeholder:font-normal"
+                  className="w-full h-7 px-2 bg-white border border-stone-300 rounded-md text-[11px] font-bold text-stone-900 focus:border-[#6a2092] focus:ring-1 focus:ring-[#6a2092]/20 focus:outline-none transition-all placeholder:text-stone-400 placeholder:font-normal"
                 />
                 <input
                   type="text"
                   value={customerNif}
                   onChange={e => setCustomerNif(e.target.value)}
                   placeholder="CPF (opcional)"
-                  className="w-full h-7 px-2 bg-white border border-stone-300 rounded-md text-[11px] font-medium text-stone-900 focus:border-amber-500 focus:ring-1 focus:ring-amber-100 focus:outline-none transition-all placeholder:text-stone-400 placeholder:font-normal"
+                  className="w-full h-7 px-2 bg-white border border-stone-300 rounded-md text-[11px] font-medium text-stone-900 focus:border-[#6a2092] focus:ring-1 focus:ring-[#6a2092]/20 focus:outline-none transition-all placeholder:text-stone-400 placeholder:font-normal"
                 />
                 <input
                   type="text"
                   value={tableNumber}
                   onChange={e => setTableNumber(e.target.value)}
                   placeholder="Nº Mesa / Comanda *"
-                  className="w-full h-7 px-2 bg-white border border-stone-300 rounded-md text-[11px] font-mono font-bold text-stone-900 focus:border-amber-500 focus:ring-1 focus:ring-amber-100 focus:outline-none transition-all placeholder:text-stone-400 placeholder:font-normal"
+                  className="w-full h-7 px-2 bg-white border border-stone-300 rounded-md text-[11px] font-mono font-bold text-stone-900 focus:border-[#6a2092] focus:ring-1 focus:ring-[#6a2092]/20 focus:outline-none transition-all placeholder:text-stone-400 placeholder:font-normal"
                 />
               </div>
             )}
@@ -1264,7 +1264,7 @@ export default function PDVModal({
                     type="text"
                     value={deliveryAddress}
                     onChange={e => setDeliveryAddress(e.target.value)}
-                    placeholder="Morada / Rua, Nº, Andar, Cód. Postal *"
+                    placeholder="Endereço: rua, nº, complemento *"
                     className="w-full h-7 px-2 bg-white border border-stone-300 rounded-md text-[11px] font-medium text-stone-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-100 focus:outline-none transition-all placeholder:text-stone-400 placeholder:font-normal"
                   />
                 </div>
@@ -1509,7 +1509,7 @@ export default function PDVModal({
               onChange={e => setOrderNotes(e.target.value)}
               placeholder="Ex: sem cebola, massa crocante, enviar talheres, entregar após 20h..."
               rows={2}
-              className="w-full px-2 py-1 bg-white border border-stone-300 rounded text-[11px] text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-200 resize-none transition-all leading-snug"
+              className="w-full px-2 py-1 bg-white border border-stone-300 rounded text-[11px] text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-[#6a2092] focus:ring-1 focus:ring-[#6a2092]/20 resize-none transition-all leading-snug"
             />
           </div>
 
@@ -1688,7 +1688,7 @@ export default function PDVModal({
             <button
               onClick={handleFinalizeOrder}
               disabled={isSubmitting || cart.length === 0}
-              className="w-full h-11 bg-[#fdde58] hover:bg-[#e2c23f] active:scale-[0.98] disabled:opacity-40 disabled:bg-gray-300 disabled:text-gray-500 text-stone-950 font-black text-sm uppercase tracking-wider rounded-[var(--pdv-radius-lg)] shadow-[var(--pdv-shadow-md)] transition-all flex items-center justify-center gap-2 cursor-pointer border border-[#d8ba39]"
+              className="w-full h-11 bg-[#6a2092] hover:bg-[#521872] active:scale-[0.98] disabled:opacity-40 disabled:bg-gray-300 disabled:text-gray-500 text-white font-black text-sm uppercase tracking-wider rounded-[var(--pdv-radius-lg)] shadow-[var(--pdv-shadow-md)] transition-all flex items-center justify-center gap-2 cursor-pointer border border-[#521872]"
             >
               {isSubmitting ? (
                 <div className="flex items-center gap-1.5">
@@ -1875,7 +1875,7 @@ export default function PDVModal({
                       <select
                         value={customPromoFlavor}
                         onChange={e => setCustomPromoFlavor(e.target.value)}
-                        className="w-full h-8 px-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold text-gray-900 focus:bg-white focus:border-amber-500 focus:outline-none"
+                        className="w-full h-8 px-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold text-gray-900 focus:bg-white focus:border-[#6a2092] focus:outline-none"
                       >
                         <option value="">Ou selecione qualquer outro sabor do cardápio...</option>
                         {pizzasList.map(p => (
@@ -1923,7 +1923,7 @@ export default function PDVModal({
                         <select
                           value={customPromoFlavor2}
                           onChange={e => setCustomPromoFlavor2(e.target.value)}
-                          className="w-full h-8 px-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold text-gray-900 focus:bg-white focus:border-amber-500 focus:outline-none"
+                          className="w-full h-8 px-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold text-gray-900 focus:bg-white focus:border-[#6a2092] focus:outline-none"
                         >
                           <option value="">Ou selecione o 2º sabor do cardápio...</option>
                           {pizzasList.map(p => (
@@ -2037,7 +2037,7 @@ export default function PDVModal({
                                   }
                                 }}
                                 placeholder="Digite o nome do produto..."
-                                className="w-full h-8 pl-8 pr-3 text-xs bg-gray-50 border border-gray-200 rounded-lg font-bold text-gray-900 focus:bg-white focus:border-amber-500 focus:outline-none"
+                                className="w-full h-8 pl-8 pr-3 text-xs bg-gray-50 border border-gray-200 rounded-lg font-bold text-gray-900 focus:bg-white focus:border-[#6a2092] focus:outline-none"
                               />
                             </div>
 
@@ -2154,7 +2154,7 @@ export default function PDVModal({
                                 }
                               }}
                               placeholder="Digite o nome do produto..."
-                              className="w-full h-8 pl-8 pr-3 text-xs bg-gray-50 border border-gray-200 rounded-lg font-bold text-gray-900 focus:bg-white focus:border-amber-500 focus:outline-none"
+                              className="w-full h-8 pl-8 pr-3 text-xs bg-gray-50 border border-gray-200 rounded-lg font-bold text-gray-900 focus:bg-white focus:border-[#6a2092] focus:outline-none"
                             />
                           </div>
 
@@ -2320,7 +2320,7 @@ export default function PDVModal({
               <button
                 onClick={handleConfirmCustomization}
                 disabled={!isPromoWithPizza(customizingItem) && customAdditionalFlavors.some(f => !f || !f.id)}
-                className="flex-1 py-2.5 bg-[#fdde58] hover:bg-[#e2c23f] disabled:opacity-50 text-stone-950 font-bold rounded-xl text-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 border border-[#d8ba39]"
+                className="flex-1 py-2.5 bg-[#6a2092] hover:bg-[#521872] disabled:opacity-50 text-white font-bold rounded-xl text-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 border border-[#521872]"
               >
                 <Check size={16} className="stroke-[3]" />
                 <span>

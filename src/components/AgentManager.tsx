@@ -1089,7 +1089,7 @@ export default function AgentManager() {
                 placeholder="Buscar cliente ou telefone..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="w-full pl-7 pr-7 py-1.5 text-xs bg-stone-100/80 rounded-lg border border-transparent focus:border-amber-400 focus:ring-2 focus:ring-amber-500/20 focus:bg-white focus:outline-none transition-all placeholder:text-stone-400 font-sans"
+                className="w-full pl-7 pr-7 py-1.5 text-xs bg-stone-100/80 rounded-lg border border-transparent focus:border-[#6a2092] focus:ring-2 focus:ring-[#6a2092]/20 focus:bg-white focus:outline-none transition-all placeholder:text-stone-400 font-sans"
               />
               {searchTerm && (
                 <button
@@ -1563,7 +1563,7 @@ export default function AgentManager() {
                   : "Digite uma resposta (isso pausará a IA)..."}
                 value={manualMessage}
                 onChange={e => setManualMessage(e.target.value)}
-                className="flex-1 px-3.5 sm:px-4 py-2.5 text-base sm:text-xs md:text-sm bg-stone-50 rounded-xl border border-stone-200 focus:border-amber-400 focus:ring-2 focus:ring-amber-500/20 focus:bg-white focus:outline-none transition-all font-sans placeholder:text-stone-400"
+                className="flex-1 px-3.5 sm:px-4 py-2.5 text-base sm:text-xs md:text-sm bg-stone-50 rounded-xl border border-stone-200 focus:border-[#6a2092] focus:ring-2 focus:ring-[#6a2092]/20 focus:bg-white focus:outline-none transition-all font-sans placeholder:text-stone-400"
               />
               <button
                 type="submit"

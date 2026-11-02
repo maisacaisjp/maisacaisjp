@@ -13,3 +13,6 @@ backups/
 .netlify/
 scratch/
 supabase/.temp/
+
+# Telefones de clientes
+CASHBACK_MIGRACAO_MULTIPEDIDOS.sql

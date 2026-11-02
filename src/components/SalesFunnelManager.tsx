@@ -435,7 +435,7 @@ export const SalesFunnelManager: React.FC<SalesFunnelManagerProps> = ({ onNaviga
           <div className="w-full flex items-center justify-between mb-3 z-10">
             <div className="flex items-center gap-2">
               <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-stone-200 flex items-center gap-1.5">
-                <Layers size={13} className="text-[#fdde58]" />
+                <Layers size={13} className="text-[#e9d5f7]" />
                 Funil Tridimensional • Mais Açaí
               </span>
             </div>
@@ -457,18 +457,18 @@ export const SalesFunnelManager: React.FC<SalesFunnelManagerProps> = ({ onNaviga
                   <feDropShadow dx="0" dy="1.5" stdDeviation="1.5" floodColor="#000000" floodOpacity="0.85"/>
                 </filter>
 
-                {/* Nível 1: Amarelo Oficial da Marca Mais Açaí (#fdde58) */}
+                {/* Nível 1: Roxo Oficial da Marca Mais Açaí */}
                 <linearGradient id="brand-l1-left" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#d8ba39"/>
-                  <stop offset="100%" stopColor="#b49721"/>
+                  <stop offset="0%" stopColor="#6a2092"/>
+                  <stop offset="100%" stopColor="#4d0471"/>
                 </linearGradient>
                 <linearGradient id="brand-l1-right" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#fdde58"/>
-                  <stop offset="100%" stopColor="#d8ba39"/>
+                  <stop offset="0%" stopColor="#8e44c4"/>
+                  <stop offset="100%" stopColor="#6a2092"/>
                 </linearGradient>
                 <linearGradient id="brand-l1-top" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="#ffea85"/>
-                  <stop offset="100%" stopColor="#fdde58"/>
+                  <stop offset="0%" stopColor="#b57edc"/>
+                  <stop offset="100%" stopColor="#8e44c4"/>
                 </linearGradient>
 
                 {/* Nível 2: Âmbar / Laranja Vibrante Quente */}
@@ -503,12 +503,12 @@ export const SalesFunnelManager: React.FC<SalesFunnelManagerProps> = ({ onNaviga
 
                 {/* Nível 5: Ouro Dourado Nobre de Fechamento */}
                 <linearGradient id="brand-l5-left" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#a16207"/>
-                  <stop offset="100%" stopColor="#713f12"/>
+                  <stop offset="0%" stopColor="#6a2092"/>
+                  <stop offset="100%" stopColor="#3b0257"/>
                 </linearGradient>
                 <linearGradient id="brand-l5-right" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#facc15"/>
-                  <stop offset="100%" stopColor="#ca8a04"/>
+                  <stop offset="0%" stopColor="#a35fd0"/>
+                  <stop offset="100%" stopColor="#6a2092"/>
                 </linearGradient>
               </defs>
 
@@ -521,21 +521,21 @@ export const SalesFunnelManager: React.FC<SalesFunnelManagerProps> = ({ onNaviga
                 <polygon 
                   points="300,10 520,38 300,68 80,38" 
                   fill="url(#brand-l1-top)" 
-                  stroke="#fef08a" 
+                  stroke="#e9d5f7" 
                   strokeWidth={selectedStage === 1 ? '2.5' : '1'} 
                 />
                 {/* Faceta Esquerda */}
                 <polygon 
                   points="80,38 300,68 300,140 110,110" 
                   fill="url(#brand-l1-left)" 
-                  stroke="#713f12" 
+                  stroke="#3b0257" 
                   strokeWidth="0.75" 
                 />
                 {/* Faceta Direita */}
                 <polygon 
                   points="300,68 520,38 490,110 300,140" 
                   fill="url(#brand-l1-right)" 
-                  stroke="#a16207" 
+                  stroke="#6a2092" 
                   strokeWidth="0.75" 
                 />
 
@@ -667,18 +667,18 @@ export const SalesFunnelManager: React.FC<SalesFunnelManagerProps> = ({ onNaviga
                 <polygon 
                   points="220,343 300,373 300,440 245,410" 
                   fill="url(#brand-l5-left)" 
-                  stroke="#713f12" 
+                  stroke="#3b0257" 
                   strokeWidth={selectedStage === 5 ? '2' : '0.75'} 
                 />
                 <polygon 
                   points="300,373 380,343 355,410 300,440" 
                   fill="url(#brand-l5-right)" 
-                  stroke="#a16207" 
+                  stroke="#6a2092" 
                   strokeWidth={selectedStage === 5 ? '2' : '0.75'} 
                 />
                 {/* Ponta em bisel dourada */}
-                <polygon points="245,410 300,440 300,470 270,455" fill="#713f12" />
-                <polygon points="300,440 355,410 330,455 300,470" fill="#facc15" />
+                <polygon points="245,410 300,440 300,470 270,455" fill="#3b0257" />
+                <polygon points="300,440 355,410 330,455 300,470" fill="#a35fd0" />
 
                 <g transform="translate(266, 391.5) rotate(11)" filter="url(#funnel-text-shadow)">
                   <text x="0" y="0" textAnchor="middle" dominantBaseline="central" fill="#ffffff" fontSize="9.5" fontWeight="900" letterSpacing="0.5">

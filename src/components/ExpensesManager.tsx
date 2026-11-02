@@ -730,7 +730,7 @@ export default function ExpensesManager({ expenses = [], onExpenseChange }: Expe
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full h-10 bg-[#fdde58] hover:bg-[#e2c23f] disabled:opacity-50 text-stone-950 font-bold text-xs rounded-lg transition-all shadow-xs border border-[#d8ba39] flex items-center justify-center gap-1.5"
+                  className="w-full h-10 bg-[#6a2092] hover:bg-[#521872] disabled:opacity-50 text-white font-bold text-xs rounded-lg transition-all shadow-xs border border-[#521872] flex items-center justify-center gap-1.5"
                 >
                   <Plus size={14} className="stroke-[2.5]" />
                   <span>{submitting ? 'Salvando...' : 'Confirmar Lançamento'}</span>

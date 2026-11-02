@@ -1236,7 +1236,17 @@ export const menuData: MenuItem[] = [
 ];
 
 export const menuDoDia: MenuItem[] = [];
-export const ALL_MENU_ITEMS: MenuItem[] = [...menuData];
+
+export const extraMenuItems: MenuItem[] = acaiExtras.map(extra => ({
+  id: extra.id,
+  name: extra.name,
+  ingredients: 'Adicional para copos de açaí e combos',
+  category: 'adicionais',
+  priceSingle: extra.price,
+  imageUrl: ''
+}));
+
+export const ALL_MENU_ITEMS: MenuItem[] = [...menuData, ...extraMenuItems];
 
 // Aliases para compatibilidade total com os componentes existentes
 export const menuCombos = menuData.filter(i => i.category === 'combos-especiais' || i.category === 'mais-vendidos');

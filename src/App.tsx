@@ -25,6 +25,7 @@ import PizzaModal from "./components/PizzaModal";
 import Footer from "./components/Footer";
 import PromoModal from "./components/PromoModal";
 import MenuDoDiaModal from "./components/MenuDoDiaModal";
+import GhostCursor from "./components/GhostCursor";
 
 
 export const categoriesUI = [
@@ -102,6 +103,39 @@ function App() {
   const [hasOpenedPromoAutomatically, setHasOpenedPromoAutomatically] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [cartBounce, setCartBounce] = useState(false);
+  const [coverUrl, setCoverUrl] = useState<string>('/capa.png');
+
+  useEffect(() => {
+    const loadCover = async () => {
+      try {
+        const { data } = await supabase
+          .from('settings')
+          .select('value')
+          .eq('key', 'store_cover_url')
+          .maybeSingle();
+        if (data && data.value) {
+          setCoverUrl(data.value);
+        }
+      } catch (err) {
+        console.warn('Erro ao carregar capa da loja:', err);
+      }
+    };
+    loadCover();
+
+    const channelId = `public:settings-cover-${Math.random().toString(36).substring(7)}`;
+    const channel = supabase
+      .channel(channelId)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, payload => {
+        if ((payload.new as any)?.key === 'store_cover_url') {
+          setCoverUrl((payload.new as any).value || '/capa.png');
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -248,6 +282,9 @@ function App() {
 
     const tabsMap: Record<string, { id: string; label: string; sub: string; group: string[]; order: number }> = {};
     dbCategories.forEach((cat: any) => {
+      // Adicionais e bordas são complementos de montagem nos modais, não categorias de vitrine direta
+      if (cat.id === 'adicionais' || cat.id === 'adicionais-extras' || cat.id === 'bordas') return;
+
       const tabId = cat.display_group || cat.id;
       if (!tabsMap[tabId]) {
         tabsMap[tabId] = {
@@ -334,6 +371,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-[#f5f5f5] font-sans text-[#1a1a1a] scroll-smooth pb-20 lg:pb-0">
+      <GhostCursor />
       {/* Navbar Topo */}
       {/* iFood Style Header */}
       <header className="bg-white sticky top-0 z-50 shadow-sm border-b border-gray-100">
@@ -395,11 +433,11 @@ function App() {
       {/* Hero Banner */}
       <div className="relative h-[220px] md:h-[280px] w-full bg-[#1c0524] max-w-7xl mx-auto md:mt-4 md:rounded-2xl overflow-hidden shadow-sm">
         <img
-          src="/capa.png"
-          className="w-full h-full object-cover opacity-90"
+          src={coverUrl || "/capa.png"}
+          className="w-full h-full object-cover opacity-90 transition-opacity duration-300"
           alt="Mais Açaí Capa Oficial"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20 pointer-events-none"></div>
         <div className="absolute bottom-6 left-6 md:left-12 flex items-center gap-4">
           <div className="w-24 h-24 bg-[#1c0524] rounded-full border-4 border-white flex items-center justify-center text-white scale-110 shadow-xl overflow-hidden drop-shadow-2xl relative group">
             <img

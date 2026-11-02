@@ -5,10 +5,11 @@ import {
   Clock, Truck, Building2, Key, FileSpreadsheet, 
   Sparkles, Check, CheckCircle2, 
   Sliders, AlertCircle, Trash2, Upload,
-  Shield, CheckCheck, RefreshCw
+  Shield, CheckCheck, RefreshCw, Image as ImageIcon
 } from 'lucide-react';
 
 import { getCashbackConfig, saveCashbackConfig, DEFAULT_CASHBACK_PERCENT } from '../utils/cashback';
+import CoverCropManager from './CoverCropManager';
 
 interface SettingsManagerProps {
   onTestPrint?: (order: any) => void;
@@ -21,7 +22,7 @@ interface SettingsManagerProps {
   onTestSound?: () => void;
 }
 
-type SettingsTab = 'empresa' | 'horarios' | 'impressao' | 'entregas' | 'cashback' | 'notificacoes' | 'seguranca';
+type SettingsTab = 'empresa' | 'capa' | 'horarios' | 'impressao' | 'entregas' | 'cashback' | 'notificacoes' | 'seguranca';
 
 export default function SettingsManager({ 
   onTestPrint, 
@@ -228,6 +229,7 @@ export default function SettingsManager({
   // Categorias do menu lateral de navegação
   const navItems = [
     { id: 'empresa' as SettingsTab, label: 'Empresa & Marca', icon: Building2, desc: 'Nome, CNPJ, endereço e logo' },
+    { id: 'capa' as SettingsTab, label: 'Capa do Cardápio', icon: ImageIcon, desc: 'Banner e enquadramento da foto' },
     { id: 'horarios' as SettingsTab, label: 'Horários de Funcionamento', icon: Clock, desc: 'Turnos e dias operacionais' },
     { id: 'impressao' as SettingsTab, label: 'Impressão Térmica', icon: Printer, desc: 'Auto-impressão e atrasos' },
     { id: 'entregas' as SettingsTab, label: 'Entregas & Prazos', icon: Truck, desc: 'Tempo estimado de espera e entrega' },
@@ -243,7 +245,7 @@ export default function SettingsManager({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-stone-200">
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-stone-900 text-[#fdde58] flex items-center justify-center border border-stone-800 shadow-2xs">
+            <div className="w-8 h-8 rounded-lg bg-[#6a2092] text-white flex items-center justify-center border border-[#521872] shadow-2xs">
               <Sliders size={16} />
             </div>
             <h1 className="text-xl font-bold text-stone-900 tracking-tight">Configurações do Sistema</h1>
@@ -273,18 +275,18 @@ export default function SettingsManager({
                 onClick={() => setActiveTab(item.id)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all cursor-pointer ${
                   isActive 
-                    ? 'bg-stone-900 text-white shadow-xs' 
+                    ? 'bg-[#6a2092] text-white shadow-xs' 
                     : 'text-stone-600 hover:text-stone-950 hover:bg-stone-100'
                 }`}
               >
                 <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
-                  isActive ? 'bg-stone-800 text-[#fdde58]' : 'bg-stone-100 text-stone-500'
+                  isActive ? 'bg-white/15 text-white' : 'bg-stone-100 text-stone-500'
                 }`}>
                   <Icon size={15} />
                 </div>
                 <div className="min-w-0">
                   <span className="text-xs font-bold block truncate leading-tight">{item.label}</span>
-                  <span className={`text-[10px] block truncate leading-tight mt-0.5 ${isActive ? 'text-stone-400' : 'text-stone-400'}`}>{item.desc}</span>
+                  <span className={`text-[10px] block truncate leading-tight mt-0.5 ${isActive ? 'text-white/70' : 'text-stone-400'}`}>{item.desc}</span>
                 </div>
               </button>
             );
@@ -326,7 +328,7 @@ export default function SettingsManager({
                       <p className="text-[11px] text-stone-500 mt-0.5">Formato quadrado recomendado (PNG ou JPG). Aparece no topo do menu lateral.</p>
                       
                       <div className="mt-3 flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                        <label className="px-3 py-1.5 bg-[#fdde58] hover:bg-[#e2c23f] text-stone-950 font-bold text-xs rounded-lg border border-[#d8ba39] cursor-pointer shadow-xs transition-all flex items-center gap-1.5">
+                        <label className="px-3 py-1.5 bg-[#6a2092] hover:bg-[#521872] text-white font-bold text-xs rounded-lg border border-[#521872] cursor-pointer shadow-xs transition-all flex items-center gap-1.5">
                           <Upload size={13} />
                           <span>{uploadingAdminLogo ? 'Enviando...' : 'Fazer Upload de Logo'}</span>
                           <input 
@@ -351,6 +353,30 @@ export default function SettingsManager({
                   </div>
                 </div>
 
+                {/* Atalho para Capa do Cardápio */}
+                <div>
+                  <label className="text-xs font-bold text-stone-800 block mb-2">Capa do Cardápio Digital (Banner)</label>
+                  <div className="p-4 bg-purple-50/50 rounded-xl border border-purple-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-purple-100 text-[#6a2092] flex items-center justify-center shrink-0">
+                        <ImageIcon size={20} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-stone-900">Personalizar e Enquadrar Capa</p>
+                        <p className="text-[11px] text-stone-500">Mude a foto de abertura do cardápio e arraste para posicionar no tamanho exato.</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('capa')}
+                      className="px-4 py-2 bg-[#6a2092] hover:bg-[#521872] text-white font-bold text-xs rounded-lg transition-all shadow-2xs whitespace-nowrap cursor-pointer flex items-center gap-1.5"
+                    >
+                      <ImageIcon size={13} />
+                      <span>Enquadrar Capa</span>
+                    </button>
+                  </div>
+                </div>
+
                 {/* Formulário de Dados da Empresa */}
                 <div className="space-y-4 pt-2">
                   <div>
@@ -359,28 +385,28 @@ export default function SettingsManager({
                       type="text" 
                       value={companyInfo.name} 
                       onChange={e => setCompanyInfo({...companyInfo, name: e.target.value})} 
-                      className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-xl text-xs font-semibold text-stone-900 focus:bg-white focus:border-[#fdde58] focus:ring-2 focus:ring-[#fdde58]/30 outline-none transition-all" 
+                      className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-xl text-xs font-semibold text-stone-900 focus:bg-white focus:border-[#6a2092] focus:ring-2 focus:ring-[#6a2092]/20 outline-none transition-all" 
                     />
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-xs font-semibold text-stone-700 block mb-1">NIF / CNPJ</label>
+                      <label className="text-xs font-semibold text-stone-700 block mb-1">CNPJ</label>
                       <input 
                         type="text" 
                         value={companyInfo.nif} 
                         onChange={e => setCompanyInfo({...companyInfo, nif: e.target.value})} 
-                        className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-xl text-xs font-mono font-semibold text-stone-900 focus:bg-white focus:border-[#fdde58] focus:ring-2 focus:ring-[#fdde58]/30 outline-none transition-all" 
-                        placeholder="Ex: 517000000"
+                        className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-xl text-xs font-mono font-semibold text-stone-900 focus:bg-white focus:border-[#6a2092] focus:ring-2 focus:ring-[#6a2092]/20 outline-none transition-all" 
+                        placeholder="Ex: 00.000.000/0001-00"
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-semibold text-stone-700 block mb-1">Morada / Endereço</label>
+                      <label className="text-xs font-semibold text-stone-700 block mb-1">Endereço</label>
                       <input 
                         type="text" 
                         value={companyInfo.address} 
                         onChange={e => setCompanyInfo({...companyInfo, address: e.target.value})} 
-                        className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-xl text-xs font-semibold text-stone-900 focus:bg-white focus:border-[#fdde58] focus:ring-2 focus:ring-[#fdde58]/30 outline-none transition-all" 
+                        className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-xl text-xs font-semibold text-stone-900 focus:bg-white focus:border-[#6a2092] focus:ring-2 focus:ring-[#6a2092]/20 outline-none transition-all" 
                         placeholder="Ex: Rua das Flores, 41"
                       />
                     </div>
@@ -391,13 +417,18 @@ export default function SettingsManager({
                   <button 
                     onClick={handleSaveCompany} 
                     disabled={savingCompany}
-                    className="px-5 py-2.5 bg-[#fdde58] hover:bg-[#e2c23f] text-stone-950 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-xs border border-[#d8ba39] cursor-pointer"
+                    className="px-5 py-2.5 bg-[#6a2092] hover:bg-[#521872] text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-xs border border-[#521872] cursor-pointer"
                   >
                     <Save size={14} />
                     <span>{savingCompany ? 'Salvando...' : 'Salvar Dados da Empresa'}</span>
                   </button>
                 </div>
               </div>
+            )}
+
+            {/* ═══════════ CAPA DO CARDÁPIO DIGITAL (ENQUADRAMENTO) ═══════════ */}
+            {activeTab === 'capa' && (
+              <CoverCropManager onSuccess={showSavedFeedback} />
             )}
 
             {/* ═══════════ 2. HORÁRIOS DE FUNCIONAMENTO ═══════════ */}
@@ -453,14 +484,14 @@ export default function SettingsManager({
                             type="time"
                             value={h.opens_at ? h.opens_at.slice(0,5) : ''}
                             onChange={(e) => updateDay(h.day_of_week, 'opens_at', e.target.value)}
-                            className="p-1.5 bg-stone-50 border border-stone-200 rounded-lg text-xs font-bold text-stone-900 focus:outline-none focus:border-[#fdde58]"
+                            className="p-1.5 bg-stone-50 border border-stone-200 rounded-lg text-xs font-bold text-stone-900 focus:outline-none focus:border-[#6a2092]"
                           />
                           <span className="text-stone-300">→</span>
                           <input
                             type="time"
                             value={h.closes_at ? h.closes_at.slice(0,5) : ''}
                             onChange={(e) => updateDay(h.day_of_week, 'closes_at', e.target.value)}
-                            className="p-1.5 bg-stone-50 border border-stone-200 rounded-lg text-xs font-bold text-stone-900 focus:outline-none focus:border-[#fdde58]"
+                            className="p-1.5 bg-stone-50 border border-stone-200 rounded-lg text-xs font-bold text-stone-900 focus:outline-none focus:border-[#6a2092]"
                           />
                         </div>
                       ) : (
@@ -474,7 +505,7 @@ export default function SettingsManager({
                   <button 
                     onClick={handleSaveHours} 
                     disabled={savingHours}
-                    className="px-5 py-2.5 bg-[#fdde58] hover:bg-[#e2c23f] text-stone-950 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-xs border border-[#d8ba39] cursor-pointer"
+                    className="px-5 py-2.5 bg-[#6a2092] hover:bg-[#521872] text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-xs border border-[#521872] cursor-pointer"
                   >
                     <Save size={14} />
                     <span>{savingHours ? 'Salvando...' : 'Salvar Grade de Horários'}</span>
@@ -529,7 +560,7 @@ export default function SettingsManager({
                       type="number"
                       value={printDelay}
                       onChange={e => setPrintDelay(e.target.value)}
-                      className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-xl text-xs font-mono font-bold text-stone-900 focus:bg-white focus:border-[#fdde58] outline-none"
+                      className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-xl text-xs font-mono font-bold text-stone-900 focus:bg-white focus:border-[#6a2092] outline-none"
                     />
                     <span className="text-xs font-mono text-stone-500">ms</span>
                   </div>
@@ -547,7 +578,7 @@ export default function SettingsManager({
                   <button 
                     onClick={handleSavePrintDelay} 
                     disabled={savingPrint}
-                    className="px-5 py-2.5 bg-[#fdde58] hover:bg-[#e2c23f] text-stone-950 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-xs border border-[#d8ba39] cursor-pointer"
+                    className="px-5 py-2.5 bg-[#6a2092] hover:bg-[#521872] text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-xs border border-[#521872] cursor-pointer"
                   >
                     <Save size={14} />
                     <span>{savingPrint ? 'Salvando...' : 'Salvar Impressão'}</span>
@@ -577,7 +608,7 @@ export default function SettingsManager({
                         type="text" 
                         value={deliveryTime} 
                         onChange={e => setDeliveryTime(e.target.value)} 
-                        className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-xl text-xs font-medium text-stone-900 focus:bg-white focus:border-[#fdde58] outline-none" 
+                        className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-xl text-xs font-medium text-stone-900 focus:bg-white focus:border-[#6a2092] outline-none" 
                         placeholder="Ex: 40 a 50 min"
                       />
                     </div>
@@ -587,7 +618,7 @@ export default function SettingsManager({
                         type="text" 
                         value={pickupTime} 
                         onChange={e => setPickupTime(e.target.value)} 
-                        className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-xl text-xs font-medium text-stone-900 focus:bg-white focus:border-[#fdde58] outline-none" 
+                        className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-xl text-xs font-medium text-stone-900 focus:bg-white focus:border-[#6a2092] outline-none" 
                         placeholder="Ex: 20 a 30 min"
                       />
                     </div>
@@ -598,7 +629,7 @@ export default function SettingsManager({
                   <button 
                     onClick={handleSaveTimes} 
                     disabled={savingTimes}
-                    className="px-5 py-2.5 bg-[#fdde58] hover:bg-[#e2c23f] text-stone-950 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-xs border border-[#d8ba39] cursor-pointer"
+                    className="px-5 py-2.5 bg-[#6a2092] hover:bg-[#521872] text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-xs border border-[#521872] cursor-pointer"
                   >
                     <Save size={14} />
                     <span>{savingTimes ? 'Salvando...' : 'Salvar Prazos'}</span>
@@ -684,7 +715,7 @@ export default function SettingsManager({
                         step="0.5"
                         value={cashbackPercent}
                         onChange={(e) => setCashbackPercent(e.target.value)}
-                        className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-xl text-xs font-bold text-stone-900 focus:bg-white focus:border-amber-500 outline-none pr-8"
+                        className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-xl text-xs font-bold text-stone-900 focus:bg-white focus:border-[#6a2092] outline-none pr-8"
                         placeholder="Ex: 5"
                       />
                       <span className="absolute right-3 top-2.5 text-xs font-bold text-stone-400">%</span>
@@ -706,7 +737,7 @@ export default function SettingsManager({
                   <button
                     onClick={handleSaveCashback}
                     disabled={savingCashback}
-                    className="px-5 py-2.5 bg-[#fdde58] hover:bg-[#e2c23f] text-stone-950 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-xs border border-[#d8ba39] cursor-pointer"
+                    className="px-5 py-2.5 bg-[#6a2092] hover:bg-[#521872] text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-xs border border-[#521872] cursor-pointer"
                   >
                     <Save size={14} />
                     <span>{savingCashback ? 'Salvando...' : 'Salvar Regras de Cashback'}</span>
@@ -758,7 +789,7 @@ export default function SettingsManager({
                     <button
                       type="button"
                       onClick={onTestSound}
-                      className="px-3.5 py-2 bg-stone-900 hover:bg-stone-800 text-[#fdde58] text-xs font-bold rounded-xl transition-colors inline-flex items-center gap-1.5 cursor-pointer shadow-xs self-start sm:self-auto"
+                      className="px-3.5 py-2 bg-[#6a2092] hover:bg-[#521872] text-white text-xs font-bold rounded-xl transition-colors inline-flex items-center gap-1.5 cursor-pointer shadow-xs self-start sm:self-auto"
                     >
                       <Volume2 size={14} />
                       <span>Testar Toque</span>
