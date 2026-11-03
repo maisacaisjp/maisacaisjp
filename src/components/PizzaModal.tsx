@@ -128,7 +128,7 @@ export default function PizzaModal({
                        className={`p-3 rounded-xl border-2 text-left transition-all ${pausedItems?.includes(`${item?.id}-P`) ? 'opacity-50 grayscale cursor-not-allowed bg-gray-100' : (selectedSize === 'P' ? 'border-[#4d0471] bg-[#4d0471]/5' : 'border-gray-200 hover:border-gray-300 bg-white')}`}
                      >
                         <div className="flex justify-between items-center">
-                           <span className="font-bold text-sm text-stone-900">Pequeno (330ml)</span>
+                           <span className="font-bold text-sm text-stone-900">330ml</span>
                            <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedSize === 'P' ? 'border-[#4d0471] bg-[#4d0471]' : 'border-gray-300'}`}>
                               {selectedSize === 'P' && <Check className="w-3 h-3 text-white" />}
                            </div>
@@ -145,7 +145,7 @@ export default function PizzaModal({
                        className={`p-3 rounded-xl border-2 text-left transition-all ${pausedItems?.includes(`${item?.id}-M`) ? 'opacity-50 grayscale cursor-not-allowed bg-gray-100' : (selectedSize === 'M' ? 'border-[#4d0471] bg-[#4d0471]/5' : 'border-gray-200 hover:border-gray-300 bg-white')}`}
                      >
                         <div className="flex justify-between items-center">
-                           <span className="font-bold text-sm text-stone-900">Médio (440ml)</span>
+                           <span className="font-bold text-sm text-stone-900">440ml</span>
                            <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedSize === 'M' ? 'border-[#4d0471] bg-[#4d0471]' : 'border-gray-300'}`}>
                               {selectedSize === 'M' && <Check className="w-3 h-3 text-white" />}
                            </div>
@@ -162,7 +162,7 @@ export default function PizzaModal({
                        className={`p-3 rounded-xl border-2 text-left transition-all ${pausedItems?.includes(`${item?.id}-G`) ? 'opacity-50 grayscale cursor-not-allowed bg-gray-100' : (selectedSize === 'G' ? 'border-[#4d0471] bg-[#4d0471]/5' : 'border-gray-200 hover:border-gray-300 bg-white')}`}
                      >
                         <div className="flex justify-between items-center">
-                           <span className="font-bold text-sm text-stone-900">Grande (550ml)</span>
+                           <span className="font-bold text-sm text-stone-900">550ml</span>
                            <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedSize === 'G' ? 'border-[#4d0471] bg-[#4d0471]' : 'border-gray-300'}`}>
                               {selectedSize === 'G' && <Check className="w-3 h-3 text-white" />}
                            </div>
@@ -179,7 +179,7 @@ export default function PizzaModal({
                        className={`p-3 rounded-xl border-2 text-left transition-all ${pausedItems?.includes(`${item?.id}-Big`) ? 'opacity-50 grayscale cursor-not-allowed bg-gray-100' : (selectedSize === 'Big' ? 'border-[#4d0471] bg-[#4d0471]/5' : 'border-gray-200 hover:border-gray-300 bg-white')}`}
                      >
                         <div className="flex justify-between items-center">
-                           <span className="font-bold text-sm text-stone-900">Super (770ml)</span>
+                           <span className="font-bold text-sm text-stone-900">770ml</span>
                            <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedSize === 'Big' ? 'border-[#4d0471] bg-[#4d0471]' : 'border-gray-300'}`}>
                               {selectedSize === 'Big' && <Check className="w-3 h-3 text-white" />}
                            </div>
@@ -196,7 +196,7 @@ export default function PizzaModal({
                        className={`p-3 rounded-xl border-2 text-left transition-all ${pausedItems?.includes(`${item?.id}-SuperBig`) ? 'opacity-50 grayscale cursor-not-allowed bg-gray-100' : (selectedSize === 'Super Big' ? 'border-[#4d0471] bg-[#4d0471]/5' : 'border-gray-200 hover:border-gray-300 bg-white')}`}
                      >
                         <div className="flex justify-between items-center">
-                           <span className="font-bold text-sm text-stone-900">Família (1 Litro)</span>
+                           <span className="font-bold text-sm text-stone-900">1 Litro (1L)</span>
                            <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedSize === 'Super Big' ? 'border-[#4d0471] bg-[#4d0471]' : 'border-gray-300'}`}>
                               {selectedSize === 'Super Big' && <Check className="w-3 h-3 text-white" />}
                            </div>

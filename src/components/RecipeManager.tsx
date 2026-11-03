@@ -886,11 +886,11 @@ export default function RecipeManager({ menuItems }: RecipeManagerProps) {
                       onChange={(e) => setSelectedSize(e.target.value as any)}
                       className="w-full h-8.5 px-2 bg-stone-50 border border-stone-200 rounded-lg text-xs font-bold text-stone-900 focus:outline-none"
                     >
-                      <option value="P">Pequeno (P) - 330ml</option>
-                      <option value="M">Médio (M) - 440ml</option>
-                      <option value="G">Grande (G) - 550ml</option>
-                      <option value="Big">Gigante - 770ml</option>
-                      <option value="SuperBig">1 Litro</option>
+                      <option value="P">330ml</option>
+                      <option value="M">440ml</option>
+                      <option value="G">550ml</option>
+                      <option value="Big">770ml</option>
+                      <option value="SuperBig">1 Litro (1L)</option><option value="2L">2 Litros (2L)</option>
                       <option value="Padrao">Padrão / Unidade (Bebida, Kit)</option>
                     </select>
                   </div>

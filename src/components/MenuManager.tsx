@@ -191,7 +191,8 @@ export default function MenuManager() {
       finalImageUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/cardapio-maisacai/${finalImageUrl}`;
     }
 
-    const isPizza = ['pizzas', 'tradicionais', 'especiais', 'gourmet', 'doces'].includes(editingItem.category) || editingItem.id?.startsWith('p-');
+    const hasMultipleSizes = ['combos-especiais', 'mais-vendidos', 'novidades', 'monte-do-seu-jeito', 'pizzas', 'tradicionais', 'especiais'].includes(editingItem.category) ||
+      Boolean(editingItem.price_p || editingItem.price_m || editingItem.price_g || editingItem.price_big || editingItem.price_super_big);
 
     const parseNum = (val: any) => {
       if (val === undefined || val === null || val === '') return null;
@@ -204,10 +205,10 @@ export default function MenuManager() {
       name: editingItem.name,
       ingredients: editingItem.ingredients,
       category: editingItem.category,
-      price_single: isPizza ? null : parseNum(editingItem.price_single),
-      price_p: isPizza ? parseNum(editingItem.price_p) : null,
-      price_m: isPizza ? parseNum(editingItem.price_m) : null,
-      price_g: isPizza ? parseNum(editingItem.price_g) : null,
+      price_single: parseNum(editingItem.price_single),
+      price_p: hasMultipleSizes ? parseNum(editingItem.price_p) : null,
+      price_m: hasMultipleSizes ? parseNum(editingItem.price_m) : null,
+      price_g: hasMultipleSizes ? parseNum(editingItem.price_g) : null,
       image_url: finalImageUrl,
       day_of_week: editingItem.day_of_week || null,
       is_active: editingItem.is_active !== undefined ? editingItem.is_active : true,
@@ -215,7 +216,7 @@ export default function MenuManager() {
     };
 
     // Apenas tenta enviar tamanhos extras se preenchidos em pizzas
-    if (isPizza) {
+    if (hasMultipleSizes) {
       const pBig = parseNum(editingItem.price_big);
       const pSuperBig = parseNum(editingItem.price_super_big);
       if (pBig !== null) dbItem.price_big = pBig;
@@ -595,48 +596,49 @@ export default function MenuManager() {
 
               <div className="border-t border-stone-100 pt-2.5">
                 {(() => {
-                  const isPizza = ['pizzas', 'tradicionais', 'especiais', 'gourmet', 'doces'].includes(editingItem.category) || editingItem.id?.startsWith('p-');
+                  const hasMultipleSizes = ['combos-especiais', 'mais-vendidos', 'novidades', 'monte-do-seu-jeito', 'pizzas', 'tradicionais', 'especiais'].includes(editingItem.category) ||
+      Boolean(editingItem.price_p || editingItem.price_m || editingItem.price_g || editingItem.price_big || editingItem.price_super_big);
 
-                  if (isPizza) {
+                  if (hasMultipleSizes) {
                     return (
                       <div>
                         <div className="flex items-center justify-between mb-2">
                           <h3 className="text-[10px] font-black text-stone-700 uppercase tracking-wider flex items-center gap-1">
-                            🍕 Preços por Tamanho da Pizza
+                            🍧 Preços por Tamanho do Copo / Açaí
                           </h3>
-                          <span className="text-[9.5px] font-mono text-stone-400">Preencha os tamanhos disponíveis</span>
+                          <span className="text-[9.5px] font-mono text-stone-400">Preencha os tamanhos (330ml, 440ml, 550ml, 770ml, 1L)</span>
                         </div>
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
                           <div className="p-2 rounded-lg bg-stone-50 border border-stone-200 space-y-1">
-                            <label className="block text-[9.5px] font-mono font-bold text-stone-600 uppercase">Pequena (P)</label>
+                            <label className="block text-[9.5px] font-mono font-bold text-stone-600 uppercase">330ml</label>
                             <div className="flex items-center gap-0.5">
                               <span className="text-xs font-mono font-bold text-stone-400">R$</span>
                               <input type="number" step="0.01" value={editingItem.price_p ?? ''} onChange={e => setEditingItem({...editingItem, price_p: e.target.value})} placeholder="0.00" className="w-full bg-white px-2 py-1 text-xs font-mono font-bold border border-stone-300 rounded focus:border-[#6a2092] outline-none" />
                             </div>
                           </div>
                           <div className="p-2 rounded-lg bg-stone-50 border border-stone-200 space-y-1">
-                            <label className="block text-[9.5px] font-mono font-bold text-stone-600 uppercase">Média (M)</label>
+                            <label className="block text-[9.5px] font-mono font-bold text-stone-600 uppercase">440ml</label>
                             <div className="flex items-center gap-0.5">
                               <span className="text-xs font-mono font-bold text-stone-400">R$</span>
                               <input type="number" step="0.01" value={editingItem.price_m ?? ''} onChange={e => setEditingItem({...editingItem, price_m: e.target.value})} placeholder="0.00" className="w-full bg-white px-2 py-1 text-xs font-mono font-bold border border-stone-300 rounded focus:border-[#6a2092] outline-none" />
                             </div>
                           </div>
                           <div className="p-2 rounded-lg bg-amber-50/50 border border-amber-300 space-y-1">
-                            <label className="block text-[9.5px] font-mono font-bold text-amber-900 uppercase">Grande (G) *</label>
+                            <label className="block text-[9.5px] font-mono font-bold text-amber-900 uppercase">550ml *</label>
                             <div className="flex items-center gap-0.5">
                               <span className="text-xs font-mono font-bold text-amber-700">R$</span>
                               <input type="number" step="0.01" value={editingItem.price_g ?? ''} onChange={e => setEditingItem({...editingItem, price_g: e.target.value})} placeholder="0.00" className="w-full bg-white px-2 py-1 text-xs font-mono font-bold border border-amber-400 rounded focus:border-[#6a2092] outline-none" />
                             </div>
                           </div>
                           <div className="p-2 rounded-lg bg-stone-50 border border-stone-200 space-y-1">
-                            <label className="block text-[9.5px] font-mono font-bold text-stone-600 uppercase">Big (Família)</label>
+                            <label className="block text-[9.5px] font-mono font-bold text-stone-600 uppercase">770ml</label>
                             <div className="flex items-center gap-0.5">
                               <span className="text-xs font-mono font-bold text-stone-400">R$</span>
                               <input type="number" step="0.01" value={editingItem.price_big ?? ''} onChange={e => setEditingItem({...editingItem, price_big: e.target.value})} placeholder="0.00" className="w-full bg-white px-2 py-1 text-xs font-mono font-bold border border-stone-300 rounded focus:border-[#6a2092] outline-none" />
                             </div>
                           </div>
                           <div className="p-2 rounded-lg bg-stone-50 border border-stone-200 space-y-1">
-                            <label className="block text-[9.5px] font-mono font-bold text-stone-600 uppercase">Super Big (GG)</label>
+                            <label className="block text-[9.5px] font-mono font-bold text-stone-600 uppercase">1 Litro (1L)</label>
                             <div className="flex items-center gap-0.5">
                               <span className="text-xs font-mono font-bold text-stone-400">R$</span>
                               <input type="number" step="0.01" value={editingItem.price_super_big ?? ''} onChange={e => setEditingItem({...editingItem, price_super_big: e.target.value})} placeholder="0.00" className="w-full bg-white px-2 py-1 text-xs font-mono font-bold border border-stone-300 rounded focus:border-[#6a2092] outline-none" />
