@@ -3,6 +3,7 @@ import { MenuItem, ExtraIngredient } from '../data/menu';
 import { CartItem, ProductSize, SIZE_LABELS } from '../types';
 import { X, Check, Minus, Plus } from 'lucide-react';
 import { useExtras } from '../hooks/useExtras';
+import { useCremes } from '../hooks/useCremes';
 import { hapticLight } from '../utils/haptics';
 import { getSizeOptions, SIZE_DESCRIPTIONS } from '../utils/produto';
 import { regrasDoProduto, textoEscolhas, escolhaPendente, escolhasIniciais } from '../data/variacoes';
@@ -38,6 +39,7 @@ export default function PizzaModal({
   pausedItems = [],
 }: PizzaModalProps) {
   const extrasList = useExtras();
+  useCremes(); // sabores do gestor: re-renderiza quando um sabor é pausado ou ativado
   const [selectedSize, setSelectedSize] = useState<ProductSize>(initialSize);
   const [selectedExtras, setSelectedExtras] = useState<ExtraIngredient[]>([]);
   const [quantity, setQuantity] = useState(1);

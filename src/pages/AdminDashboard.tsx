@@ -173,7 +173,6 @@ export default function AdminDashboard() {
     'visao-geral': { title: 'Visão Geral', subtitle: 'Acompanhe o desempenho do seu negócio em tempo real.' },
     'pedidos': { title: 'Pedidos', subtitle: 'Gerencie e acompanhe os pedidos em tempo real.' },
     'caixa': { title: 'Caixa', subtitle: 'Abertura, fechamento e conferência do turno.' },
-    'cardapio-digital': { title: 'Cardápio Digital', subtitle: 'Espelho do que os clientes veem na loja.' },
     'gestao-cardapio': { title: 'Produtos', subtitle: 'Gerencie o cardápio, preços e fotos.' },
     'categorias': { title: 'Categorias', subtitle: 'Organize as categorias do cardápio.' },
     'fichas-tecnicas': { title: 'Ficha Técnica & CMV', subtitle: 'Gestão de insumos, custo de produção e margem real por produto.' },
@@ -1491,7 +1490,6 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {activeTab === 'cardapio-digital' && 'Cardápio Digital'}
               {activeTab === 'gestao-cardapio' && 'Produtos'}
               {activeTab === 'categorias' && 'Categorias'}
               {activeTab === 'fichas-tecnicas' && 'Ficha Técnica & CMV'}
@@ -1617,12 +1615,6 @@ export default function AdminDashboard() {
                 {isOwner && (
                   <div className="pt-3 mt-3 border-t border-white/10">
                     <p className="px-3 text-[10px] font-mono font-bold text-white/50 uppercase tracking-wider mb-1">Cardápio</p>
-                    <button 
-                      onClick={() => { setActiveTab("cardapio-digital"); setIsMobileMenuOpen(false); }} 
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'cardapio-digital' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
-                    >
-                      Cardápio Digital
-                    </button>
                     <button 
                       onClick={() => { setActiveTab("gestao-cardapio"); setIsMobileMenuOpen(false); }} 
                       className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'gestao-cardapio' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
@@ -1837,13 +1829,6 @@ export default function AdminDashboard() {
           {(hasPermission('gerenciar_produtos') || hasPermission('gerenciar_categorias')) && (
             <div className="pt-1 mt-1 border-t border-white/10 space-y-[2px]">
               <p className="px-2 text-[8px] font-mono font-bold text-white/50 uppercase tracking-wider mb-0.5 leading-none">Cardápio</p>
-              <button 
-                onClick={() => setActiveTab("cardapio-digital")} 
-                className={`w-full flex items-center gap-1.5 px-2 py-[3.5px] rounded font-medium transition-colors cursor-pointer ${activeTab === 'cardapio-digital' ? 'bg-white text-[#4d0471] font-bold shadow-xs border border-white' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
-              >
-                <UtensilsCrossed size={12} className={activeTab === 'cardapio-digital' ? 'text-[#6a2092]' : 'text-white/55'} />
-                Cardápio Digital
-              </button>
               {hasPermission('gerenciar_produtos') && (
                 <button 
                   onClick={() => setActiveTab("gestao-cardapio")} 
@@ -3666,191 +3651,6 @@ export default function AdminDashboard() {
               </div>
             </div>
           </motion.div>
-        )}
-
-        {activeTab === "cardapio-digital" && (
-          <div className="space-y-4 pb-12 mt-1">
-            {/* Unified Sticky Header for Cardápio Digital: Search + Category Pills */}
-            <div className="sticky top-0 z-50 bg-stone-50/98 backdrop-blur-md border-b border-stone-200/90 shadow-sm -mx-4 md:-mx-8 px-4 md:px-8 pt-4 pb-3 mb-4 space-y-2.5">
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                {/* Search Bar */}
-                <div className="relative flex-1 max-w-md">
-                  <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
-                  <input
-                    type="text"
-                    placeholder="Buscar produto por nome, ingrediente ou ID..."
-                    value={cardapioSearchTerm}
-                    onChange={(e) => setCardapioSearchTerm(e.target.value)}
-                    className="w-full pl-9 pr-8 py-1.5 bg-white border border-stone-200 rounded-xl text-xs font-medium focus:outline-none focus:border-[#4d0471] focus:ring-1 focus:ring-[#4d0471] transition-colors shadow-2xs"
-                  />
-                  {cardapioSearchTerm && (
-                    <button onClick={() => setCardapioSearchTerm('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700 text-xs font-bold p-1 cursor-pointer">✕</button>
-                  )}
-                </div>
-              </div>
-              
-              {/* Category Filter Pills */}
-              <div className="flex overflow-x-auto no-scrollbar gap-1.5 items-center">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setActiveCategory('');
-                    const mainEl = document.querySelector('main');
-                    if (mainEl) mainEl.scrollTo({ top: 0, behavior: 'smooth' });
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  className={`py-1 px-3 rounded-full text-xs whitespace-nowrap font-bold transition-all duration-150 active:scale-95 cursor-pointer border ${
-                    !activeCategory
-                      ? "bg-[#6a2092] text-white border-[#6a2092] shadow-2xs"
-                      : "bg-white text-stone-600 border-stone-200 hover:bg-stone-100"
-                  }`}
-                >
-                  TODOS
-                </button>
-                {currentCategoriesUI.map((cat) => (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setActiveCategory(cat.id);
-                      if (cardapioSearchTerm) {
-                        setCardapioSearchTerm('');
-                      }
-                      setTimeout(() => {
-                        const el = document.getElementById(`admin-cat-${cat.id}`);
-                        if (el) {
-                          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                          const mainEl = document.querySelector('main');
-                          if (mainEl && mainEl.scrollHeight > mainEl.clientHeight) {
-                            const topY = el.getBoundingClientRect().top + mainEl.scrollTop - mainEl.getBoundingClientRect().top - 130;
-                            mainEl.scrollTo({ top: Math.max(0, topY), behavior: 'smooth' });
-                          }
-                          const windowY = el.getBoundingClientRect().top + window.pageYOffset - 130;
-                          window.scrollTo({ top: Math.max(0, windowY), behavior: 'smooth' });
-                        }
-                      }, 40);
-                    }}
-                    className={`py-1 px-3 rounded-full text-xs whitespace-nowrap font-bold transition-all duration-150 active:scale-95 cursor-pointer border ${
-                      activeCategory === cat.id
-                        ? "bg-[#6a2092] text-white border-[#6a2092] shadow-2xs"
-                        : "bg-white text-stone-600 border-stone-200 hover:bg-stone-100"
-                    } ${cat.id === "promocoes" && activeCategory !== cat.id ? "animate-pulse text-[#e9d5f7] border-stone-800" : ""}`}
-                  >
-                    {cat.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {currentCategoriesUI.map(cat => {
-              let items = itemsByCategory[cat.id];
-              if (!items) return null;
-              
-              if (cardapioSearchTerm) {
-                const term = cardapioSearchTerm.toLowerCase();
-                items = items.filter(item => 
-                  item.name.toLowerCase().includes(term) || 
-                  item.id.toLowerCase().includes(term) ||
-                  (item.ingredients && item.ingredients.toLowerCase().includes(term))
-                );
-              }
-              
-              if (items.length === 0) return null;
-              
-              // Check if all items in this category are paused
-              const allPaused = items.every(item => pausedItems.includes(item.id));
-              
-              return (
-                <div key={cat.id} id={`admin-cat-${cat.id}`} className="scroll-mt-36 bg-white p-5 rounded-xl border border-[#E7E5E1] shadow-[0_1px_2px_rgba(28,25,23,0.04),0_1px_8px_rgba(28,25,23,0.04)] hover:shadow-[0_4px_12px_rgba(28,25,23,0.08)] hover:border-[#6a2092]/30 transition-all duration-300">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-5 gap-3">
-                    <div>
-                      <h2 className="text-lg font-bold text-stone-900">{cat.label}</h2>
-                      <p className="text-xs text-stone-500 font-mono">Total: {items.length} itens</p>
-                    </div>
-                    <button
-                      onClick={() => togglePauseCategory(cat.group, allPaused)}
-                      className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-colors cursor-pointer ${allPaused ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-rose-100 text-rose-700 hover:bg-rose-200 border border-rose-200'}`}
-                    >
-                      {allPaused ? 'Ativar Categoria' : 'Pausar Categoria'}
-                    </button>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
-                    {items.map((item) => (
-                      <div key={item.id} className={`p-3.5 rounded-xl border ${pausedItems.includes(item.id) ? 'border-rose-200 bg-rose-50/50' : 'border-[#E7E5E1] bg-white'} shadow-xs hover:shadow-md transition-all flex gap-3 min-w-0 overflow-hidden`}>
-                        {item.imageUrl ? (
-                          <div className="w-20 h-20 rounded-lg overflow-hidden shrink-0 bg-stone-100 relative border border-stone-200/60">
-                             <img 
-                               src={item.imageUrl.startsWith('http') ? item.imageUrl : (item.imageUrl.startsWith('/') ? item.imageUrl : '/' + item.imageUrl)} 
-                               alt={item.name} 
-                               className={`w-full h-full object-cover ${pausedItems.includes(item.id) ? 'grayscale opacity-50' : ''}`}
-                               onError={(e) => { (e.target as HTMLElement).parentElement!.style.display = 'none'; }}
-                             />
-                             {pausedItems.includes(item.id) && (
-                               <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-xs text-white text-[9px] font-bold uppercase tracking-wider">
-                                 Pausado
-                               </div>
-                             )}
-                          </div>
-                        ) : null}
-                        <div className="flex-1 min-w-0 flex flex-col justify-between">
-                          <div>
-                            <h3 className={`font-bold text-xs truncate ${pausedItems.includes(item.id) ? 'text-stone-400 line-through' : 'text-stone-900'}`}>{item.name}</h3>
-                            <p className="text-[11px] text-stone-500 mt-0.5 line-clamp-2 leading-snug">{item.ingredients}</p>
-                          </div>
-                          <div className="mt-2 flex flex-col gap-1.5">
-                            <div className="flex justify-between items-center gap-1">
-                              <span className="font-bold text-xs text-stone-900 font-mono shrink-0">
-                                {item.priceSingle ? `R$ ${Number(item.priceSingle).toFixed(2)}` : (item.priceP ? `Pq: R$ ${Number(item.priceP).toFixed(2)}` : '')}
-                              </span>
-                              <button
-                                onClick={() => togglePauseItem(item.id)}
-                                className={`text-[10px] font-bold px-2 py-1 rounded-md transition-colors cursor-pointer shrink-0 ${pausedItems.includes(item.id) ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-rose-600 text-white hover:bg-rose-700'}`}
-                              >
-                                {pausedItems.includes(item.id) ? 'Ativar Item' : 'Pausar Item'}
-                              </button>
-                            </div>
-                            
-                            {/* Size-specific pausing for pizzas */}
-                            {item.priceM !== undefined && item.priceG !== undefined && (
-                              <div className="flex items-center justify-between border-t border-stone-100 pt-1.5 mt-0.5 gap-1">
-                                <span className="text-[9px] font-mono font-semibold text-stone-400 shrink-0">Tamanhos:</span>
-                                <div className="flex gap-1 shrink-0">
-                                  <button
-                                    onClick={() => togglePauseItem(`${item.id}-P`)}
-                                    className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border transition-colors cursor-pointer ${pausedItems.includes(`${item.id}-P`) ? 'bg-rose-100 text-rose-700 border-rose-300' : 'bg-stone-100 text-stone-700 border-stone-200 hover:bg-stone-200'}`}
-                                    title={pausedItems.includes(`${item.id}-P`) ? 'Ativar Tamanho P' : 'Pausar Tamanho P'}
-                                  >
-                                    P {pausedItems.includes(`${item.id}-P`) ? '✕' : ''}
-                                  </button>
-                                  <button
-                                    onClick={() => togglePauseItem(`${item.id}-M`)}
-                                    className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border transition-colors cursor-pointer ${pausedItems.includes(`${item.id}-M`) ? 'bg-rose-100 text-rose-700 border-rose-300' : 'bg-stone-100 text-stone-700 border-stone-200 hover:bg-stone-200'}`}
-                                    title={pausedItems.includes(`${item.id}-M`) ? 'Ativar Tamanho M' : 'Pausar Tamanho M'}
-                                  >
-                                    M {pausedItems.includes(`${item.id}-M`) ? '✕' : ''}
-                                  </button>
-                                  <button
-                                    onClick={() => togglePauseItem(`${item.id}-G`)}
-                                    className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border transition-colors cursor-pointer ${pausedItems.includes(`${item.id}-G`) ? 'bg-rose-100 text-rose-700 border-rose-300' : 'bg-stone-100 text-stone-700 border-stone-200 hover:bg-stone-200'}`}
-                                    title={pausedItems.includes(`${item.id}-G`) ? 'Ativar Tamanho G' : 'Pausar Tamanho G'}
-                                  >
-                                    G {pausedItems.includes(`${item.id}-G`) ? '✕' : ''}
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
         )}
 
       </div>

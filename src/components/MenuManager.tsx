@@ -2,6 +2,58 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { MenuItem, ALL_MENU_ITEMS } from '../data/menu';
 import { Plus, Edit2, Trash2, Save, X, Image as ImageIcon, Search, ChevronDown, Check } from 'lucide-react';
+import { CATEGORIA_CREMES, CREMES_GELADOS } from '../data/variacoes';
+import { getSizeOptions } from '../utils/produto';
+
+// Rótulo curto de cada tamanho para os botões de pausa
+const ROTULO_TAMANHO: Record<string, string> = { P: '330ml', M: '440ml', G: '550ml', Big: '770ml', 'Super Big': '1 Litro', '2L': '2 Litros' };
+
+// Linha do banco (snake_case) -> formato usado por getSizeOptions
+const tamanhosDoItem = (item: any) =>
+  getSizeOptions({
+    id: item.id,
+    name: item.name,
+    category: item.category,
+    priceSingle: item.price_single ?? undefined,
+    priceP: item.price_p ?? undefined,
+    priceM: item.price_m ?? undefined,
+    priceG: item.price_g ?? undefined,
+    priceBig: item.price_big ?? undefined,
+    priceSuperBig: item.price_super_big ?? undefined,
+    price2L: item.price_2l ?? undefined,
+  } as any);
+
+/**
+ * Cria a categoria CREMES com os sabores (uma única vez).
+ * Os itens entram antes da categoria: se algo falhar, tenta de novo no próximo acesso.
+ */
+async function garantirCremes(): Promise<boolean> {
+  const { data: cat, error: catErr } = await supabase.from('categories').select('id').eq('id', CATEGORIA_CREMES);
+  if (catErr || (cat && cat.length > 0)) return false;
+
+  const sabores = CREMES_GELADOS.opcoes.map((o, i) => ({
+    id: o.id,
+    name: o.nome,
+    ingredients: 'Sabor de creme: aparece na escolha do copo e dos combos (casadinho até 2).',
+    category: CATEGORIA_CREMES,
+    price_single: 0,
+    is_active: true,
+    sort_order: i + 1,
+    is_bestseller: false,
+  }));
+  const { error: itensErr } = await supabase.from('menu_items').upsert(sabores, { onConflict: 'id', ignoreDuplicates: true });
+  if (itensErr) throw itensErr;
+
+  // Sabores que já estavam indisponíveis entram pausados
+  const pausados = CREMES_GELADOS.opcoes.filter(o => !o.disponivel).map(o => ({ id: o.id }));
+  if (pausados.length) await supabase.from('paused_items').upsert(pausados, { onConflict: 'id' });
+
+  const { error: novaCatErr } = await supabase
+    .from('categories')
+    .insert({ id: CATEGORIA_CREMES, name: 'CREMES', order_index: 10, is_active: true });
+  if (novaCatErr) throw novaCatErr;
+  return true;
+}
 
 export default function MenuManager() {
   const [categories, setCategories] = useState<any[]>([]);
@@ -82,6 +134,15 @@ export default function MenuManager() {
         });
       }
     });
+    garantirCremes()
+      .then(criou => {
+        if (criou) {
+          setFeedback("Categoria CREMES criada com os sabores.");
+          setTimeout(() => setFeedback(""), 4000);
+          loadData();
+        }
+      })
+      .catch(err => console.error("Erro ao criar a categoria CREMES:", err));
     loadData();
   }, []);
 
@@ -293,6 +354,30 @@ export default function MenuManager() {
     }
   };
 
+  // Pausar ou ativar todos os produtos de uma categoria (vinha do antigo Cardápio Digital)
+  const togglePauseCategory = async (categoryId: string, allPaused: boolean) => {
+    const ids = items.filter(i => i.category === categoryId).map(i => i.id);
+    if (ids.length === 0) return;
+    try {
+      if (allPaused) {
+        setPausedItems(prev => prev.filter(id => !ids.includes(id)));
+        const { error } = await supabase.from('paused_items').delete().in('id', ids);
+        if (error) throw error;
+        await supabase.from('extras').update({ is_active: true }).in('id', ids);
+      } else {
+        setPausedItems(prev => Array.from(new Set([...prev, ...ids])));
+        const agora = new Date().toISOString();
+        const { error } = await supabase.from('paused_items').upsert(ids.map(id => ({ id, paused_at: agora })), { onConflict: 'id' });
+        if (error) throw error;
+        await supabase.from('extras').update({ is_active: false }).in('id', ids);
+      }
+    } catch (e: any) {
+      console.error(e);
+      alert("Erro ao pausar categoria: " + (e?.message || e));
+      loadData();
+    }
+  };
+
   const handleQuickPriceEdit = async (itemId: string, field: string, value: string) => {
     const numVal = parseFloat(value.replace(',', '.'));
     if(isNaN(numVal)) return;
@@ -336,7 +421,10 @@ export default function MenuManager() {
   if (loading) return <div className="p-8 text-center">Carregando dados do banco...</div>;
 
   const filteredItems = (activeCategory === 'all' ? items : items.filter(i => i.category === activeCategory))
-    .filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase()) || (i.ingredients && i.ingredients.toLowerCase().includes(searchTerm.toLowerCase())));
+    .filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase()) || String(i.id).toLowerCase().includes(searchTerm.toLowerCase()) || (i.ingredients && i.ingredients.toLowerCase().includes(searchTerm.toLowerCase())));
+
+  const itensDaCategoria = activeCategory === 'all' ? [] : items.filter(i => i.category === activeCategory);
+  const categoriaToda = itensDaCategoria.length > 0 && itensDaCategoria.every(i => pausedItems.includes(i.id));
 
   return (
     <div className="bg-white rounded-xl border border-[#E7E5E1] shadow-[0_1px_2px_rgba(28,25,23,0.04),0_1px_8px_rgba(28,25,23,0.04)] p-6">
@@ -397,6 +485,24 @@ export default function MenuManager() {
         </div>
       </div>
 
+      {activeCategory !== 'all' && itensDaCategoria.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4 px-4 py-3 rounded-xl bg-[#FAFAF9] border border-[#E7E5E1]">
+          <div className="text-xs text-stone-600">
+            <span className="font-bold text-stone-900">{categories.find(c => c.id === activeCategory)?.name || activeCategory}</span>
+            {' · '}{itensDaCategoria.length} {itensDaCategoria.length === 1 ? 'produto' : 'produtos'}
+            {activeCategory === CATEGORIA_CREMES && (
+              <span className="block mt-0.5 text-stone-500">Sabores do copo e dos combos. Pausou aqui, some do cardápio e do PDV na hora.</span>
+            )}
+          </div>
+          <button
+            onClick={() => togglePauseCategory(activeCategory, categoriaToda)}
+            className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-colors cursor-pointer ${categoriaToda ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-rose-100 text-rose-700 hover:bg-rose-200 border border-rose-200'}`}
+          >
+            {categoriaToda ? 'Ativar categoria' : 'Pausar categoria'}
+          </button>
+        </div>
+      )}
+
       {/* Items Table (Quick Edit) */}
       <div className="bg-white rounded-xl border border-[#E7E5E1] shadow-[0_1px_2px_rgba(28,25,23,0.04)] overflow-hidden overflow-x-auto">
         <table className="min-w-full text-left border-collapse">
@@ -432,7 +538,9 @@ export default function MenuManager() {
                     </div>
                   </td>
                   <td className="py-3 px-4">
-                    {item.price_single !== null ? (
+                    {item.category === CATEGORIA_CREMES ? (
+                      <span className="text-xs font-semibold text-stone-500">Sabor · sem custo</span>
+                    ) : item.price_single !== null ? (
                       <div className="flex items-center gap-1">
                         <span className="text-stone-500 font-mono">R$</span>
                         <input 
@@ -478,6 +586,28 @@ export default function MenuManager() {
                     <div className={`text-[10px] font-mono font-bold mt-1 ${isPaused ? 'text-red-500' : 'text-emerald-600'}`}>
                       {isPaused ? 'PAUSADO' : 'ATIVO'}
                     </div>
+                    {(() => {
+                      const tamanhos = tamanhosDoItem(item);
+                      if (tamanhos.length < 2) return null;
+                      return (
+                        <div className="mt-2 flex flex-wrap justify-center gap-1 max-w-[180px] mx-auto" title="Pausar só um tamanho">
+                          {tamanhos.map(t => {
+                            const chave = `${item.id}-${t.pauseKey}`;
+                            const pausado = pausedItems.includes(chave);
+                            return (
+                              <button
+                                key={chave}
+                                onClick={() => togglePauseItem(chave)}
+                                title={pausado ? `Ativar ${ROTULO_TAMANHO[t.size] || t.size}` : `Pausar ${ROTULO_TAMANHO[t.size] || t.size}`}
+                                className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border transition-colors cursor-pointer ${pausado ? 'bg-rose-100 text-rose-700 border-rose-300 line-through' : 'bg-stone-100 text-stone-700 border-stone-200 hover:bg-stone-200'}`}
+                              >
+                                {ROTULO_TAMANHO[t.size] || t.size}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
                   </td>
                   <td className="py-3 px-4 text-right">
                     <div className="flex items-center justify-end gap-1">

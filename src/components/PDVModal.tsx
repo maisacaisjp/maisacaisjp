@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useMenu } from '../hooks/useMenu';
 import { useExtras } from '../hooks/useExtras';
+import { useCremes } from '../hooks/useCremes';
 import { MenuItem, ExtraIngredient } from '../data/menu';
 import { findImageForProduct } from '../utils/imageResolver';
 import { aceitaAdicionais, agruparExtras, nomeExtraAgrupado } from '../utils/produto';
@@ -184,6 +185,7 @@ export default function PDVModal({
   onOrderCreated
 }: PDVModalProps) {
   const { menuItems, categories, loading: menuLoading, refresh: refreshMenu } = useMenu();
+  useCremes(); // sabores do gestor: re-renderiza quando um sabor é pausado ou ativado
   const availableExtras = useExtras();
 
   // Sincroniza cardápio ao abrir o PDV

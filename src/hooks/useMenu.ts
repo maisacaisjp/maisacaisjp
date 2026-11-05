@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { ALL_MENU_ITEMS, MenuItem } from '../data/menu';
+import { CATEGORIA_CREMES } from '../data/variacoes';
 
 export interface Category {
   id: string;
@@ -59,10 +60,11 @@ export function useMenu() {
         };
       };
 
-      const normalizedItems: MenuItem[] = items.map(normalizeItem);
+      // Sabores (CREMES) não são produtos de vitrine: aparecem só como escolha dentro do copo/combo
+      const normalizedItems: MenuItem[] = items.filter((it: any) => it.category !== CATEGORIA_CREMES).map(normalizeItem);
 
       setMenuItems(normalizedItems);
-      setCategories(cats as Category[]);
+      setCategories((cats as Category[]).filter(c => c.id !== CATEGORIA_CREMES));
       setUsingFallback(false);
     } catch (err) {
       console.warn('[useMenu] Não foi possível carregar dados do Supabase, usando cardápio estático de reserva.', err);

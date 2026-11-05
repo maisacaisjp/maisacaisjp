@@ -49,7 +49,7 @@ export const CREMES_GELADOS: GrupoEscolha = {
     { id: 'cr-58543', nome: 'AÇAÍ SABOR BANANA', disponivel: true },
     { id: 'cr-58544', nome: 'AÇAÍ SABOR MORANGO', disponivel: true },
     { id: 'cr-58547', nome: 'CUPUAÇU NATURAL', disponivel: true, destaque: 'O mais pedido!' },
-    { id: 'cr-58549', nome: 'CUPUAÇU CREMOSO', disponivel: false, destaque: 'Mais adocicado.' },
+    { id: 'cr-58549', nome: 'CUPUAÇU CREMOSO', disponivel: true, destaque: 'Mais adocicado.' },
     { id: 'cr-58546', nome: 'CAFÉ E CACAU', disponivel: true },
     { id: 'cr-619708', nome: 'CREME DE PAÇOCA', disponivel: true },
     { id: 'cr-58552', nome: 'PITAYA', disponivel: true },
@@ -84,7 +84,42 @@ const LEVE_2_MILKSHAKES = 'acai-1422806';
 
 const SEM_ADICIONAIS = ['bebidas', 'milkshakes', 'adicionais'];
 
+// ==============================================================================
+// SABORES (CREMES) VINDOS DO GESTOR
+// Os sabores são produtos da categoria "cremes" em Produtos. Pausou lá, some aqui
+// (cardápio e PDV). A lista fixa acima só é usada se o banco não responder.
+// ==============================================================================
+
+export const CATEGORIA_CREMES = 'cremes';
+
+let cremesDoBanco: OpcaoVariacao[] | null = null;
+const nomesDosSabores = new Map<string, string>(CREMES_GELADOS.opcoes.map(o => [o.id, o.nome]));
+export const DESTAQUES_SABORES: Record<string, string> = Object.fromEntries(
+  CREMES_GELADOS.opcoes.filter(o => o.destaque).map(o => [o.id, o.destaque as string])
+);
+
+/** Chamado pelo useCremes quando a lista do banco carrega ou muda. */
+export function definirCremes(lista: OpcaoVariacao[] | null) {
+  cremesDoBanco = lista && lista.length ? lista : null;
+  (lista || []).forEach(o => nomesDosSabores.set(o.id, o.nome));
+}
+
+/** Troca os sabores pelos do gestor e esconde os pausados (e grupos que ficarem vazios). */
+function aplicarSabores(regras: RegrasProduto): RegrasProduto {
+  const escolhas = regras.escolhas
+    .map(g => {
+      const opcoes = g.rotulo === CREMES_GELADOS.rotulo && cremesDoBanco ? cremesDoBanco : g.opcoes;
+      return { ...g, opcoes: opcoes.filter(o => o.disponivel) };
+    })
+    .filter(g => g.opcoes.length > 0);
+  return { ...regras, escolhas };
+}
+
 export function regrasDoProduto(item: Pick<MenuItem, 'id' | 'category'> | null | undefined): RegrasProduto {
+  return aplicarSabores(regrasBase(item));
+}
+
+function regrasBase(item: Pick<MenuItem, 'id' | 'category'> | null | undefined): RegrasProduto {
   if (!item) return { escolhas: [], adicionais: null };
 
   if (item.id === LEVE_2_MILKSHAKES) return { escolhas: [SABORES_MILKSHAKE], adicionais: null };
@@ -109,7 +144,7 @@ export function textoEscolhas(grupos: GrupoEscolha[], selecionadas: Record<strin
   return grupos
     .map(g => {
       const nomes = (selecionadas[g.rotulo] || [])
-        .map(id => g.opcoes.find(o => o.id === id)?.nome)
+        .map(id => g.opcoes.find(o => o.id === id)?.nome ?? nomesDosSabores.get(id))
         .filter(Boolean);
       return nomes.length ? `${g.rotulo}: ${nomes.join(' + ')}` : '';
     })
