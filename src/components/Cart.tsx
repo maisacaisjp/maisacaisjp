@@ -3,6 +3,7 @@ import confetti from "canvas-confetti";
 import { supabase } from '../lib/supabase';
 import { CartItem, SIZE_LABELS } from "../types";
 import { agruparExtras, nomeExtraAgrupado } from "../utils/produto";
+import { brl, nomeBonito } from "../utils/formatacao";
 import { hapticLight, hapticMedium, hapticSuccess } from "../utils/haptics";
 import {
   RESTAURANT_WHATSAPP_PHONE,
@@ -25,10 +26,15 @@ import {
   Phone,
   User,
   FileText,
-  Sparkles
+  Sparkles,
+  Bike,
+  Store
 } from "lucide-react";
 import { useAnalytics } from '../hooks/useAnalytics';
 import { getCashbackConfig, getCustomerCashbackInfo, applyOrderCashback, dataCurta, DEFAULT_CASHBACK_PERCENT } from '../utils/cashback';
+
+const ENDERECO_LOJA = "Rua Almirante Alexandrino, 909, sala 02 – Parque da Fonte";
+const MAPA_LOJA = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent("Rua Almirante Alexandrino, 909, São José dos Pinhais - PR")}`;
 
 interface CartProps {
   items: CartItem[];
@@ -504,15 +510,15 @@ export default function Cart({
   // SUCCESS SCREEN
   if (isSuccess) {
     const successActionButtons = (
-      <div className="w-full max-w-xs mx-auto flex flex-col gap-2.5 mt-3">
+      <div className="w-full max-w-xs mx-auto flex flex-col gap-2.5 mt-5">
         {savedOrderId && (
           <a
             href={`/track/${savedTrackingCode}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full bg-[#4d0471] hover:bg-[#3b0257] text-white font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 text-xs shadow-sm transition-all cursor-pointer"
+            className="w-full h-12 bg-brand-700 hover:bg-brand-800 text-white font-semibold text-[15px] rounded-2xl flex items-center justify-center gap-2 transition cursor-pointer"
           >
-            🔍 Acompanhar Pedido
+            Acompanhar pedido
           </a>
         )}
         <a
@@ -524,9 +530,9 @@ export default function Cart({
             setIsSuccess(false);
             onClose();
           }}
-          className="w-full bg-[#25D366] hover:bg-[#1EBE5D] text-white font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 text-xs shadow-sm transition-all animate-pulse cursor-pointer"
+          className="w-full h-12 bg-[#25D366] hover:bg-[#1EBE5D] text-white font-semibold text-[15px] rounded-2xl flex items-center justify-center gap-2 transition cursor-pointer"
         >
-          📲 Abrir WhatsApp do Pedido
+          Abrir WhatsApp do pedido
         </a>
         <button
           onClick={() => {
@@ -534,670 +540,603 @@ export default function Cart({
             setCurrentStep('items');
             onClose();
           }}
-          className="text-[11px] text-gray-500 hover:text-gray-800 font-medium text-center py-1 cursor-pointer"
+          className="h-11 text-[14px] text-stone-500 hover:text-stone-900 font-medium cursor-pointer"
         >
-          Voltar ao Cardápio
+          Voltar ao cardápio
         </button>
+      </div>
+    );
+
+    const sucesso = (
+      <div className="flex flex-col items-center text-center px-6 py-8">
+        <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mb-4 ring-8 ring-emerald-50/50">
+          <Check className="w-8 h-8 text-leaf" strokeWidth={3} />
+        </div>
+        <h2 className="font-display text-[22px] font-extrabold text-stone-900">Pedido enviado!</h2>
+        <p className="text-stone-500 text-[14px] mt-1">Recebemos seu pedido. Confirme pelo WhatsApp.</p>
+        {successActionButtons}
       </div>
     );
 
     return (
       <>
-        {/* Desktop Inline Cart */}
-        <div className="hidden lg:block sticky top-28 w-full z-10">
-          <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-xs flex flex-col items-center justify-center text-center">
-            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-2.5">
-              <Check className="w-6 h-6 text-green-600" />
-            </div>
-            <h2 className="text-base font-black text-gray-800 mb-0.5">Pedido Gerado!</h2>
-            <p className="text-gray-500 text-xs mb-1">O seu pedido foi enviado com sucesso.</p>
-            {successActionButtons}
-          </div>
+        <div className="hidden lg:block sticky top-[76px] w-full">
+          <div className="bg-white rounded-3xl ring-1 ring-stone-200/80 shadow-[0_10px_30px_rgba(38,1,58,0.06)]">{sucesso}</div>
         </div>
 
-        {/* Mobile Modal Cart */}
         {isOpen && (
-          <div className="lg:hidden fixed inset-0 z-50 flex flex-col justify-end">
-            <div
-              className="absolute inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
-              onClick={onClose}
-            />
-            <div className="relative bg-white w-full rounded-t-3xl overflow-hidden shadow-2xl flex flex-col items-center justify-center p-6 text-center">
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-2.5">
-                <Check className="w-6 h-6 text-green-600" />
-              </div>
-              <h2 className="text-base font-black text-gray-800 mb-0.5">Pedido Gerado!</h2>
-              <p className="text-gray-500 text-xs mb-1">O seu pedido foi enviado com sucesso.</p>
-              {successActionButtons}
-            </div>
+          <div className="lg:hidden fixed inset-0 z-[55] flex flex-col justify-end">
+            <div className="absolute inset-0 bg-stone-950/55 animate-fade-in" onClick={onClose} />
+            <div className="relative bg-white w-full rounded-t-[28px] shadow-2xl pb-safe animate-sheet-in">{sucesso}</div>
           </div>
         )}
       </>
     );
   }
 
-  // MAIN CART CONTENT (ULTRA-COMPACT, ELEGANT, HIGH-CONVERSION)
+  const PAGAMENTOS: { valor: string; rotulo: string }[] = [
+    { valor: "PIX", rotulo: "PIX" },
+    { valor: "Cartão de Crédito", rotulo: "Crédito" },
+    { valor: "Cartão de Débito", rotulo: "Débito" },
+    { valor: "Dinheiro", rotulo: "Dinheiro" },
+  ];
+
+  const campoCls =
+    "w-full h-12 bg-white rounded-xl px-3.5 text-[16px] text-stone-900 placeholder:text-stone-400 ring-1 ring-stone-200 focus:ring-2 focus:ring-brand-600 outline-none transition-shadow";
+  const rotuloCls = "flex items-center gap-1.5 text-[13px] font-semibold text-stone-700 mb-1.5";
+  const opcaoCls = (ativo: boolean) =>
+    `h-11 px-1 rounded-xl text-[14px] font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+      ativo ? "bg-brand-50 text-brand-800 ring-2 ring-brand-700" : "bg-white text-stone-700 ring-1 ring-stone-200 hover:ring-stone-300"
+    }`;
+
+  // CONTEÚDO DA SACOLA (desktop: coluna; celular: folha de baixo)
   const CartContent = (
-    <div className="bg-white lg:border border-gray-200 lg:rounded-2xl shadow-xs flex flex-col w-full relative">
-      
-      {/* HEADER WITH DISCREET STEP TABS */}
-      <div className="bg-white border-b border-gray-100 p-3 shrink-0">
-        <div className="flex justify-between items-center mb-2">
-          <div className="flex items-center gap-1.5">
-            <ShoppingBag className="w-4 h-4 text-[#4d0471]" />
-            <h2 className="text-[13px] font-black uppercase tracking-wide text-gray-800">
-              {currentStep === 'items' ? 'Meu Pedido' : 'Entrega & Pagamento'}
+    <div className="flex flex-col w-full">
+      {/* CABEÇALHO */}
+      <div className="sticky top-0 z-10 bg-white/95 backdrop-blur px-5 pt-3.5 pb-3 border-b border-stone-100">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            {currentStep === 'checkout' && (
+              <button
+                type="button"
+                onClick={() => setCurrentStep('items')}
+                aria-label="Voltar para os itens"
+                className="-ml-2 w-9 h-9 rounded-full text-stone-700 hover:bg-stone-100 flex items-center justify-center cursor-pointer"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+            )}
+            <h2 className="font-display text-[18px] font-extrabold text-stone-900">
+              {currentStep === 'items' ? 'Sua sacola' : 'Finalizar pedido'}
             </h2>
-            <span className="bg-gray-100 text-gray-600 text-[10px] font-bold px-1.5 py-0.2 rounded-full">
-              {totalItemCount}
-            </span>
+            {currentStep === 'items' && totalItemCount > 0 && (
+              <span className="min-w-6 h-6 px-1.5 rounded-full bg-brand-50 text-brand-700 text-[12px] font-bold flex items-center justify-center tabular-nums">
+                {totalItemCount}
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-1">
             {items.length > 0 && currentStep === 'items' && (
               <button
                 onClick={onClearCart}
-                className="text-[10px] text-gray-400 hover:text-red-600 font-semibold px-1.5 py-0.5 rounded transition-colors flex items-center gap-1 cursor-pointer"
-                title="Limpar carrinho"
+                className="h-9 px-2.5 text-[13px] text-stone-500 hover:text-red-600 hover:bg-red-50 font-medium rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
               >
-                <Trash2 className="w-3 h-3" />
+                <Trash2 className="w-4 h-4" />
                 <span>Limpar</span>
               </button>
             )}
             <button
               onClick={onClose}
-              className="lg:hidden p-1 text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-100 cursor-pointer"
+              aria-label="Fechar sacola"
+              className="lg:hidden w-9 h-9 text-stone-500 hover:text-stone-900 rounded-full hover:bg-stone-100 flex items-center justify-center cursor-pointer"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* COMPACT STEP SWITCHER */}
+        {/* Etapas */}
         {items.length > 0 && (
-          <div className="grid grid-cols-2 gap-1 bg-gray-100 p-0.5 rounded-lg text-[11px] font-bold">
-            <button
-              type="button"
-              onClick={() => setCurrentStep('items')}
-              className={`py-1 px-2 rounded-md transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                currentStep === 'items'
-                  ? 'bg-white text-[#4d0471] shadow-xs'
-                  : 'text-gray-500 hover:text-gray-900'
-              }`}
-            >
-              <span>1. Itens ({totalItemCount})</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                if (items.length > 0) setCurrentStep('checkout');
-              }}
-              className={`py-1 px-2 rounded-md transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                currentStep === 'checkout'
-                  ? 'bg-[#4d0471] text-white shadow-xs'
-                  : 'text-gray-500 hover:text-gray-900'
-              }`}
-            >
-              <span>2. Entrega ➔</span>
-            </button>
+          <div className="mt-3 grid grid-cols-2 gap-2" aria-label="Etapas do pedido">
+            {[
+              { id: 'items' as const, rotulo: '1. Itens' },
+              { id: 'checkout' as const, rotulo: '2. Entrega ou retirada' },
+            ].map((e) => {
+              const ativo = currentStep === e.id;
+              const feito = e.id === 'items' && currentStep === 'checkout';
+              return (
+                <button
+                  key={e.id}
+                  type="button"
+                  onClick={() => setCurrentStep(e.id)}
+                  aria-current={ativo ? 'step' : undefined}
+                  className="text-left cursor-pointer group"
+                >
+                  <span className={`block h-1 rounded-full transition-colors ${ativo || feito ? 'bg-brand-700' : 'bg-stone-200 group-hover:bg-stone-300'}`} />
+                  <span className={`block mt-1.5 text-[12px] font-semibold ${ativo ? 'text-brand-700' : 'text-stone-400'}`}>{e.rotulo}</span>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
 
-      {/* EMPTY CART STATE */}
+      {/* SACOLA VAZIA */}
       {items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
-          <div className="w-10 h-10 rounded-full bg-gray-50 border border-dashed border-gray-200 flex items-center justify-center mb-2">
-            <ShoppingBag className="w-5 h-5 text-gray-300" />
+        <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
+          <div className="w-14 h-14 rounded-full bg-brand-50 flex items-center justify-center mb-3">
+            <ShoppingBag className="w-6 h-6 text-brand-500" />
           </div>
-          <h3 className="font-bold text-gray-700 text-xs mb-0.5">Seu carrinho está vazio</h3>
-          <p className="text-gray-400 text-[11px] max-w-[220px] mb-3">
-            Adicione itens do cardápio para fazer o seu pedido!
+          <h3 className="font-display font-bold text-stone-900 text-[16px]">Sua sacola está vazia</h3>
+          <p className="text-stone-500 text-[14px] max-w-[240px] mt-1">
+            Escolha um açaí ou combo no cardápio para começar.
           </p>
           <button
             onClick={onClose}
-            className="lg:hidden bg-[#4d0471] text-white text-[11px] font-bold py-1.5 px-4 rounded-lg hover:bg-[#3b0257] transition-colors cursor-pointer"
+            className="lg:hidden mt-5 h-11 px-5 bg-brand-700 text-white text-[14px] font-semibold rounded-xl hover:bg-brand-800 transition-colors cursor-pointer"
           >
-            Ver Cardápio
+            Ver cardápio
           </button>
         </div>
       ) : (
         <>
-          {/* BODY AREA - COMPACT & NATURAL */}
-          <div className="p-3 space-y-2.5">
-            
-            {/* ======================================================== */}
-            {/* STEP 1: COMPACT ITEMS REVIEW */}
-            {/* ======================================================== */}
-            {currentStep === 'items' && (
-              <div className="space-y-2.5 animate-in fade-in duration-150">
-                {/* ITEMS LIST (MAX 380px, scrollable only if many items) */}
-                <div className="max-h-[300px] overflow-y-auto overscroll-contain pr-1 custom-scrollbar space-y-1.5 divide-y divide-gray-100">
-                  {items.map((item) => (
-                    <div
-                      key={item.id}
-                      className="pt-1.5 first:pt-0"
-                    >
-                      <div className="flex justify-between items-start gap-1.5 text-xs">
-                        <div className="flex-1 min-w-0">
-                          <span className="font-extrabold text-gray-800">
-                            {item.quantity}x{" "}
-                            {item.isHalfAndHalf && item.halfAndHalfFlavor
-                              ? `1/2 ${item.menuItem.name} + 1/2 ${item.halfAndHalfFlavor.name}`
-                              : item.menuItem.name}
+          {/* ===================== ETAPA 1: ITENS ===================== */}
+          {currentStep === 'items' && (
+            <div className="animate-fade-in">
+              <ul className="px-5 divide-y divide-stone-100">
+                {items.map((item) => (
+                  <li key={item.id} className="py-4">
+                    <div className="flex justify-between items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[15px] font-semibold text-stone-900 leading-snug">
+                          {item.isHalfAndHalf && item.halfAndHalfFlavor
+                            ? `1/2 ${nomeBonito(item.menuItem.name)} + 1/2 ${nomeBonito(item.halfAndHalfFlavor.name)}`
+                            : nomeBonito(item.menuItem.name)}
+                        </p>
+                        {item.size && (
+                          <span className="inline-block mt-1 text-[12px] font-medium text-stone-600 bg-stone-100 px-2 py-0.5 rounded-md">
+                            {SIZE_LABELS[item.size] || item.size}
                           </span>
-                          {item.size && (
-                            <span className="ml-1 text-[10px] font-semibold text-gray-500 bg-gray-100 px-1 py-0.2 rounded">
-                              {SIZE_LABELS[item.size] || item.size}
-                            </span>
-                          )}
-
-                          {/* Extras */}
-                          {item.extras && item.extras.length > 0 && (
-                            <div className="text-[10px] text-gray-500 mt-0.5">
-                              {agruparExtras(item.extras).map((g) => `+ ${nomeExtraAgrupado(g)} (R$${(g.extra.price * g.qtd).toFixed(2)})`).join(', ')}
-                            </div>
-                          )}
-
-                          {/* Notes */}
-                          {item.notes && (
-                            <div className="text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded mt-0.5 truncate max-w-[240px]">
-                              Obs: {item.notes}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Price */}
-                        <span className="font-black text-[#4d0471] shrink-0 text-xs">
-                          R$ {(item.priceCalculated * item.quantity).toFixed(2)}
-                        </span>
+                        )}
+                        {item.extras && item.extras.length > 0 && (
+                          <p className="text-[13px] text-stone-500 mt-1.5 leading-relaxed">
+                            {agruparExtras(item.extras).map((g) => `+ ${nomeExtraAgrupado(g)}`).join(' · ')}
+                          </p>
+                        )}
+                        {item.notes && (
+                          <p className="text-[13px] text-stone-600 mt-1.5 leading-relaxed bg-amber-50 rounded-lg px-2.5 py-1.5">
+                            {item.notes}
+                          </p>
+                        )}
                       </div>
+                      <span className="font-display font-bold text-stone-900 shrink-0 text-[15px] tabular-nums">
+                        {brl(item.priceCalculated * item.quantity)}
+                      </span>
+                    </div>
 
-                      {/* Stepper + Remover in one compact row */}
-                      <div className="flex justify-between items-center mt-1">
-                        <div className="flex items-center border border-gray-200 rounded-md bg-white overflow-hidden">
-                          <button
-                            onClick={() => onUpdateQuantity(item.id, -1)}
-                            className="px-1.5 py-0.5 text-gray-500 hover:text-[#4d0471] hover:bg-gray-50 transition-colors cursor-pointer"
-                          >
-                            <Minus className="w-2.5 h-2.5" />
-                          </button>
-                          <span className="text-[11px] font-bold px-1.5 text-gray-800 min-w-4 text-center">
-                            {item.quantity}
-                          </span>
-                          <button
-                            onClick={() => onUpdateQuantity(item.id, 1)}
-                            className="px-1.5 py-0.5 text-gray-500 hover:text-[#4d0471] hover:bg-gray-50 transition-colors cursor-pointer"
-                          >
-                            <Plus className="w-2.5 h-2.5" />
-                          </button>
-                        </div>
-
+                    <div className="flex justify-between items-center mt-3">
+                      <div className="flex items-center h-10 rounded-full ring-1 ring-stone-200 bg-white">
+                        <button
+                          onClick={() => (item.quantity > 1 ? onUpdateQuantity(item.id, -1) : onRemoveItem(item.id))}
+                          aria-label={item.quantity > 1 ? 'Diminuir quantidade' : 'Remover item'}
+                          className="w-10 h-10 rounded-full text-brand-700 hover:bg-brand-50 flex items-center justify-center cursor-pointer"
+                        >
+                          {item.quantity > 1 ? <Minus className="w-4 h-4" strokeWidth={2.5} /> : <Trash2 className="w-4 h-4" />}
+                        </button>
+                        <span className="w-6 text-center font-display text-[15px] font-bold text-stone-900 tabular-nums">
+                          {item.quantity}
+                        </span>
+                        <button
+                          onClick={() => onUpdateQuantity(item.id, 1)}
+                          aria-label="Aumentar quantidade"
+                          className="w-10 h-10 rounded-full text-brand-700 hover:bg-brand-50 flex items-center justify-center cursor-pointer"
+                        >
+                          <Plus className="w-4 h-4" strokeWidth={2.5} />
+                        </button>
+                      </div>
+                      {item.quantity > 1 && (
                         <button
                           onClick={() => onRemoveItem(item.id)}
-                          className="text-[10px] text-gray-400 hover:text-red-600 transition-colors cursor-pointer"
+                          className="h-9 px-2 text-[13px] text-stone-400 hover:text-red-600 transition-colors cursor-pointer"
                         >
                           Remover
                         </button>
-                      </div>
+                      )}
                     </div>
-                  ))}
+                  </li>
+                ))}
+              </ul>
+
+              {/* Sugestão de bebida */}
+              {(() => {
+                const hasBebida = items.some((i) => i.menuItem.category === "bebidas");
+                if (hasBebida) return null;
+                const sug = ALL_MENU_ITEMS.find((m) => m.id === "b-1");
+                if (!sug) return null;
+                return (
+                  <div className="mx-5 mb-4 bg-stone-50 rounded-2xl px-4 py-3 flex items-center justify-between gap-3">
+                    <span className="text-[14px] text-stone-600 min-w-0">
+                      Que tal uma <strong className="text-stone-900 font-semibold">{nomeBonito(sug.name)}</strong> por {brl(sug.priceSingle || 0)}?
+                    </span>
+                    <button
+                      onClick={() =>
+                        onAddToCart({
+                          id: Date.now().toString(),
+                          menuItem: sug,
+                          quantity: 1,
+                          priceCalculated: sug.priceSingle || 0,
+                        })
+                      }
+                      className="h-9 px-3 text-[13px] bg-white ring-1 ring-stone-200 text-brand-700 font-semibold rounded-xl hover:ring-brand-300 transition shrink-0 cursor-pointer"
+                    >
+                      Adicionar
+                    </button>
+                  </div>
+                );
+              })()}
+
+              {/* Rodapé fixo da etapa 1 */}
+              <div className="sticky bottom-0 bg-white border-t border-stone-100 px-5 pt-3 pb-4 lg:pb-5">
+                <div className="flex justify-between items-baseline mb-3">
+                  <span className="text-[14px] text-stone-500">Subtotal</span>
+                  <span className="font-display text-[20px] font-extrabold text-stone-900 tabular-nums">{brl(subtotal)}</span>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFormError(null);
+                    setCurrentStep('checkout');
+                  }}
+                  disabled={!businessStatus.isOpen}
+                  className={`w-full h-[52px] rounded-2xl font-semibold text-[15px] transition flex justify-center items-center gap-2 cursor-pointer ${
+                    !businessStatus.isOpen
+                      ? 'bg-stone-100 text-stone-500 cursor-not-allowed'
+                      : 'bg-brand-700 hover:bg-brand-800 active:scale-[0.99] text-white shadow-[0_8px_20px_rgba(77,4,113,0.25)]'
+                  }`}
+                >
+                  {!businessStatus.isOpen ? (
+                    <>
+                      <Clock className="w-4 h-4" />
+                      <span>Loja fechada no momento</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Continuar para entrega ou retirada</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
 
-                {/* DISCREET UPSELL CHIP */}
-                {(() => {
-                  const hasBebida = items.some((i) => i.menuItem.category === "bebidas");
-                  if (!hasBebida) {
-                    const sug = ALL_MENU_ITEMS.find((m) => m.id === "b-1");
-                    if (sug) {
+          {/* ===================== ETAPA 2: ENTREGA E PAGAMENTO ===================== */}
+          {currentStep === 'checkout' && (
+            <div className="animate-fade-in">
+              <div className="px-5 pt-3.5 pb-4 space-y-3.5">
+                {/* Entrega ou retirada */}
+                <fieldset>
+                  <legend className={rotuloCls}>Como você quer receber?</legend>
+                  <div className="grid grid-cols-2 gap-2">
+                    {([
+                      { valor: "Delivery", titulo: "Entrega", Icone: Bike, tempo: deliveryTimeEstimate, info: "Taxa por bairro" },
+                      { valor: "Takeaway", titulo: "Retirada", Icone: Store, tempo: pickupTimeEstimate, info: "Sem taxa" },
+                    ] as const).map(({ valor, titulo, Icone, tempo, info }) => {
+                      const ativo = orderType === valor;
                       return (
-                        <div className="bg-gray-50 border border-gray-200/80 rounded-lg px-2 py-1.5 flex items-center justify-between text-[11px]">
-                          <span className="text-gray-600 truncate">
-                            🥤 Coca-Cola por <strong>R${(sug.priceSingle || 0).toFixed(2)}</strong>?
+                        <button
+                          key={valor}
+                          type="button"
+                          aria-pressed={ativo}
+                          onClick={() => {
+                            setOrderType(valor);
+                            saveCustomerData({ orderType: valor });
+                            setFormError(null);
+                          }}
+                          className={`flex items-center gap-2.5 text-left rounded-2xl px-3 py-2.5 transition-all cursor-pointer ${
+                            ativo ? "bg-brand-50 ring-2 ring-brand-700" : "bg-white ring-1 ring-stone-200 hover:ring-stone-300"
+                          }`}
+                        >
+                          <span className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center transition-colors ${ativo ? "bg-brand-700 text-white" : "bg-stone-100 text-stone-600"}`}>
+                            <Icone className="w-[18px] h-[18px]" />
                           </span>
-                          <button
-                            onClick={() =>
-                              onAddToCart({
-                                id: Date.now().toString(),
-                                menuItem: sug,
-                                quantity: 1,
-                                priceCalculated: sug.priceSingle || 0,
-                              })
-                            }
-                            className="text-[10px] bg-white border border-emerald-500 text-emerald-700 font-bold px-2 py-0.5 rounded hover:bg-emerald-50 transition-colors shrink-0 ml-1.5 cursor-pointer"
-                          >
-                            + Adicionar
-                          </button>
-                        </div>
+                          <span className="min-w-0 leading-tight">
+                            <span className="block font-display text-[15px] font-bold text-stone-900">{titulo}</span>
+                            <span className="block mt-0.5 text-[12px] text-stone-500">{tempo}</span>
+                            <span className={`block text-[12px] font-semibold ${valor === "Takeaway" ? "text-leaf" : "text-stone-500"}`}>{info}</span>
+                          </span>
+                        </button>
                       );
-                    }
-                  }
-                  return null;
-                })()}
-
-                {/* STEP 1 FOOTER & CTA */}
-                <div className="pt-2 border-t border-gray-100 space-y-2">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-gray-500 font-medium">Subtotal dos itens:</span>
-                    <span className="font-black text-[#4d0471] text-sm">R$ {subtotal.toFixed(2)}</span>
+                    })}
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFormError(null);
-                      setCurrentStep('checkout');
-                    }}
-                    disabled={!businessStatus.isOpen}
-                    className={`w-full font-bold py-2.5 px-3 rounded-xl transition-all flex justify-center items-center gap-1.5 text-xs shadow-xs cursor-pointer ${
-                      !businessStatus.isOpen
-                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                        : 'bg-[#4d0471] hover:bg-[#3b0257] active:scale-[0.99] text-white'
-                    }`}
-                  >
-                    {!businessStatus.isOpen ? (
-                      <>
-                        <Clock className="w-3.5 h-3.5" />
-                        <span>Loja Fechada no Momento</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>Avançar para Entrega</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            )}
+                  {orderType === "Takeaway" && (
+                    <div className="mt-2 rounded-xl bg-stone-50 px-3 py-2.5 flex items-start gap-2 text-[13px] leading-snug animate-fade-in">
+                      <MapPin className="w-4 h-4 text-brand-600 shrink-0 mt-px" />
+                      <p className="min-w-0 text-stone-600">
+                        <span className="font-semibold text-stone-900">Retire em: </span>
+                        {ENDERECO_LOJA} ·{" "}
+                        <a href={MAPA_LOJA} target="_blank" rel="noopener noreferrer" className="font-semibold text-brand-700 underline-offset-2 hover:underline whitespace-nowrap">
+                          Ver no mapa
+                        </a>
+                      </p>
+                    </div>
+                  )}
+                </fieldset>
 
-            {/* ======================================================== */}
-            {/* STEP 2: ULTRA-COMPACT CHECKOUT FORM */}
-            {/* ======================================================== */}
-            {currentStep === 'checkout' && (
-              <div className="space-y-2.5 animate-in fade-in duration-150">
-                
-                {/* BACK LINK + RESUMO EM 1 LINHA */}
-                <div className="flex items-center justify-between text-[11px] pb-1 border-b border-gray-100">
-                  <button
-                    type="button"
-                    onClick={() => setCurrentStep('items')}
-                    className="font-bold text-[#4d0471] hover:underline flex items-center gap-1 cursor-pointer"
-                  >
-                    <ArrowLeft className="w-3 h-3" />
-                    <span>Editar itens</span>
-                  </button>
-                  <span className="text-gray-500 font-medium">
-                    {totalItemCount} {totalItemCount === 1 ? 'item' : 'itens'} • Subtotal: R${subtotal.toFixed(2)}
-                  </span>
-                </div>
-
-                {/* ENTREGA VS RETIRADA (COMPACT 28px ROW) */}
-                <div className="grid grid-cols-2 gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setOrderType("Delivery");
-                      saveCustomerData({ orderType: "Delivery" });
-                    }}
-                    className={`py-1.5 px-2 rounded-lg font-bold text-[11px] transition-all flex items-center justify-center gap-1 border cursor-pointer ${
-                      orderType === "Delivery"
-                        ? "bg-[#4d0471] text-white border-[#4d0471] shadow-xs"
-                        : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
-                    }`}
-                  >
-                    <span>🛵 Entrega ({deliveryTimeEstimate})</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setOrderType("Takeaway");
-                      saveCustomerData({ orderType: "Takeaway" });
-                    }}
-                    className={`py-1.5 px-2 rounded-lg font-bold text-[11px] transition-all flex items-center justify-center gap-1 border cursor-pointer ${
-                      orderType === "Takeaway"
-                        ? "bg-[#4d0471] text-white border-[#4d0471] shadow-xs"
-                        : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
-                    }`}
-                  >
-                    <span>🛍️ Retirada ({pickupTimeEstimate})</span>
-                  </button>
+                {/* Nome e WhatsApp */}
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label htmlFor="ck-nome" className={rotuloCls}>
+                      <User className="w-4 h-4 text-brand-600" /> Nome
+                    </label>
+                    <input
+                      id="ck-nome"
+                      type="text"
+                      autoComplete="name"
+                      placeholder="Seu nome"
+                      value={name}
+                      onChange={(e) => {
+                        setName(e.target.value);
+                        saveCustomerData({ name: e.target.value });
+                      }}
+                      className={campoCls}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="ck-tel" className={rotuloCls}>
+                      <Phone className="w-4 h-4 text-brand-600" /> WhatsApp
+                    </label>
+                    <input
+                      id="ck-tel"
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
+                      placeholder="(41) 90000-0000"
+                      value={telefone}
+                      onChange={(e) => {
+                        setTelefone(e.target.value);
+                        saveCustomerData({ telefone: e.target.value });
+                      }}
+                      className={campoCls}
+                    />
+                  </div>
                 </div>
 
-                {/* FORM FIELDS */}
-                <div className="space-y-2">
-                  {/* Nome & WhatsApp em 2 colunas compactas */}
-                  <div className="grid grid-cols-2 gap-1.5">
+                {/* Endereço e bairro */}
+                {orderType === "Delivery" && (
+                  <div className="space-y-2.5">
                     <div>
-                      <label className="block text-[10px] font-bold text-gray-600 mb-0.5 flex items-center gap-0.5 uppercase">
-                        <User className="w-2.5 h-2.5 text-[#4d0471]" />
-                        <span>Nome *</span>
+                      <label htmlFor="ck-end" className={rotuloCls}>
+                        <MapPin className="w-4 h-4 text-brand-600" /> Endereço
                       </label>
+                      <input
+                        id="ck-end"
+                        type="text"
+                        autoComplete="street-address"
+                        placeholder="Rua, número, complemento"
+                        value={morada}
+                        onChange={(e) => {
+                          setMorada(e.target.value);
+                          saveCustomerData({ morada: e.target.value });
+                        }}
+                        className={campoCls}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="ck-bairro" className={rotuloCls}>Bairro (São José dos Pinhais)</label>
+                      <select
+                        id="ck-bairro"
+                        value={zona}
+                        onChange={(e) => {
+                          setZona(e.target.value);
+                          saveCustomerData({ zona: e.target.value });
+                        }}
+                        className={`${campoCls} appearance-none bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%2378716c%22 stroke-width=%222%22><path d=%22m6 9 6 6 6-6%22/></svg>')] bg-no-repeat bg-[right_14px_center] pr-10`}
+                      >
+                        <option value="">Selecione o bairro</option>
+                        {Object.keys(zonesFees).map((z) => (
+                          <option key={z} value={z}>
+                            {z} ({zonesFees[z] === 0 ? "entrega grátis" : `+ ${brl(zonesFees[z])}`})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {/* Pagamento */}
+                <fieldset>
+                  <legend className={rotuloCls}>Forma de pagamento</legend>
+                  <div className="grid grid-cols-4 gap-2">
+                    {PAGAMENTOS.map((p) => (
+                      <button
+                        key={p.valor}
+                        type="button"
+                        onClick={() => {
+                          setPagamento(p.valor as typeof pagamento);
+                          saveCustomerData({ pagamento: p.valor });
+                        }}
+                        className={opcaoCls(pagamento === p.valor)}
+                      >
+                        {p.rotulo}
+                      </button>
+                    ))}
+                  </div>
+
+                  {(pagamento === "Cartão de Crédito" || pagamento === "Cartão de Débito") && (
+                    <p className="mt-2 text-[13px] text-brand-700 bg-brand-50 rounded-xl px-3 py-2">
+                      {orderType === "Delivery" ? "Levamos a maquininha até você." : "Pague com cartão na hora da retirada."}
+                    </p>
+                  )}
+
+                  {pagamento === "Dinheiro" && (
+                    <div className="mt-3">
+                      <label htmlFor="ck-troco" className={rotuloCls}>Troco para quanto?</label>
+                      <input
+                        id="ck-troco"
+                        type="number"
+                        inputMode="decimal"
+                        min="0"
+                        step="0.01"
+                        placeholder="Ex.: 50"
+                        value={trocoPara}
+                        onChange={(e) => setTrocoPara(e.target.value)}
+                        className={`${campoCls} max-w-[180px]`}
+                      />
+                    </div>
+                  )}
+                </fieldset>
+
+                {/* CPF na nota */}
+                <div>
+                  {!showNifInput && !nif ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowNifInput(true)}
+                      className="h-8 text-[13px] text-stone-500 hover:text-brand-700 font-medium flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <FileText className="w-4 h-4" />
+                      <span>Adicionar CPF na nota (opcional)</span>
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-2">
                       <input
                         type="text"
-                        placeholder="Seu nome"
-                        value={name}
+                        inputMode="numeric"
+                        aria-label="CPF na nota"
+                        placeholder="CPF na nota (opcional)"
+                        value={nif}
                         onChange={(e) => {
-                          setName(e.target.value);
-                          saveCustomerData({ name: e.target.value });
+                          setNif(e.target.value);
+                          saveCustomerData({ nif: e.target.value });
                         }}
-                        className="w-full h-8 bg-gray-50/50 focus:bg-white border border-gray-200 focus:border-[#4d0471] rounded-lg px-2 text-xs outline-none transition-colors"
+                        className={campoCls}
                       />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-bold text-gray-600 mb-0.5 flex items-center gap-0.5 uppercase">
-                        <Phone className="w-2.5 h-2.5 text-[#4d0471]" />
-                        <span>WhatsApp *</span>
-                      </label>
-                      <input
-                        type="tel"
-                        placeholder="9xx xxx xxx"
-                        value={telefone}
-                        onChange={(e) => {
-                          setTelefone(e.target.value);
-                          saveCustomerData({ telefone: e.target.value });
-                        }}
-                        className="w-full h-8 bg-gray-50/50 focus:bg-white border border-gray-200 focus:border-[#4d0471] rounded-lg px-2 text-xs outline-none transition-colors"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Se Entrega: Morada & Zona */}
-                  {orderType === "Delivery" && (
-                    <div className="space-y-1.5 bg-red-50/30 p-2 rounded-lg border border-red-100">
-                      <div>
-                        <label className="block text-[10px] font-bold text-gray-600 mb-0.5 flex items-center gap-0.5 uppercase">
-                          <MapPin className="w-2.5 h-2.5 text-[#4d0471]" />
-                          <span>Endereço Completo *</span>
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="Rua, número, andar / apto"
-                          value={morada}
-                          onChange={(e) => {
-                            setMorada(e.target.value);
-                            saveCustomerData({ morada: e.target.value });
-                          }}
-                          className="w-full h-8 bg-white border border-gray-200 focus:border-[#4d0471] rounded-lg px-2 text-xs outline-none transition-colors"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[10px] font-bold text-gray-600 mb-0.5 uppercase">
-                          Bairro para Entrega (SJP) *
-                        </label>
-                        <select
-                          value={zona}
-                          onChange={(e) => {
-                            setZona(e.target.value);
-                            saveCustomerData({ zona: e.target.value });
-                          }}
-                          className="w-full h-8 bg-white border border-gray-200 focus:border-[#4d0471] rounded-lg px-2 text-xs outline-none font-medium transition-colors"
-                        >
-                          <option value="">Selecione o bairro em SJP...</option>
-                          {Object.keys(zonesFees).map((z) => (
-                            <option key={z} value={z}>
-                              {z} ({zonesFees[z] === 0 ? "Taxa Grátis" : `+R$ ${zonesFees[z].toFixed(2)}`})
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Formas de Pagamento: PIX, Crédito, Débito e Dinheiro */}
-                  <div>
-                    <label className="block text-[10px] font-bold text-gray-600 mb-1 uppercase tracking-wider">
-                      Forma de Pagamento
-                    </label>
-                    <div className="grid grid-cols-2 gap-1.5">
                       <button
                         type="button"
+                        aria-label="Remover CPF"
                         onClick={() => {
-                          setPagamento("PIX");
-                          saveCustomerData({ pagamento: "PIX" });
+                          setNif("");
+                          setShowNifInput(false);
+                          saveCustomerData({ nif: "" });
                         }}
-                        className={`h-7 px-2 rounded-lg font-bold text-[11px] transition-all flex items-center justify-center gap-1 border cursor-pointer ${
-                          pagamento === "PIX"
-                            ? "bg-[#4d0471] text-white border-[#4d0471] shadow-2xs"
-                            : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
-                        }`}
+                        className="w-12 h-12 shrink-0 rounded-xl text-stone-400 hover:text-stone-700 hover:bg-stone-100 flex items-center justify-center cursor-pointer"
                       >
-                        <span>📱 PIX</span>
+                        <X className="w-5 h-5" />
                       </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPagamento("Cartão de Crédito");
-                          saveCustomerData({ pagamento: "Cartão de Crédito" });
-                        }}
-                        className={`h-7 px-2 rounded-lg font-bold text-[11px] transition-all flex items-center justify-center gap-1 border cursor-pointer ${
-                          pagamento === "Cartão de Crédito"
-                            ? "bg-[#4d0471] text-white border-[#4d0471] shadow-2xs"
-                            : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
-                        }`}
-                      >
-                        <span>💳 Crédito</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPagamento("Cartão de Débito");
-                          saveCustomerData({ pagamento: "Cartão de Débito" });
-                        }}
-                        className={`h-7 px-2 rounded-lg font-bold text-[11px] transition-all flex items-center justify-center gap-1 border cursor-pointer ${
-                          pagamento === "Cartão de Débito"
-                            ? "bg-[#4d0471] text-white border-[#4d0471] shadow-2xs"
-                            : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
-                        }`}
-                      >
-                        <span>💳 Débito</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPagamento("Dinheiro");
-                          saveCustomerData({ pagamento: "Dinheiro" });
-                        }}
-                        className={`h-7 px-2 rounded-lg font-bold text-[11px] transition-all flex items-center justify-center gap-1 border cursor-pointer ${
-                          pagamento === "Dinheiro"
-                            ? "bg-[#4d0471] text-white border-[#4d0471] shadow-2xs"
-                            : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
-                        }`}
-                      >
-                        <span>💵 Dinheiro</span>
-                      </button>
-                    </div>
-
-                    {(pagamento === "Cartão de Crédito" || pagamento === "Cartão de Débito") && (
-                      <div className="mt-1.5 p-1.5 bg-purple-50 border border-purple-200 rounded-lg text-[10.5px] text-[#4d0471] font-semibold flex items-center gap-1.5">
-                        <span>💳</span>
-                        <span>Levamos a maquininha de cartão até você!</span>
-                      </div>
-                    )}
-
-                    {pagamento === "Dinheiro" && (
-                      <div className="mt-1.5 flex items-center gap-1.5">
-                        <span className="text-[10px] font-semibold text-gray-600">Troco para quanto?</span>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          placeholder="Ex: 50"
-                          value={trocoPara}
-                          onChange={(e) => setTrocoPara(e.target.value)}
-                          className="h-7 w-24 bg-white border border-gray-200 focus:border-[#4d0471] rounded-lg px-2 text-xs outline-none"
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* CPF opcional na nota */}
-                  <div className="pt-0.5">
-                    {!showNifInput && !nif ? (
-                      <button
-                        type="button"
-                        onClick={() => setShowNifInput(true)}
-                        className="text-[10px] text-gray-400 hover:text-gray-700 flex items-center gap-0.5 cursor-pointer"
-                      >
-                        <FileText className="w-2.5 h-2.5" />
-                        <span>+ Adicionar CPF na nota (opcional)</span>
-                      </button>
-                    ) : (
-                      <div className="flex items-center gap-1.5">
-                        <input
-                          type="text"
-                          placeholder="CPF na nota (opcional)"
-                          value={nif}
-                          onChange={(e) => {
-                            setNif(e.target.value);
-                            saveCustomerData({ nif: e.target.value });
-                          }}
-                          className="h-7 w-full bg-white border border-gray-200 focus:border-[#4d0471] rounded-lg px-2 text-xs outline-none"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setNif("");
-                            setShowNifInput(false);
-                            saveCustomerData({ nif: "" });
-                          }}
-                          className="text-gray-400 hover:text-gray-600 text-xs p-1"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  {/* PROGRAMA DE CASHBACK / FIDELIDADE */}
-                  {cashbackConfig.enabled && (
-                    <div className="space-y-1.5 pt-1">
-                      {customerCashbackBalance > 0 && (
-                        <div className="bg-amber-50/90 border border-amber-300 rounded-xl p-2.5 transition-all shadow-2xs">
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <div className="w-6 h-6 rounded-full bg-amber-500 text-stone-950 flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
-                                R$
-                              </div>
-                              <div className="min-w-0">
-                                <span className="text-[11px] font-extrabold text-stone-900 block truncate">
-                                  Cashback Disponível
-                                </span>
-                                <span className="text-[10px] text-amber-800 font-semibold block">
-                                  Saldo: <strong>R$ {customerCashbackBalance.toFixed(2)}</strong>
-                                </span>
-                                {cashbackVence && (
-                                  <span className="text-[10px] text-amber-700 block">
-                                    R$ {cashbackVence.valor.toFixed(2)} vence em {dataCurta(cashbackVence.data)}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-
-                            <button
-                              type="button"
-                              onClick={() => setUseCashback(!useCashback)}
-                              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer border ${
-                                useCashback
-                                  ? 'bg-amber-500 text-stone-950 border-amber-600 shadow-2xs'
-                                  : 'bg-white text-stone-800 border-amber-300 hover:bg-amber-100/60'
-                              }`}
-                            >
-                              {useCashback ? '✓ Aplicado' : 'Abater Saldo'}
-                            </button>
-                          </div>
-
-                          {useCashback && (
-                            <div className="mt-1.5 pt-1.5 border-t border-amber-200/60 flex items-center justify-between text-[10px] text-emerald-800 font-bold">
-                              <span>Desconto no pedido:</span>
-                              <span>- R$ {cashbackDiscount.toFixed(2)}</span>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {earnedCashback > 0 && (
-                        <div className="flex items-center justify-between px-2.5 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-lg text-[10px] text-amber-900">
-                          <div className="flex items-center gap-1.5">
-                            <Sparkles className="w-3 h-3 text-amber-600" />
-                            <span>Cashback ganho hoje ({cashbackConfig.percent}%):</span>
-                          </div>
-                          <span className="font-black text-amber-700">+ R$ {earnedCashback.toFixed(2)}</span>
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
 
-                {/* STEP 2 FOOTER & FINAL CTA */}
-                <div className="pt-2 border-t border-gray-100 space-y-2">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-gray-500">
-                      {orderType === "Delivery" ? (
-                        <>Taxa entrega: <strong className="text-emerald-600">{deliveryFee === 0 ? 'GRÁTIS' : `R$${deliveryFee.toFixed(2)}`}</strong></>
-                      ) : (
-                        'Retirada no balcão'
-                      )}
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <span className="text-gray-500 font-medium">Total:</span>
-                      <span className="font-black text-[#4d0471] text-base">R$ {total.toFixed(2)}</span>
-                    </div>
+                {/* Cashback */}
+                {cashbackConfig.enabled && (
+                  <div className="space-y-2">
+                    {customerCashbackBalance > 0 && (
+                      <div className="bg-amber-50 ring-1 ring-amber-200 rounded-2xl p-3.5">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-9 h-9 rounded-full bg-gold text-stone-900 flex items-center justify-center shrink-0">
+                              <Sparkles className="w-4 h-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <span className="text-[14px] font-semibold text-stone-900 block">Cashback disponível</span>
+                              <span className="text-[13px] text-amber-900 block tabular-nums">
+                                Saldo: <strong>{brl(customerCashbackBalance)}</strong>
+                              </span>
+                              {cashbackVence && (
+                                <span className="text-[12px] text-amber-800 block">
+                                  {brl(cashbackVence.valor)} vence em {dataCurta(cashbackVence.data)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setUseCashback(!useCashback)}
+                            aria-pressed={useCashback}
+                            className={`h-10 px-3.5 rounded-xl text-[13px] font-semibold transition cursor-pointer shrink-0 ${
+                              useCashback ? 'bg-stone-900 text-white' : 'bg-white text-stone-900 ring-1 ring-amber-300 hover:bg-amber-100'
+                            }`}
+                          >
+                            {useCashback ? 'Aplicado ✓' : 'Usar saldo'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {earnedCashback > 0 && (
+                      <div className="flex items-center justify-between gap-2 px-3.5 py-2 bg-amber-50/60 rounded-xl text-[13px] text-amber-900">
+                        <span className="flex items-center gap-1.5">
+                          <Sparkles className="w-4 h-4 text-amber-600" />
+                          Você ganha neste pedido ({cashbackConfig.percent}%)
+                        </span>
+                        <span className="font-bold tabular-nums">+ {brl(earnedCashback)}</span>
+                      </div>
+                    )}
                   </div>
+                )}
+              </div>
 
+              {/* Rodapé fixo da etapa 2 */}
+              <div className="sticky bottom-0 bg-white border-t border-stone-100 px-5 pt-2.5 pb-4 lg:pb-5">
+                {formError && (
+                  <div role="alert" className="mb-2.5 bg-red-50 ring-1 ring-red-200 text-red-700 px-3 py-2.5 rounded-xl text-[13px] font-medium whitespace-pre-line flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                    <div>{formError}</div>
+                  </div>
+                )}
+
+                <p className="text-[12px] text-stone-500 leading-snug tabular-nums">
+                  Subtotal {brl(subtotal)} ·{" "}
+                  {orderType !== "Delivery" ? (
+                    <span className="text-leaf font-semibold">retirada sem taxa</span>
+                  ) : !zona ? (
+                    <span>entrega: escolha o bairro</span>
+                  ) : deliveryFee === 0 ? (
+                    <span className="text-leaf font-semibold">entrega grátis</span>
+                  ) : (
+                    <span>entrega {brl(deliveryFee)}</span>
+                  )}
                   {cashbackDiscount > 0 && (
-                    <div className="flex justify-between items-center text-xs text-amber-900 bg-amber-50/90 px-2.5 py-1 rounded-lg border border-amber-200">
-                      <span className="font-semibold flex items-center gap-1">
-                        <span>Desconto Cashback:</span>
-                      </span>
-                      <span className="font-extrabold text-emerald-700">- R$ {cashbackDiscount.toFixed(2)}</span>
-                    </div>
+                    <span className="text-leaf font-semibold"> · cashback − {brl(cashbackDiscount)}</span>
                   )}
+                </p>
 
-                  {formError && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 p-2 rounded-lg text-[11px] font-semibold whitespace-pre-line flex items-center gap-1.5">
-                      <AlertCircle className="w-3.5 h-3.5 text-red-600 shrink-0" />
-                      <div>{formError}</div>
-                    </div>
-                  )}
-
+                <div className="mt-2 flex items-center gap-3">
+                  <div className="shrink-0">
+                    <span className="block text-[12px] font-medium text-stone-500 leading-none">Total</span>
+                    <span className="block mt-1 font-display text-[22px] font-extrabold text-stone-900 tabular-nums leading-none">{brl(total)}</span>
+                  </div>
                   <button
                     type="button"
                     onClick={handleCheckout}
                     disabled={isSubmitting || !businessStatus.isOpen}
-                    className={`w-full font-black py-2.5 px-3 rounded-xl transition-all flex justify-center items-center gap-1.5 text-xs shadow-xs cursor-pointer ${
+                    className={`flex-1 min-w-0 h-[52px] px-3 rounded-2xl font-semibold text-[15px] transition flex justify-center items-center gap-2 cursor-pointer ${
                       isSubmitting || !businessStatus.isOpen
-                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                        : 'bg-[#25D366] hover:bg-[#1EBE5D] active:scale-[0.99] text-white shadow-emerald-700/20'
+                        ? 'bg-stone-100 text-stone-500 cursor-not-allowed'
+                        : 'bg-[#25D366] hover:bg-[#1EBE5D] active:scale-[0.99] text-white shadow-[0_8px_20px_rgba(37,211,102,0.3)]'
                     }`}
                   >
                     {isSubmitting ? (
                       <>
-                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        <span>Enviando pedido...</span>
+                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>Enviando...</span>
                       </>
                     ) : !businessStatus.isOpen ? (
                       <>
-                        <Clock className="w-3.5 h-3.5" />
-                        <span>Loja Fechada no Momento</span>
+                        <Clock className="w-4 h-4" />
+                        <span>Loja fechada</span>
                       </>
                     ) : (
-                      <>
-                        <span>Confirmar e Enviar Pedido</span>
-                        <span>📱</span>
-                      </>
+                      <span>Enviar pelo WhatsApp</span>
                     )}
                   </button>
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </>
       )}
     </div>
@@ -1205,19 +1144,19 @@ export default function Cart({
 
   return (
     <>
-      {/* Desktop Inline Cart */}
-      <div className="hidden lg:block sticky top-28 w-full z-10">
-        {CartContent}
+      {/* Desktop: coluna fixa ao lado do cardápio */}
+      <div className="hidden lg:block sticky top-[76px] w-full">
+        <div className="bg-white rounded-3xl ring-1 ring-stone-200/80 shadow-[0_10px_30px_rgba(38,1,58,0.06)] max-h-[calc(100vh-92px)] overflow-y-auto overscroll-contain custom-scrollbar">
+          {CartContent}
+        </div>
       </div>
 
-      {/* Mobile Modal Cart */}
+      {/* Celular: folha de baixo */}
       {isOpen && (
-        <div className="lg:hidden fixed inset-0 z-50 flex flex-col justify-end">
-          <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
-            onClick={onClose}
-          />
-          <div className="relative bg-white w-full max-h-[85vh] rounded-t-3xl overflow-y-auto shadow-2xl flex flex-col p-2">
+        <div className="lg:hidden fixed inset-0 z-[55] flex flex-col justify-end" role="dialog" aria-modal="true" aria-label="Sacola">
+          <div className="absolute inset-0 bg-stone-950/55 animate-fade-in" onClick={onClose} />
+          <div className="relative bg-white w-full max-h-[94dvh] rounded-t-[28px] overflow-y-auto overscroll-contain shadow-2xl pb-[env(safe-area-inset-bottom)] animate-sheet-in">
+            <span className="block mx-auto mt-2 w-10 h-1 rounded-full bg-stone-200" aria-hidden="true" />
             {CartContent}
           </div>
         </div>

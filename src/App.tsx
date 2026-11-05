@@ -2,7 +2,7 @@
 
 // Commit trigger - updated
 import { supabase } from "./lib/supabase";
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useMenu } from "./hooks/useMenu";
 import { useBusinessHours } from "./hooks/useBusinessHours";
 import {
@@ -18,7 +18,8 @@ import { CartItem } from "./types";
 import { playVictorySound } from "./utils/sound";
 import { getStoreDate } from "./utils/date";
 import { hapticLight, hapticMedium, hapticSuccess } from "./utils/haptics";
-import { Search, Plus, ShoppingBag, X, Instagram, MapPin, ChevronDown, ArrowUp } from "lucide-react";
+import { Search, ShoppingBag, X, MapPin, ArrowUp, Clock, Bike, Check, ChevronRight } from "lucide-react";
+import { brl, nomeBonito, tituloCategoria } from "./utils/formatacao";
 import Cart from "./components/Cart";
 import MenuItemCard from "./components/MenuItemCard";
 import PizzaModal from "./components/PizzaModal";
@@ -80,8 +81,14 @@ function App() {
   const { menuItems, categories: dbCategories, loading: menuLoading, usingFallback } = useMenu();
   const businessStatus = useBusinessHours();
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [activeCategory, setActiveCategory] = useState<string>("tradicionais");
+  const [activeCategory, setActiveCategory] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [toast, setToast] = useState<{ key: number; nome: string } | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const tabsRef = useRef<HTMLDivElement>(null);
+  // Enquanto a página rola por clique numa aba, o scrollspy não troca a aba ativa
+  const scrollLockRef = useRef(false);
   
   const { trackEvent } = useAnalytics();
 
@@ -170,6 +177,19 @@ function App() {
     }
   }, [menuLoading, pausedItemsLoaded, menuItems, pausedItems, hasOpenedPromoAutomatically]);
 
+  // Tempo de entrega cadastrado no gestor (o mesmo que aparece no checkout)
+  const [tempoEntrega, setTempoEntrega] = useState("45 a 75 min");
+  useEffect(() => {
+    supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'delivery_time_estimate')
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.value) setTempoEntrega(String(data.value));
+      });
+  }, []);
+
   useEffect(() => {
     const fetchPausedItems = async () => {
       try {
@@ -222,6 +242,7 @@ function App() {
 
     setCartBounce(true);
     setTimeout(() => setCartBounce(false), 500);
+    setToast({ key: Date.now(), nome: nomeBonito(newItem.menuItem.name) });
 
     // Só soma na mesma linha se for o mesmo produto, tamanho, adicionais e observação.
     // Dois copos de 550ml com adicionais diferentes ficam em linhas separadas.
@@ -354,22 +375,100 @@ function App() {
     return map;
   }, [allItems, searchTerm, currentCategoriesUI]); // Re-calculate only when these change
 
+  // Subtítulo da seção: o do banco; se vier vazio, o texto padrão da categoria
+  const subPadrao = (id: string, sub: string) =>
+    sub || categoriesUI.find((c) => c.id === id)?.sub || (id === "mais-pedidos" ? "Os queridinhos dos nossos clientes" : "");
+
+  // Só aparecem abas de categorias que têm produto (evita "Mais pedidos" e "Mais vendidos" repetidos)
+  const visibleCategories = useMemo(
+    () => currentCategoriesUI.filter((cat) => cat.id !== "menu-do-dia" && (itemsByCategory[cat.id] || []).length > 0),
+    [currentCategoriesUI, itemsByCategory]
+  );
+  const totalResultados = useMemo(
+    () => visibleCategories.reduce((n, c) => n + (itemsByCategory[c.id] || []).length, 0),
+    [visibleCategories, itemsByCategory]
+  );
+
+  // Rola a barra de abas até a aba ativa (sem mexer na rolagem da página)
+  const centralizarAba = useCallback((id: string) => {
+    const bar = tabsRef.current;
+    const tab = bar?.querySelector<HTMLElement>(`[data-tab="${id}"]`);
+    if (!bar || !tab) return;
+    bar.scrollTo({ left: tab.offsetLeft - bar.clientWidth / 2 + tab.clientWidth / 2, behavior: "smooth" });
+  }, []);
+
+  // Scrollspy: a aba ativa acompanha a seção que está na tela
+  useEffect(() => {
+    if (searchTerm.trim() || visibleCategories.length === 0) return;
+    const handle = () => {
+      if (scrollLockRef.current) return;
+      const barra = document.getElementById("categories-bar");
+      const limite = (barra?.getBoundingClientRect().bottom || 0) + 24;
+      let atual = visibleCategories[0].id;
+      for (const cat of visibleCategories) {
+        const el = document.getElementById(`cat-${cat.id}`);
+        if (el && el.getBoundingClientRect().top <= limite) atual = cat.id;
+      }
+      setActiveCategory((prev) => (prev === atual ? prev : atual));
+    };
+    window.addEventListener("scroll", handle, { passive: true });
+    handle();
+    return () => window.removeEventListener("scroll", handle);
+  }, [visibleCategories, searchTerm]);
+
+  useEffect(() => {
+    if (activeCategory) centralizarAba(activeCategory);
+  }, [activeCategory, centralizarAba]);
+
+  // Aviso "Adicionado à sacola" some sozinho
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 2800);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  useEffect(() => {
+    if (searchOpen) setTimeout(() => searchInputRef.current?.focus(), 30);
+  }, [searchOpen]);
+
+  const irParaCategoria = (id: string) => {
+    hapticLight();
+    setActiveCategory(id);
+    const el = document.getElementById(`cat-${id}`);
+    const barra = document.getElementById("categories-bar");
+    if (!el) return;
+    const offset = (barra?.offsetHeight || 60) + 12;
+    const y = el.getBoundingClientRect().top + window.scrollY - offset;
+    scrollLockRef.current = true;
+    window.scrollTo({ top: y, behavior: "smooth" });
+    setTimeout(() => { scrollLockRef.current = false; }, 900);
+  };
+
+  const fecharBusca = () => {
+    setSearchTerm("");
+    setSearchOpen(false);
+  };
+
+  const abrirSacola = () => {
+    hapticMedium();
+    setToast(null);
+    setIsCartOpen(true);
+  };
+
   if (!businessStatus.loading && businessStatus.subscriptionStatus === 'blocked') {
     return (
-      <div className="min-h-screen bg-[#f5f5f5] flex items-center justify-center p-4 font-sans">
-        <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full text-center">
-          <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Search className="w-10 h-10 text-gray-400" />
-          </div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-4">Cardápio Indisponível</h1>
-          <p className="text-gray-600 mb-6 font-medium">
-            Nosso cardápio digital está temporariamente fora do ar. Por favor, tente novamente mais tarde ou faça seu pedido diretamente pelo nosso WhatsApp.
+      <div className="min-h-screen bg-page flex items-center justify-center p-4 font-sans">
+        <div className="bg-white p-8 rounded-3xl shadow-xl ring-1 ring-stone-200 max-w-md w-full text-center">
+          <img src="/logo.png" alt="Mais Açaí" className="w-20 h-20 rounded-full mx-auto mb-5 ring-4 ring-brand-50" />
+          <h1 className="font-display text-2xl font-bold text-stone-900 mb-3">Cardápio indisponível</h1>
+          <p className="text-stone-600 mb-6 leading-relaxed">
+            Nosso cardápio digital está temporariamente fora do ar. Faça seu pedido pelo WhatsApp.
           </p>
           <a
             href={`https://wa.me/${RESTAURANT_WHATSAPP_PHONE}`}
             target="_blank"
             rel="noreferrer"
-            className="inline-block bg-[#25D366] text-white font-bold px-6 py-3 rounded-xl hover:bg-[#20bd5a] transition-colors shadow-lg active:scale-95"
+            className="inline-flex items-center justify-center h-12 px-6 bg-[#25D366] text-white font-bold rounded-xl hover:bg-[#1fbe5b] transition-colors"
           >
             Falar no WhatsApp
           </a>
@@ -378,224 +477,235 @@ function App() {
     );
   }
 
+  const aberto = businessStatus.isOpen;
+  const carregandoStatus = businessStatus.loading;
+  const temSacola = totalCartQty > 0;
+  const tabAtiva = activeCategory || visibleCategories[0]?.id;
+
   return (
-    <div className="min-h-screen bg-[#f5f5f5] font-sans text-[#1a1a1a] scroll-smooth pb-20 lg:pb-0">
+    <div className="min-h-screen bg-page font-sans text-stone-900">
       <GhostCursor />
-      {/* Navbar Topo */}
-      {/* iFood Style Header */}
-      <header className="bg-white sticky top-0 z-50 shadow-sm border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-3 md:gap-0 md:flex-row md:items-center justify-between">
-          <div className="flex justify-between items-center w-full md:w-auto">
-            <div className="flex items-center gap-2.5">
-              <div className="font-bold text-2xl drop-shadow-sm text-[#6a2092] flex items-center gap-1.5">
-                Mais Açaí <span className="text-xl">💜</span>
+
+      {/* ============ CAPA + LOJA ============ */}
+      <header className="relative">
+        <div className="relative h-[168px] sm:h-[220px] lg:h-[260px] w-full max-w-6xl mx-auto lg:mt-4 lg:rounded-3xl overflow-hidden bg-brand-900">
+          <img src={coverUrl || "/capa.png"} className="w-full h-full object-cover" alt="" />
+          <div className="absolute inset-0 bg-gradient-to-t from-brand-900/70 via-brand-900/10 to-transparent" />
+        </div>
+
+        <div className="max-w-6xl mx-auto px-4 lg:px-6">
+          <div className="relative -mt-14 sm:-mt-16 bg-white rounded-3xl ring-1 ring-stone-200/80 shadow-[0_10px_30px_rgba(38,1,58,0.08)] p-4 sm:p-5">
+            <div className="flex items-center gap-3.5 sm:gap-4">
+              <img
+                src="/logo.png"
+                alt="Logo Mais Açaí"
+                className="w-[68px] h-[68px] sm:w-20 sm:h-20 rounded-full object-cover ring-4 ring-white shadow-md -mt-10 sm:-mt-12 shrink-0 bg-brand-900"
+              />
+              <div className="min-w-0">
+                <h1 className="font-display text-[22px] sm:text-[26px] font-extrabold leading-tight tracking-tight text-stone-900">
+                  Mais Açaí
+                </h1>
+                <p className="text-[13px] text-stone-500 truncate">Açaí, combos e milkshakes<span className="hidden sm:inline"> · desde 2016</span></p>
               </div>
-              {!businessStatus.loading && (
-                <div className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
-                  businessStatus.isOpen 
-                    ? "bg-purple-50 text-purple-800 border-purple-200" 
-                    : "bg-rose-50 text-rose-700 border-rose-200"
-                }`}>
-                  <span className={`w-2 h-2 rounded-full ${
-                    businessStatus.isOpen ? "bg-purple-600 animate-pulse" : "bg-rose-500"
-                  }`} />
-                  <span>{businessStatus.isOpen ? "Aberto • 45-75 min" : "Fechado"}</span>
-                </div>
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-center gap-2 text-[12.5px] font-medium">
+              {!carregandoStatus && (
+                <span
+                  className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-full ${
+                    aberto ? "bg-emerald-50 text-emerald-800" : "bg-rose-50 text-rose-700"
+                  }`}
+                >
+                  <span className={`w-2 h-2 rounded-full ${aberto ? "bg-leaf" : "bg-rose-500"}`} />
+                  {aberto ? "Aberto agora" : "Fechado agora"}
+                </span>
               )}
+              <span className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-stone-100 text-stone-700">
+                <Clock className="w-3.5 h-3.5" /> {tempoEntrega}
+              </span>
+              <span className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-stone-100 text-stone-700">
+                <Bike className="w-3.5 h-3.5" /> Delivery e retirada
+              </span>
+              <span className="hidden sm:inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-stone-100 text-stone-700">
+                <MapPin className="w-3.5 h-3.5" /> São José dos Pinhais
+              </span>
             </div>
-            
-            <button
-              onClick={() => setIsPromoOpen(true)}
-              className="md:hidden font-bold text-[#6a2092] transition-colors text-xs border border-[#6a2092] rounded-full px-2.5 py-1 hover:bg-[#6a2092] hover:text-white"
-            >
-              COMBOS ESPECIAIS
-            </button>
-          </div>
-          
-          <div className="flex items-center gap-4 w-full md:w-auto">
-            <div className="w-full md:w-[350px] relative">
-               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-               <input 
-                 type="text" 
-                 placeholder="Busque seu açaí, combo, milkshake..."
-                 className="w-full bg-gray-100 border-none rounded-lg py-2.5 pl-10 pr-4 text-sm focus:ring-1 focus:ring-[#6a2092]/40 outline-none transition-all"
-                 value={searchTerm}
-                 onChange={(e) => setSearchTerm(e.target.value)}
-               />
-            </div>
-            <button
-              onClick={() => setIsPromoOpen(true)}
-              className="hidden md:block font-bold text-[#6a2092] transition-colors text-sm hover:underline"
-            >
-              COMBOS ESPECIAIS
-            </button>
+
+            {!carregandoStatus && !aberto && (
+              <p className="mt-3 text-[13px] leading-relaxed text-stone-600 bg-amber-50 ring-1 ring-amber-200/70 rounded-xl px-3 py-2.5">
+                <strong className="font-semibold text-stone-900">
+                  {businessStatus.todayLabel ? `Hoje abrimos das ${businessStatus.todayLabel}.` : "Hoje não abrimos."}
+                </strong>{" "}
+                Você pode montar seu pedido agora e enviar quando a loja abrir.
+              </p>
+            )}
           </div>
         </div>
       </header>
 
-      {!businessStatus.loading && !businessStatus.isOpen && (
-        <div className="bg-[#4d0471] text-white text-center py-2 px-4 text-sm font-semibold">
-          🔴 Estamos fechados no momento{businessStatus.todayLabel ? ` — hoje funcionamos das ${businessStatus.todayLabel}` : ''}. Você pode navegar no cardápio, mas o pedido só pode ser finalizado durante o horário de funcionamento.
-        </div>
-      )}
-
-      {/* Hero Banner */}
-      <div className="relative h-[220px] md:h-[280px] w-full bg-[#1c0524] max-w-7xl mx-auto md:mt-4 md:rounded-2xl overflow-hidden shadow-sm">
-        <img
-          src={coverUrl || "/capa.png"}
-          className="w-full h-full object-cover opacity-90 transition-opacity duration-300"
-          alt="Mais Açaí Capa Oficial"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20 pointer-events-none"></div>
-        <div className="absolute bottom-6 left-6 md:left-12 flex items-center gap-4">
-          <div className="w-24 h-24 bg-[#1c0524] rounded-full border-4 border-white flex items-center justify-center text-white scale-110 shadow-xl overflow-hidden drop-shadow-2xl relative group">
-            <img
-              src="/logo.png"
-              alt="Mais Açaí - Desde 2016"
-              className="w-full h-full object-cover absolute inset-0 z-20"
-            />
-          </div>
-          <div className="text-white drop-shadow-md hidden sm:block">
-            <h1 className="text-2xl font-black leading-tight">Mais Açaí</h1>
-            <p className="text-xs text-purple-200 font-medium">Desde 2016 • São José dos Pinhais / PR</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Categories Bar Sticky */}
-      <div 
+      {/* ============ BARRA DE CATEGORIAS + BUSCA (fixa no topo) ============ */}
+      <nav
         id="categories-bar"
-        className="bg-white border-b border-gray-200 sticky top-[108px] md:top-[64px] z-30 shadow-xs relative"
+        aria-label="Categorias do cardápio"
+        className="sticky top-0 z-40 mt-4 bg-page/90 backdrop-blur-xl border-b border-stone-200/70"
       >
-        <div 
-          onWheel={(e) => {
-            if (e.deltaY !== 0) {
-              e.currentTarget.scrollLeft += e.deltaY;
-            }
-          }}
-          className="max-w-7xl mx-auto flex overflow-x-auto custom-scrollbar gap-1 px-2.5 py-1.5 items-center"
-        >
-          {currentCategoriesUI.map((cat) => {
-            const shortLabel = cat.label
-              .replace(/^OS\s+MAIS\s+PEDIDOS/i, 'MAIS PEDIDOS')
-              .replace(/^PIZZAS\s+/i, '')
-              .replace(/^ESFIHAS\s+SALGADAS\s+/i, 'ESF. ')
-              .replace(/^ESFIHAS\s+/i, 'ESF. ');
-
-            return (
-            <a
-              key={cat.id}
-              href={`#cat-${cat.id}`}
-              onClick={(e) => {
-                if (cat.id === "menu-do-dia") {
-                  e.preventDefault();
-                  setIsMenuDoDiaOpen(true);
-                  return;
-                }
-                hapticLight();
-                setActiveCategory(cat.id);
-                e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
-                const el = document.getElementById(`cat-${cat.id}`);
-                if (el) {
-                  e.preventDefault();
-                  const yOffset = -140; // compensate for sticky header
-                  const y =
-                    el.getBoundingClientRect().top +
-                    window.pageYOffset +
-                    yOffset;
-                  window.scrollTo({ top: y, behavior: "smooth" });
-                }
-              }}
-              className={`py-0.5 md:py-1 px-2 md:px-2.5 rounded-full text-[10px] md:text-[11px] whitespace-nowrap font-bold tracking-tight transition-all duration-150 active:scale-95 active:opacity-70 cursor-pointer border ${
-                activeCategory === cat.id
-                  ? "bg-[#4d0471] text-white border-[#4d0471] shadow-2xs"
-                  : "bg-white text-stone-600 border-stone-200 hover:bg-stone-50 hover:text-stone-900"
-              } ${cat.id === "promocoes" && activeCategory !== cat.id ? "animate-pulse text-[#4d0471] border-[#4d0471]" : ""}`}
-              title={cat.label}
-            >
-              {shortLabel}
-            </a>
-            );
-          })}
+        <div className="max-w-6xl mx-auto px-4 lg:px-6">
+          <div className="h-[60px] flex items-center gap-2">
+            {searchOpen ? (
+              <div className="flex-1 flex items-center gap-2 animate-fade-in">
+                <div className="relative flex-1">
+                  <Search className="w-[18px] h-[18px] absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
+                  <input
+                    ref={searchInputRef}
+                    type="search"
+                    inputMode="search"
+                    enterKeyHint="search"
+                    placeholder="Buscar açaí, combo, milkshake..."
+                    aria-label="Buscar no cardápio"
+                    className="w-full h-11 bg-white rounded-xl pl-10 pr-3 text-[16px] text-stone-900 placeholder:text-stone-400 ring-1 ring-stone-200 focus:ring-2 focus:ring-brand-600 outline-none transition-shadow"
+                    value={searchTerm}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      const topoBarra = document.getElementById("categories-bar")?.offsetTop || 0;
+                      if (window.scrollY > topoBarra) window.scrollTo({ top: topoBarra });
+                    }}
+                    onKeyDown={(e) => e.key === "Escape" && fecharBusca()}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={fecharBusca}
+                  className="h-11 px-3 rounded-xl text-[14px] font-semibold text-brand-700 hover:bg-brand-50 transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+              </div>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => { hapticLight(); setSearchOpen(true); }}
+                  aria-label="Buscar no cardápio"
+                  className="w-11 h-11 shrink-0 rounded-xl bg-white ring-1 ring-stone-200 text-stone-700 flex items-center justify-center hover:ring-brand-300 hover:text-brand-700 transition cursor-pointer"
+                >
+                  <Search className="w-[18px] h-[18px]" />
+                </button>
+                <div
+                  ref={tabsRef}
+                  onWheel={(e) => { if (e.deltaY !== 0) e.currentTarget.scrollLeft += e.deltaY; }}
+                  className="relative flex-1 min-w-0 flex items-center gap-1 overflow-x-auto hide-scrollbar px-1 [mask-image:linear-gradient(to_right,transparent,black_10px,black_calc(100%-28px),transparent)]"
+                >
+                  {visibleCategories.map((cat) => {
+                    const ativo = tabAtiva === cat.id;
+                    return (
+                      <a
+                        key={cat.id}
+                        data-tab={cat.id}
+                        href={`#cat-${cat.id}`}
+                        aria-current={ativo ? "true" : undefined}
+                        onClick={(e) => { e.preventDefault(); irParaCategoria(cat.id); }}
+                        className={`h-10 px-4 shrink-0 inline-flex items-center rounded-full text-[14px] font-semibold whitespace-nowrap transition-colors duration-150 cursor-pointer ${
+                          ativo
+                            ? "bg-brand-700 text-white shadow-[0_4px_12px_rgba(77,4,113,0.25)]"
+                            : "text-stone-600 hover:text-stone-900 hover:bg-white"
+                        }`}
+                      >
+                        {tituloCategoria(cat.label).replace(/^Os mais pedidos$/i, "Mais pedidos")}
+                      </a>
+                    );
+                  })}
+                  <span className="w-4 shrink-0" aria-hidden="true" />
+                </div>
+              </>
+            )}
+          </div>
         </div>
-      </div>
+      </nav>
 
-      <div className="max-w-7xl mx-auto px-4 py-4 md:py-8 flex flex-col lg:flex-row gap-8">
-        {/* Left Column - Main Content */}
+      {/* ============ CARDÁPIO + SACOLA ============ */}
+      <main className={`max-w-6xl mx-auto px-4 lg:px-6 pt-5 lg:pt-6 ${temSacola ? "pb-28" : "pb-12"} lg:pb-16 flex flex-col lg:flex-row lg:items-start gap-7 lg:gap-8`}>
         <div className="w-full lg:flex-1 min-w-0">
-          {/* Products Grids */}
-          <div className="space-y-10 md:space-y-12 pb-12 lg:pb-24">
-            {currentCategoriesUI.map((cat) => {
-              if (cat.id === "menu-do-dia") return null;
-              
+          {searchTerm.trim() && (
+            <p className="mb-4 text-[14px] text-stone-500" aria-live="polite">
+              {totalResultados === 0
+                ? <>Nada encontrado para <strong className="text-stone-900">“{searchTerm}”</strong>.</>
+                : <>{totalResultados} {totalResultados === 1 ? "resultado" : "resultados"} para <strong className="text-stone-900">“{searchTerm}”</strong></>}
+            </p>
+          )}
+
+          <div className="space-y-10 lg:space-y-12">
+            {visibleCategories.map((cat) => {
               const items = itemsByCategory[cat.id];
-              if (items.length === 0) return null;
+              const destaque = cat.id === "mais-pedidos" && !searchTerm.trim();
+              const sub = subPadrao(cat.id, cat.sub);
 
               return (
-                <div key={cat.id} id={`cat-${cat.id}`} className="scroll-mt-36">
-                    <>
-                      <h2 className="text-[26px] font-extrabold text-[#1a1a1a] mb-1">
-                        {cat.label}
+                <section key={cat.id} id={`cat-${cat.id}`} aria-labelledby={`titulo-${cat.id}`} className="scroll-mt-[84px]">
+                  <div className="mb-4 flex items-end justify-between gap-3">
+                    <div className="min-w-0">
+                      <h2 id={`titulo-${cat.id}`} className="font-display text-[21px] sm:text-[24px] font-extrabold tracking-tight text-stone-900 leading-tight">
+                        {tituloCategoria(cat.label)}
                       </h2>
-                      <p className="text-gray-500 mb-6 text-[15px] font-medium">
-                        {cat.sub}
-                      </p>
-                    </>
+                      {sub && <p className="mt-1 text-[14px] text-stone-500">{sub}</p>}
+                    </div>
+                    <span className="shrink-0 text-[12px] font-medium text-stone-400 tabular-nums pb-0.5">
+                      {items.length} {items.length === 1 ? "item" : "itens"}
+                    </span>
+                  </div>
 
                   <div
                     className={
-                      cat.id === "promocoes"
-                        ? "flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory"
-                        : "grid gap-4 grid-cols-1 sm:grid-cols-2"
+                      destaque
+                        ? "-mx-4 px-4 flex gap-3 overflow-x-auto snap-x snap-mandatory hide-scrollbar pb-1 scroll-px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible"
+                        : "grid gap-3 grid-cols-1 md:grid-cols-2 md:gap-4"
                     }
                   >
                     {items.map((item) => {
                       const cacheKey = item.id + (item.isMaisPedido ? "-mp" : "");
-                      const failedImage = failedImages[cacheKey] || false;
                       return (
-                        <div 
-                          key={cacheKey}
-                          className={cat.id === "promocoes" ? "flex-none w-[280px] snap-center" : ""}
-                        >
+                        <div key={cacheKey} className={destaque ? "w-[46%] min-w-[156px] max-w-[200px] shrink-0 snap-start sm:w-auto sm:min-w-0 sm:max-w-none" : ""}>
                           <MenuItemCard
                             item={item}
                             catId={cat.id}
-                            failedImage={failedImage}
+                            variante={destaque ? "destaque" : "lista"}
+                            failedImage={failedImages[cacheKey] || false}
                             onClick={() => handleSelectItem(item)}
                             onZoom={(src) => setZoomedImage(src)}
-                            onImageError={() =>
-                              setFailedImages((prev) => ({ ...prev, [cacheKey]: true }))
-                            }
+                            onImageError={() => setFailedImages((prev) => ({ ...prev, [cacheKey]: true }))}
                           />
                         </div>
                       );
                     })}
                   </div>
-                </div>
+                </section>
               );
             })}
-            {Object.values(itemsByCategory).every(
-              (arr: any) => arr.length === 0,
-            ) && (
-              <div className="text-center py-20 text-gray-400 bg-white border border-gray-200 rounded-xl">
-                <Search className="w-8 h-8 mx-auto mb-3 opacity-50" />
-                <p className="font-medium">
-                  Nenhum produto encontrado na pesquisa.
+
+            {visibleCategories.length === 0 && (
+              <div className="text-center py-16 px-6 bg-white rounded-3xl ring-1 ring-stone-200/80">
+                <div className="w-12 h-12 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center mx-auto mb-3">
+                  <Search className="w-5 h-5" />
+                </div>
+                <p className="font-display font-bold text-stone-900">
+                  {menuLoading ? "Carregando o cardápio..." : "Nenhum produto encontrado"}
                 </p>
+                {!menuLoading && searchTerm.trim() && (
+                  <button type="button" onClick={fecharBusca} className="mt-3 text-[14px] font-semibold text-brand-700 hover:underline cursor-pointer">
+                    Limpar busca
+                  </button>
+                )}
               </div>
             )}
           </div>
         </div>
 
-        {/* Right Column - Desktop Cart integration */}
-        <div className="w-full lg:w-[380px] xl:w-[400px] lg:shrink-0 relative">
+        {/* Sacola: coluna fixa no desktop, folha de baixo no celular */}
+        <aside className="w-full lg:w-[380px] xl:w-[400px] lg:shrink-0 lg:self-stretch" aria-label="Sacola">
           <Cart
             items={cart}
             onUpdateQuantity={(id, delta) => {
               const updatedCart = cart.map((c) =>
-                c.id === id
-                  ? { ...c, quantity: Math.max(1, c.quantity + delta) }
-                  : c
+                c.id === id ? { ...c, quantity: Math.max(1, c.quantity + delta) } : c
               );
               saveCart(updatedCart);
             }}
@@ -605,79 +715,85 @@ function App() {
             isOpen={isCartOpen}
             onClose={() => setIsCartOpen(false)}
           />
-        </div>
-      </div>
+        </aside>
+      </main>
 
       <Footer />
 
-      {/* Floating Action Buttons */}
-
-      {/* Mobile view cart toggle - Only visible when items are in cart */}
-      {totalCartQty > 0 && (
-        <div className="fixed bottom-0 left-0 w-full p-3 bg-white/95 backdrop-blur-md border-t border-gray-200 lg:hidden z-40 pb-safe shadow-[0_-4px_25px_rgba(0,0,0,0.12)] transition-all animate-in slide-in-from-bottom duration-200">
+      {/* ============ BARRA DA SACOLA (celular) ============ */}
+      {temSacola && !isCartOpen && (
+        <div className="fixed bottom-0 inset-x-0 z-40 lg:hidden px-4 pt-3 pb-safe bg-gradient-to-t from-page via-page/95 to-page/0 animate-toast-in">
           <button
-            onClick={() => {
-              hapticMedium();
-              setIsCartOpen(true);
-            }}
-            className="w-full bg-[#4d0471] text-white font-extrabold text-[15px] py-3.5 px-4 rounded-xl flex items-center justify-between shadow-xl active:scale-[0.98] transition-all hover:bg-[#380252]"
+            type="button"
+            onClick={abrirSacola}
+            className="w-full h-14 bg-brand-700 hover:bg-brand-800 active:scale-[0.99] text-white rounded-2xl pl-3 pr-4 flex items-center justify-between shadow-[0_10px_30px_rgba(77,4,113,0.35)] transition cursor-pointer"
           >
-            <div className="flex items-center gap-2">
-              <div className={`relative transition-transform duration-300 ${cartBounce ? 'scale-125 rotate-6' : 'scale-100'}`}>
-                <ShoppingBag className="w-5 h-5 text-[#fdde58]" />
-                <span className="absolute -top-1.5 -right-2 bg-[#fdde58] text-[#1a1a1a] text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow-xs">
+            <span className="flex items-center gap-3">
+              <span className={`relative w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center transition-transform duration-300 ${cartBounce ? "scale-110" : ""}`}>
+                <ShoppingBag className="w-[18px] h-[18px]" />
+                <span className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 rounded-full bg-gold text-stone-900 text-[11px] font-bold flex items-center justify-center tabular-nums">
                   {totalCartQty}
                 </span>
-              </div>
-              <span className="ml-1">Ver Sacola</span>
-            </div>
-            <span className="bg-white/20 px-2.5 py-1 rounded-lg text-sm tracking-wide font-black">
-              R$ {totalCartPrice.toFixed(2)}
+              </span>
+              <span className="text-[15px] font-semibold">Ver sacola</span>
             </span>
+            <span className="font-display text-[16px] font-bold tabular-nums">{brl(totalCartPrice)}</span>
           </button>
         </div>
       )}
 
-      {/* Scroll to Top Floating Button */}
+      {/* Aviso: item adicionado */}
+      {toast && (
+        <div
+          key={toast.key}
+          role="status"
+          className={`fixed z-50 left-4 right-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 sm:w-[380px] lg:bottom-6 ${temSacola ? "bottom-[92px]" : "bottom-6"}`}
+        >
+          <div className="flex items-center gap-3 bg-stone-900 text-white rounded-2xl pl-3 pr-2 py-2 shadow-2xl animate-toast-in">
+            <span className="w-7 h-7 rounded-full bg-leaf flex items-center justify-center shrink-0">
+              <Check className="w-4 h-4" strokeWidth={3} />
+            </span>
+            <span className="flex-1 min-w-0 text-[14px] leading-snug">
+              <span className="block text-white/60 text-[12px]">Adicionado à sacola</span>
+              <span className="block font-semibold truncate">{toast.nome}</span>
+            </span>
+            <button
+              type="button"
+              onClick={abrirSacola}
+              className="lg:hidden h-9 px-3 rounded-xl text-[13px] font-semibold text-gold hover:bg-white/10 inline-flex items-center gap-0.5 cursor-pointer"
+            >
+              Ver <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Voltar ao topo (desktop) */}
       {showScrollTop && (
         <button
-          onClick={() => {
-            hapticLight();
-            const el = document.getElementById("categories-bar");
-            if (el) {
-              const yOffset = -120;
-              const y = el.getBoundingClientRect().top + window.pageYOffset + yOffset;
-              window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
-            } else {
-              window.scrollTo({ top: 0, behavior: "smooth" });
-            }
-          }}
-          className="fixed bottom-24 lg:bottom-8 left-4 sm:left-6 w-12 h-12 bg-white/95 backdrop-blur-md text-[#4d0471] rounded-full flex items-center justify-center shadow-lg border border-stone-200 hover:bg-[#4d0471] hover:text-white transition-all active:scale-95 z-30 group"
-          title="Voltar ao topo do cardápio"
-          aria-label="Voltar ao topo do cardápio"
+          type="button"
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          className="hidden lg:flex fixed bottom-6 left-6 w-11 h-11 bg-white text-stone-700 rounded-full items-center justify-center shadow-lg ring-1 ring-stone-200 hover:text-brand-700 transition z-30 cursor-pointer"
+          aria-label="Voltar ao topo"
         >
-          <ArrowUp className="w-5 h-5 transition-transform group-hover:-translate-y-0.5" />
+          <ArrowUp className="w-5 h-5" />
         </button>
       )}
 
-      {/* WhatsApp Floating Button */}
+      {/* WhatsApp */}
       <a
         href={`https://wa.me/${RESTAURANT_WHATSAPP_PHONE}`}
         target="_blank"
         rel="noreferrer"
-        className="fixed bottom-24 lg:bottom-8 right-6 w-[60px] h-[60px] bg-[#25D366] rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-transform z-30 group"
+        aria-label="Falar com a loja no WhatsApp"
+        className={`fixed right-4 lg:right-6 lg:bottom-6 ${temSacola ? "bottom-[92px]" : "bottom-5"} ${toast || isCartOpen ? "max-lg:opacity-0 max-lg:pointer-events-none" : ""} w-[52px] h-[52px] bg-[#25D366] rounded-full flex items-center justify-center shadow-[0_8px_24px_rgba(37,211,102,0.4)] hover:scale-105 transition z-30`}
       >
-        <span className="absolute inset-0 rounded-full border-[3px] border-[#25D366] animate-ping opacity-30"></span>
-        <svg
-          viewBox="0 0 24 24"
-          fill="white"
-          className="w-[34px] h-[34px] ml-0.5 mt-0.5 drop-shadow-sm"
-        >
+        <svg viewBox="0 0 24 24" fill="white" className="w-7 h-7" aria-hidden="true">
           <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z" />
         </svg>
       </a>
 
-      {/* Pizza configuration modal */}
+      {/* Montagem do produto */}
       <PizzaModal
         pausedItems={pausedItems}
         item={selectedItem}
@@ -687,28 +803,24 @@ function App() {
         onAddToCart={handleAddToCart}
         allMenuItems={menuItems}
       />
-      {/* Menu do Dia Modal */}
       <MenuDoDiaModal
         isOpen={isMenuDoDiaOpen}
         onClose={() => setIsMenuDoDiaOpen(false)}
         onSelectItem={handleSelectItem}
         menuItems={menuItems}
       />
-      {/* Promoções Modal */}
-      <PromoModal
-        isOpen={isPromoOpen}
-        onClose={() => setIsPromoOpen(false)}
-      />
-      {/* Zoomed Image Modal */}
+      <PromoModal isOpen={isPromoOpen} onClose={() => setIsPromoOpen(false)} />
+
       {zoomedImage && (
-        <div 
-          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm transition-opacity"
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in"
           onClick={() => setZoomedImage(null)}
         >
           <div className="relative max-w-4xl w-full flex justify-center items-center">
             <button
               onClick={() => setZoomedImage(null)}
-              className="absolute -top-12 right-0 p-2 text-white hover:text-gray-300 transition-colors"
+              aria-label="Fechar"
+              className="absolute -top-12 right-0 p-2 text-white/80 hover:text-white transition-colors"
             >
               <X className="w-8 h-8" />
             </button>

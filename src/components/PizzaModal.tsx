@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MenuItem, ExtraIngredient } from '../data/menu';
 import { CartItem, ProductSize, SIZE_LABELS } from '../types';
-import { X, Check, ShoppingBag } from 'lucide-react';
+import { X, Check, Minus, Plus } from 'lucide-react';
 import { useExtras } from '../hooks/useExtras';
 import { hapticLight } from '../utils/haptics';
 import { getSizeOptions, SIZE_DESCRIPTIONS } from '../utils/produto';
-import { regrasDoProduto, textoEscolhas, escolhaPendente } from '../data/variacoes';
-import VariacoesProduto from './VariacoesProduto';
+import { regrasDoProduto, textoEscolhas, escolhaPendente, escolhasIniciais } from '../data/variacoes';
+import { findImageForProduct } from '../utils/imageResolver';
+import { brl, nomeBonito, limparDescricao } from '../utils/formatacao';
+import VariacoesProduto, { CabecalhoGrupo } from './VariacoesProduto';
 
 interface PizzaModalProps {
   item: MenuItem | null;
@@ -18,14 +20,22 @@ interface PizzaModalProps {
   allMenuItems: MenuItem[];
 }
 
-export default function PizzaModal({ 
-  item, 
-  isOpen, 
-  onClose, 
-  onAddToCart, 
-  initialSize, 
-  pausedItems = [], 
-  allMenuItems = [] 
+function fotoDoProduto(item: MenuItem): string {
+  let src = item.imageUrl ? item.imageUrl.replace(/^\//, '') : '';
+  if (src === 'none') return '';
+  if (!src) src = (findImageForProduct(item) || '').replace(/^\//, '');
+  if (!src) return '';
+  return src.startsWith('http') ? src : `/${src}`;
+}
+
+// Montagem do produto no cardápio do cliente: tamanho → sabores → adicionais → observação.
+export default function PizzaModal({
+  item,
+  isOpen,
+  onClose,
+  onAddToCart,
+  initialSize,
+  pausedItems = [],
 }: PizzaModalProps) {
   const extrasList = useExtras();
   const [selectedSize, setSelectedSize] = useState<ProductSize>(initialSize);
@@ -34,30 +44,42 @@ export default function PizzaModal({
   const [notes, setNotes] = useState('');
   const [escolhas, setEscolhas] = useState<Record<string, string[]>>({});
   const [avisoEscolha, setAvisoEscolha] = useState('');
+  const [grupoPendente, setGrupoPendente] = useState<string | null>(null);
+  const [fotoOk, setFotoOk] = useState(true);
+  const [barraTopo, setBarraTopo] = useState(false);
+  const corpoRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen && item) {
-       // Abre no tamanho inicial (550ml); se o produto não tiver, no primeiro tamanho que estiver ativo
-       const opts = getSizeOptions(item).filter(o => !pausedItems.includes(`${item.id}-${o.pauseKey}`));
-       const inicial = opts.find(o => o.size === initialSize) || opts[0];
-       setSelectedSize(inicial ? inicial.size : initialSize);
-       setSelectedExtras([]);
-       setQuantity(1);
-       setNotes('');
-       setEscolhas({});
-       setAvisoEscolha('');
+      // Abre no tamanho inicial (550ml); se o produto não tiver, no primeiro tamanho que estiver ativo
+      const opts = getSizeOptions(item).filter(o => !pausedItems.includes(`${item.id}-${o.pauseKey}`));
+      const inicial = opts.find(o => o.size === initialSize) || opts[0];
+      setSelectedSize(inicial ? inicial.size : initialSize);
+      setSelectedExtras([]);
+      setQuantity(1);
+      setNotes('');
+      setEscolhas(escolhasIniciais(regrasDoProduto(item).escolhas));
+      setAvisoEscolha('');
+      setGrupoPendente(null);
+      setFotoOk(true);
+      setBarraTopo(false);
+      corpoRef.current?.scrollTo({ top: 0 });
     }
   }, [isOpen, item, initialSize]);
 
+  // ESC fecha e a página de trás não rola enquanto o modal está aberto
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
+      if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    const overflowAntes = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = overflowAntes;
+    };
   }, [isOpen, onClose]);
 
   if (!isOpen || !item) return null;
@@ -67,17 +89,22 @@ export default function PizzaModal({
   const regras = regrasDoProduto(item);
   const podeAdicionais = regras.adicionais !== null;
 
-  // Preço base conforme o tamanho selecionado
   const selectedOption = sizeOptions.find(o => o.size === selectedSize);
   const basePrice = selectedOption ? selectedOption.price : (item.priceSingle || item.priceG || item.priceM || item.priceP || 0);
-
   const extrasTotalPrice = podeAdicionais ? selectedExtras.reduce((sum, extra) => sum + extra.price, 0) : 0;
   const currentPrice = basePrice + extrasTotalPrice;
   const pendente = escolhaPendente(regras.escolhas, escolhas);
+  const menorPreco = hasSizes ? Math.min(...sizeOptions.map(o => o.price)) : basePrice;
 
-  const handleAdd = (openCart: boolean) => {
+  const foto = fotoDoProduto(item);
+  const nome = nomeBonito(item.name);
+  const descricao = limparDescricao(item.ingredients);
+
+  const handleAdd = () => {
     if (pendente) {
-      setAvisoEscolha(`${pendente.titulo}: escolha ${pendente.min === 1 ? 'pelo menos 1 opção' : `pelo menos ${pendente.min}`}.`);
+      setAvisoEscolha(`Escolha ${pendente.min === 1 ? 'pelo menos 1 opção' : `pelo menos ${pendente.min} opções`} em "${pendente.titulo}".`);
+      setGrupoPendente(pendente.rotulo);
+      document.getElementById(`grupo-${pendente.rotulo}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
     // As escolhas (creme, sabor) vão nas observações do item, antes do que o cliente escreveu
@@ -85,158 +112,190 @@ export default function PizzaModal({
     onAddToCart({
       id: crypto.randomUUID(),
       menuItem: item,
-      quantity: quantity,
+      quantity,
       size: hasSizes ? selectedSize : undefined,
       extras: podeAdicionais ? selectedExtras : [],
       priceCalculated: currentPrice,
-      notes: obs || undefined
-    }, openCart);
+      notes: obs || undefined,
+    }, false);
     onClose();
   };
 
   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity"
-      onClick={onClose}
+    <div
+      className="fixed inset-0 z-[55] flex items-end sm:items-center justify-center sm:p-6"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="produto-titulo"
     >
-      <div 
-        className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden text-[#1a1a1a] flex flex-col max-h-[90vh]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Topo do Modal */}
-        <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 flex-shrink-0">
-          <h3 className="font-bold text-lg text-stone-900">{item.name}</h3>
-          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full text-gray-500 transition-colors">
-            <X className="w-5 h-5" />
-          </button>
+      <div className="absolute inset-0 bg-stone-950/55 backdrop-blur-[2px] animate-fade-in" onClick={onClose} />
+
+      <div className="relative w-full sm:max-w-[520px] h-[94dvh] sm:h-auto sm:max-h-[88vh] bg-white rounded-t-[28px] sm:rounded-[28px] shadow-2xl flex flex-col overflow-hidden animate-sheet-in sm:animate-pop-in">
+        {/* Fechar (sempre visível) */}
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Fechar"
+          className="absolute top-2 right-3 z-30 w-10 h-10 rounded-full bg-white/95 text-stone-700 shadow-md ring-1 ring-black/5 flex items-center justify-center hover:bg-white hover:text-stone-900 transition cursor-pointer"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
+        {/* Barra com o nome do produto, aparece ao rolar */}
+        <div
+          aria-hidden={!barraTopo}
+          className={`absolute top-0 inset-x-0 z-20 h-14 pl-5 pr-16 flex items-center bg-white/95 backdrop-blur border-b border-stone-100 transition-opacity duration-200 ${barraTopo ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        >
+          <span className="font-display text-[16px] font-bold text-stone-900 truncate">{nome}</span>
         </div>
-        
-        <div className="p-5 overflow-y-auto">
-           {item.ingredients && (
-             <p className="text-gray-600 text-sm mb-4 leading-relaxed bg-purple-50/60 p-3 rounded-lg border border-purple-100">
-               {item.ingredients}
-             </p>
-           )}
 
-           {/* Seleção de Tamanhos (Copos) */}
-           {hasSizes && (
-             <div className="mb-6">
-                <h4 className="font-bold mb-3 text-sm uppercase tracking-wide text-gray-800">Escolha o Tamanho:</h4>
-                <div className="flex flex-col gap-2.5">
-                   {sizeOptions.map(opt => {
-                     const paused = Boolean(pausedItems?.includes(`${item.id}-${opt.pauseKey}`));
-                     const selected = selectedSize === opt.size;
-                     return (
-                       <button
-                         key={opt.size}
-                         type="button"
-                         onClick={() => { hapticLight(); setSelectedSize(opt.size); }}
-                         disabled={paused}
-                         className={`p-3 rounded-xl border-2 text-left transition-all ${paused ? 'opacity-50 grayscale cursor-not-allowed bg-gray-100' : (selected ? 'border-[#4d0471] bg-[#4d0471]/5' : 'border-gray-200 hover:border-gray-300 bg-white')}`}
-                       >
-                          <div className="flex justify-between items-center">
-                             <span className="font-bold text-sm text-stone-900">
-                               {SIZE_LABELS[opt.size]}
-                               {SIZE_DESCRIPTIONS[opt.size] && <span className="ml-1.5 text-xs font-medium text-gray-500">{SIZE_DESCRIPTIONS[opt.size]}</span>}
-                             </span>
-                             <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${selected ? 'border-[#4d0471] bg-[#4d0471]' : 'border-gray-300'}`}>
-                                {selected && <Check className="w-3 h-3 text-white" />}
-                             </div>
-                          </div>
-                          <span className="text-[#4d0471] font-bold mt-1 block text-base">R$ {opt.price.toFixed(2).replace('.', ',')}</span>
-                       </button>
-                     );
-                   })}
-                </div>
-             </div>
-           )}
+        <div
+          ref={corpoRef}
+          onScroll={(e) => {
+            const limiar = foto && fotoOk ? 190 : 24;
+            const mostrar = e.currentTarget.scrollTop > limiar;
+            if (mostrar !== barraTopo) setBarraTopo(mostrar);
+          }}
+          className="flex-1 overflow-y-auto overscroll-contain"
+        >
+          {/* Foto */}
+          {foto && fotoOk ? (
+            <div className="relative h-[230px] sm:h-[260px] bg-brand-900 overflow-hidden">
+              <img src={foto} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover scale-125 blur-2xl opacity-70" />
+              <img
+                src={foto}
+                alt={nome}
+                onError={() => setFotoOk(false)}
+                className="relative h-full mx-auto object-contain drop-shadow-[0_12px_24px_rgba(0,0,0,0.25)]"
+              />
+              <span className="sm:hidden absolute top-2 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-white/70" aria-hidden="true" />
+            </div>
+          ) : (
+            <div className="h-14" />
+          )}
 
-           {/* Creme gelado / sabor e adicionais, com as regras do Multipedidos */}
-           <VariacoesProduto
-             regras={regras}
-             extrasList={extrasList || []}
-             escolhas={escolhas}
-             onEscolhasChange={(v) => { setEscolhas(v); setAvisoEscolha(''); }}
-             extras={selectedExtras}
-             onExtrasChange={setSelectedExtras}
-           />
+          {/* Nome e descrição */}
+          <div className="px-5 pt-5 pb-4">
+            <h2 id="produto-titulo" className="font-display text-[22px] sm:text-[24px] font-extrabold leading-tight tracking-tight text-stone-900 pr-10">
+              {nome}
+            </h2>
+            {descricao && <p className="mt-2 text-[14px] leading-relaxed text-stone-600">{descricao}</p>}
+            <p className="mt-3 text-[13px] text-stone-500">
+              {hasSizes && sizeOptions.length > 1 ? 'a partir de ' : ''}
+              <span className="font-display text-[17px] font-bold text-stone-900 tabular-nums">{brl(menorPreco)}</span>
+            </p>
+          </div>
 
-           {/* Campo de Observações */}
-           <div className="mb-6">
-             <div className="flex justify-between items-center mb-2">
-               <label htmlFor="order-notes" className="font-bold text-sm uppercase tracking-wide text-gray-800">
-                 Observações do Pedido
-               </label>
-               <span className="text-xs text-gray-400">{notes.length}/250</span>
-             </div>
-             <textarea
-               id="order-notes"
-               value={notes}
-               onChange={(e) => setNotes(e.target.value)}
-               maxLength={250}
-               rows={3}
-               placeholder={podeAdicionais ? "Ex.: Sem granola, pouco leite condensado, caprichar no leite em pó..." : "Ex.: Bem gelado, sem canudo..."}
-               className="w-full p-3 text-sm border-2 border-gray-200 rounded-xl focus:border-[#4d0471] focus:outline-none transition-colors resize-none placeholder:text-gray-400"
-             />
-           </div>
+          {/* Tamanho */}
+          {hasSizes && (
+            <section>
+              <CabecalhoGrupo titulo="Escolha o tamanho" subtitulo="Escolha 1 opção" obrigatorio completo={!!selectedOption} />
+              <div className="px-5 py-4 grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                {sizeOptions.map(opt => {
+                  const paused = pausedItems.includes(`${item.id}-${opt.pauseKey}`);
+                  const selected = selectedSize === opt.size;
+                  return (
+                    <button
+                      key={opt.size}
+                      type="button"
+                      onClick={() => { hapticLight(); setSelectedSize(opt.size); }}
+                      disabled={paused}
+                      aria-pressed={selected}
+                      className={`relative text-left rounded-2xl px-3.5 py-3 min-h-[76px] transition-all duration-150 cursor-pointer disabled:cursor-not-allowed ${
+                        paused
+                          ? 'bg-stone-50 ring-1 ring-stone-200 opacity-60'
+                          : selected
+                            ? 'bg-brand-50 ring-2 ring-brand-700'
+                            : 'bg-white ring-1 ring-stone-200 hover:ring-stone-300'
+                      }`}
+                    >
+                      <span className="block font-display text-[15px] font-bold text-stone-900 leading-tight pr-5">
+                        {opt.size === 'Super Big' ? 'Pote 1 Litro' : SIZE_LABELS[opt.size]}
+                      </span>
+                      <span className="block text-[12px] text-stone-500 mt-0.5">
+                        {paused ? 'Esgotado' : SIZE_DESCRIPTIONS[opt.size] || (opt.size === 'Super Big' ? 'Recheado' : '')}
+                      </span>
+                      <span className={`block mt-1.5 text-[14px] font-semibold tabular-nums ${selected ? 'text-brand-700' : 'text-stone-800'}`}>
+                        {brl(opt.price)}
+                      </span>
+                      {selected && (
+                        <span className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full bg-brand-700 text-white flex items-center justify-center">
+                          <Check className="w-3 h-3" strokeWidth={3} />
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          )}
 
-           {/* Seletor de Quantidade e Total */}
-           <div className="mb-6 flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-100">
-             <div className="flex items-center gap-4">
-               <button 
-                 type="button"
-                 onClick={() => {
-                   hapticLight();
-                   setQuantity(Math.max(1, quantity - 1));
-                 }}
-                 className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-[#4d0471] font-bold text-xl hover:bg-gray-100 active:scale-95 transition-all shadow-sm"
-               >
-                 -
-               </button>
-               <span className="font-bold text-xl w-6 text-center text-gray-800">{quantity}</span>
-               <button 
-                 type="button"
-                 onClick={() => {
-                   hapticLight();
-                   setQuantity(quantity + 1);
-                 }}
-                 className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-[#4d0471] font-bold text-xl hover:bg-gray-100 active:scale-95 transition-all shadow-sm"
-               >
-                 +
-               </button>
-             </div>
-             <div className="text-right">
-               <div className="text-xs text-gray-500 font-bold uppercase tracking-wide mb-1">Total</div>
-               <div className="text-[#4d0471] font-bold text-2xl">
-                 R$ {((currentPrice || 0) * quantity).toFixed(2).replace('.', ',')}
-               </div>
-             </div>
-           </div>
+          {/* Sabores (casadinho) e adicionais */}
+          <VariacoesProduto
+            regras={regras}
+            extrasList={extrasList || []}
+            escolhas={escolhas}
+            onEscolhasChange={(v) => { setEscolhas(v); setAvisoEscolha(''); setGrupoPendente(null); }}
+            extras={selectedExtras}
+            onExtrasChange={setSelectedExtras}
+            grupoPendente={grupoPendente}
+          />
 
-           {avisoEscolha && (
-             <p className="mb-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-sm font-medium">
-               {avisoEscolha}
-             </p>
-           )}
+          {/* Observação */}
+          <section>
+            <CabecalhoGrupo titulo="Alguma observação?" subtitulo="Opcional" />
+            <div className="px-5 py-4">
+              <textarea
+                id="order-notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                maxLength={250}
+                rows={3}
+                placeholder={podeAdicionais ? 'Ex.: sem granola, leite condensado no fundo...' : 'Ex.: bem gelado, sem canudo...'}
+                className="w-full p-3.5 text-[16px] leading-relaxed bg-stone-50 rounded-2xl ring-1 ring-stone-200 focus:bg-white focus:ring-2 focus:ring-brand-600 outline-none transition resize-none placeholder:text-stone-400"
+              />
+              <p className="mt-1.5 text-right text-[12px] text-stone-400 tabular-nums">{notes.length}/250</p>
+            </div>
+          </section>
+        </div>
 
-           {/* Botões de Ação */}
-           <div className="flex flex-col gap-2.5">
-             <button 
-               type="button"
-               onClick={() => handleAdd(true)}
-               className="w-full bg-[#4d0471] hover:bg-[#3b0257] text-white font-bold py-3.5 px-4 rounded-xl transition-transform active:scale-[0.98] shadow-md flex justify-center items-center gap-2 cursor-pointer"
-             >
-               <ShoppingBag className="w-5 h-5" />
-               Adicionar e ver pedido
-             </button>
-             <button 
-               type="button"
-               onClick={() => handleAdd(false)}
-               className="w-full bg-white text-[#4d0471] border-2 border-[#4d0471] hover:bg-purple-50 font-bold py-3 px-4 rounded-xl transition-transform active:scale-[0.98] flex justify-center items-center gap-2 cursor-pointer"
-             >
-               Adicionar e continuar comprando
-             </button>
-           </div>
+        {/* Rodapé fixo: quantidade + adicionar */}
+        <div className="shrink-0 border-t border-stone-100 bg-white px-4 pt-3 pb-safe">
+          {avisoEscolha && (
+            <p role="alert" className="mb-3 px-3.5 py-2.5 rounded-xl bg-amber-50 ring-1 ring-amber-200 text-amber-900 text-[13px] font-medium animate-fade-in">
+              {avisoEscolha}
+            </p>
+          )}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center h-[52px] rounded-2xl ring-1 ring-stone-200 bg-white">
+              <button
+                type="button"
+                onClick={() => { hapticLight(); setQuantity(Math.max(1, quantity - 1)); }}
+                disabled={quantity <= 1}
+                aria-label="Diminuir quantidade"
+                className="w-11 h-full flex items-center justify-center text-brand-700 disabled:text-stone-300 cursor-pointer disabled:cursor-default"
+              >
+                <Minus className="w-[18px] h-[18px]" strokeWidth={2.5} />
+              </button>
+              <span className="w-7 text-center font-display text-[17px] font-bold tabular-nums text-stone-900" aria-live="polite">{quantity}</span>
+              <button
+                type="button"
+                onClick={() => { hapticLight(); setQuantity(quantity + 1); }}
+                aria-label="Aumentar quantidade"
+                className="w-11 h-full flex items-center justify-center text-brand-700 cursor-pointer"
+              >
+                <Plus className="w-[18px] h-[18px]" strokeWidth={2.5} />
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={handleAdd}
+              className="flex-1 h-[52px] rounded-2xl bg-brand-700 hover:bg-brand-800 active:scale-[0.99] text-white px-5 flex items-center justify-between gap-3 shadow-[0_8px_20px_rgba(77,4,113,0.28)] transition cursor-pointer"
+            >
+              <span className="text-[15px] font-semibold">Adicionar</span>
+              <span className="font-display text-[16px] font-bold tabular-nums">{brl(currentPrice * quantity)}</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

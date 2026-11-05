@@ -20,6 +20,10 @@ export interface GrupoEscolha {
   min: number;
   max: number;
   opcoes: OpcaoVariacao[];
+  /** Texto curto embaixo do título (ex.: explicação do casadinho). */
+  dica?: string;
+  /** Opções que já vêm marcadas quando o produto abre. */
+  padrao?: string[];
 }
 
 export interface RegrasAdicionais {
@@ -51,6 +55,15 @@ export const CREMES_GELADOS: GrupoEscolha = {
     { id: 'cr-58552', nome: 'PITAYA', disponivel: true },
     { id: 'cr-58553', nome: 'TAPIOCA COM COCO', disponivel: true },
   ],
+  dica: 'Casadinho: escolha até 2 sabores no mesmo copo, sem custo.',
+};
+
+// Combos: mesmos sabores do creme gelado, casadinho de até 2.
+// Já vem com AÇAÍ NATURAL marcado (o combo normal); o cliente troca ou marca o 2º sabor.
+export const SABORES_COMBO: GrupoEscolha = {
+  ...CREMES_GELADOS,
+  titulo: 'Escolha o sabor do creme',
+  padrao: ['cr-58542'],
 };
 
 // Grupo "Escolha o sabor do Milkshake": obrigatório, 1 sabor
@@ -83,8 +96,12 @@ export function regrasDoProduto(item: Pick<MenuItem, 'id' | 'category'> | null |
   if (KITS_10_ADICIONAIS.includes(item.id)) {
     return { escolhas: [], adicionais: { max: 10, maxPorItem: 5 } };
   }
-  // Combos, mais vendidos, novidades e Kit Festa
-  return { escolhas: [], adicionais: { max: 5, maxPorItem: 5 } };
+  // Kit Festa: sem escolha de sabor
+  if (item.category === 'kits-promocionais') {
+    return { escolhas: [], adicionais: { max: 5, maxPorItem: 5 } };
+  }
+  // Combos, mais vendidos e novidades: sabor do creme (casadinho até 2) antes dos adicionais
+  return { escolhas: [SABORES_COMBO], adicionais: { max: 5, maxPorItem: 5 } };
 }
 
 /** Texto das escolhas para as observações do item: "Creme: AÇAÍ NATURAL + PITAYA". */
@@ -103,4 +120,14 @@ export function textoEscolhas(grupos: GrupoEscolha[], selecionadas: Record<strin
 /** Primeiro grupo que ainda não tem o mínimo de escolhas, para avisar o cliente. */
 export function escolhaPendente(grupos: GrupoEscolha[], selecionadas: Record<string, string[]>): GrupoEscolha | null {
   return grupos.find(g => (selecionadas[g.rotulo] || []).length < g.min) || null;
+}
+
+/** Escolhas que já vêm marcadas ao abrir o produto (só opções disponíveis). */
+export function escolhasIniciais(grupos: GrupoEscolha[]): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  grupos.forEach(g => {
+    const ids = (g.padrao || []).filter(id => g.opcoes.some(o => o.id === id && o.disponivel));
+    if (ids.length) out[g.rotulo] = ids.slice(0, g.max);
+  });
+  return out;
 }

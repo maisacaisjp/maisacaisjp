@@ -5,7 +5,7 @@ import { useExtras } from '../hooks/useExtras';
 import { MenuItem, ExtraIngredient } from '../data/menu';
 import { findImageForProduct } from '../utils/imageResolver';
 import { aceitaAdicionais, agruparExtras, nomeExtraAgrupado } from '../utils/produto';
-import { regrasDoProduto, textoEscolhas, escolhaPendente } from '../data/variacoes';
+import { regrasDoProduto, textoEscolhas, escolhaPendente, escolhasIniciais } from '../data/variacoes';
 import VariacoesProduto from './VariacoesProduto';
 import { formatSplitPayment } from '../utils/paymentAndOrderHelper';
 import {
@@ -538,7 +538,7 @@ export default function PDVModal({
       const defaultSize: AcaiSize = sizes.find(s => s.size === '440ml') ? '440ml' : (sizes[0]?.size || '440ml');
       setCustomSize(defaultSize);
       setCustomExtras([]);
-      setCustomEscolhas({});
+      setCustomEscolhas(escolhasIniciais(regrasDoProduto(item).escolhas));
       setCustomAviso('');
       setCustomNotes('');
     } else {
