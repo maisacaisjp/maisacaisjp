@@ -192,7 +192,7 @@ export default function MenuManager() {
     }
 
     const hasMultipleSizes = ['combos-especiais', 'mais-vendidos', 'novidades', 'monte-do-seu-jeito', 'pizzas', 'tradicionais', 'especiais'].includes(editingItem.category) ||
-      Boolean(editingItem.price_p || editingItem.price_m || editingItem.price_g || editingItem.price_big || editingItem.price_super_big);
+      Boolean(editingItem.price_p || editingItem.price_m || editingItem.price_g || editingItem.price_big || editingItem.price_super_big || editingItem.price_2l);
 
     const parseNum = (val: any) => {
       if (val === undefined || val === null || val === '') return null;
@@ -221,10 +221,21 @@ export default function MenuManager() {
       const pSuperBig = parseNum(editingItem.price_super_big);
       if (pBig !== null) dbItem.price_big = pBig;
       if (pSuperBig !== null) dbItem.price_super_big = pSuperBig;
+      const p2l = parseNum(editingItem.price_2l);
+      if (p2l !== null) dbItem.price_2l = p2l;
     }
 
     let { error } = await supabase.from('menu_items').upsert(dbItem, { onConflict: 'id' });
     
+    // Antes de rodar o SQL da coluna price_2l: salva os outros tamanhos e avisa.
+    let aviso2L = '';
+    if (error && error.message.includes('price_2l')) {
+      delete dbItem.price_2l;
+      aviso2L = ' (2 Litros não salvo: rode o SQL PRECOS_770ML_POTE_1L_COMBOS.sql no Supabase)';
+      const retry2l = await supabase.from('menu_items').upsert(dbItem, { onConflict: 'id' });
+      error = retry2l.error;
+    }
+
     // Auto-recuperação: se as colunas price_big/price_super_big não existirem no schema cache do Supabase,
     // remove esses campos extras e salva perfeitamente sem travar o gestor.
     if (error && (error.message.includes('price_big') || error.message.includes('price_super_big'))) {
@@ -247,7 +258,7 @@ export default function MenuManager() {
         }, { onConflict: 'id' });
       }
 
-      setFeedback("Salvo com sucesso!");
+      setFeedback("Salvo com sucesso!" + aviso2L);
       setIsModalOpen(false);
       loadData();
     }
@@ -314,6 +325,7 @@ export default function MenuManager() {
       price_g: '',
       price_big: '',
       price_super_big: '',
+      price_2l: '',
       image_url: '',
       is_bestseller: false
     });
@@ -597,7 +609,7 @@ export default function MenuManager() {
               <div className="border-t border-stone-100 pt-2.5">
                 {(() => {
                   const hasMultipleSizes = ['combos-especiais', 'mais-vendidos', 'novidades', 'monte-do-seu-jeito', 'pizzas', 'tradicionais', 'especiais'].includes(editingItem.category) ||
-      Boolean(editingItem.price_p || editingItem.price_m || editingItem.price_g || editingItem.price_big || editingItem.price_super_big);
+      Boolean(editingItem.price_p || editingItem.price_m || editingItem.price_g || editingItem.price_big || editingItem.price_super_big || editingItem.price_2l);
 
                   if (hasMultipleSizes) {
                     return (
@@ -606,9 +618,9 @@ export default function MenuManager() {
                           <h3 className="text-[10px] font-black text-stone-700 uppercase tracking-wider flex items-center gap-1">
                             🍧 Preços por Tamanho do Copo / Açaí
                           </h3>
-                          <span className="text-[9.5px] font-mono text-stone-400">Preencha os tamanhos (330ml, 440ml, 550ml, 770ml, 1L)</span>
+                          <span className="text-[9.5px] font-mono text-stone-400">Preencha os tamanhos (330ml a 2L). Tamanho vazio não aparece no cardápio.</span>
                         </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
                           <div className="p-2 rounded-lg bg-stone-50 border border-stone-200 space-y-1">
                             <label className="block text-[9.5px] font-mono font-bold text-stone-600 uppercase">330ml</label>
                             <div className="flex items-center gap-0.5">
@@ -638,10 +650,17 @@ export default function MenuManager() {
                             </div>
                           </div>
                           <div className="p-2 rounded-lg bg-stone-50 border border-stone-200 space-y-1">
-                            <label className="block text-[9.5px] font-mono font-bold text-stone-600 uppercase">1 Litro (1L)</label>
+                            <label className="block text-[9.5px] font-mono font-bold text-stone-600 uppercase">Pote Recheado 1L</label>
                             <div className="flex items-center gap-0.5">
                               <span className="text-xs font-mono font-bold text-stone-400">R$</span>
                               <input type="number" step="0.01" value={editingItem.price_super_big ?? ''} onChange={e => setEditingItem({...editingItem, price_super_big: e.target.value})} placeholder="0.00" className="w-full bg-white px-2 py-1 text-xs font-mono font-bold border border-stone-300 rounded focus:border-[#6a2092] outline-none" />
+                            </div>
+                          </div>
+                          <div className="p-2 rounded-lg bg-stone-50 border border-stone-200 space-y-1">
+                            <label className="block text-[9.5px] font-mono font-bold text-stone-600 uppercase">2 Litros (2L)</label>
+                            <div className="flex items-center gap-0.5">
+                              <span className="text-xs font-mono font-bold text-stone-400">R$</span>
+                              <input type="number" step="0.01" value={editingItem.price_2l ?? ''} onChange={e => setEditingItem({...editingItem, price_2l: e.target.value})} placeholder="0.00" className="w-full bg-white px-2 py-1 text-xs font-mono font-bold border border-stone-300 rounded focus:border-[#6a2092] outline-none" />
                             </div>
                           </div>
                         </div>

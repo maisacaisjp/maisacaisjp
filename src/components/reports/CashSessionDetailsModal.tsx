@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { format, differenceInMinutes } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { normalizePaymentMethod, normalizeOrderType, isOrderActive } from '../../utils/paymentAndOrderHelper';
+import { normalizePaymentMethod, normalizeOrderType, isOrderActive, paymentParts, paymentLabel } from '../../utils/paymentAndOrderHelper';
 import { formatItemNameForPrint } from '../../utils/printHelpers';
 
 interface CashSessionDetailsModalProps {
@@ -145,8 +145,11 @@ export default function CashSessionDetailsModal({ session, onClose }: CashSessio
     // Pagamentos
     const paymentTotals: Record<string, number> = {};
     orders.forEach((o: any) => {
-      const pm = normalizePaymentMethod(o.payment_method || o.paymentMethod);
-      paymentTotals[pm] = (paymentTotals[pm] || 0) + Number(o.total_amount || o.totalAmount || 0);
+      // Pagamento dividido soma cada parte na sua forma
+      paymentParts(o.payment_method || o.paymentMethod, Number(o.total_amount || o.totalAmount || 0)).forEach(part => {
+        const pm = normalizePaymentMethod(part.method);
+        paymentTotals[pm] = (paymentTotals[pm] || 0) + part.amount;
+      });
     });
 
     const totalDinheiro = paymentTotals['Dinheiro'] || 0;
@@ -322,7 +325,7 @@ export default function CashSessionDetailsModal({ session, onClose }: CashSessio
                     </div>
                     <div className="text-[9px] font-mono text-stone-500 flex justify-between items-center">
                       <span>{summary.entrega.count} pedidos</span>
-                      {summary.entrega.count > 0 && <span className="truncate max-w-[180px]">{Object.entries(summary.entrega.orders.reduce((acc: Record<string, number>, o: any) => { const pm = normalizePaymentMethod(o.payment_method || o.paymentMethod); acc[pm] = (acc[pm] || 0) + Number(o.total_amount || o.totalAmount || 0); return acc; }, {})).map(([pm, val]) => `${pm} R$ ${Number(val).toFixed(2)}`).join(' | ')}</span>}
+                      {summary.entrega.count > 0 && <span className="truncate max-w-[180px]">{Object.entries(summary.entrega.orders.reduce((acc: Record<string, number>, o: any) => { paymentParts(o.payment_method || o.paymentMethod, Number(o.total_amount || o.totalAmount || 0)).forEach(part => { const pm = normalizePaymentMethod(part.method); acc[pm] = (acc[pm] || 0) + part.amount; }); return acc; }, {})).map(([pm, val]) => `${pm} R$ ${Number(val).toFixed(2)}`).join(' | ')}</span>}
                     </div>
                   </div>
 
@@ -336,7 +339,7 @@ export default function CashSessionDetailsModal({ session, onClose }: CashSessio
                     </div>
                     <div className="text-[9px] font-mono text-stone-500 flex justify-between items-center">
                       <span>{summary.mesa.count} pedidos</span>
-                      {summary.mesa.count > 0 && <span className="truncate max-w-[180px]">{Object.entries(summary.mesa.orders.reduce((acc: Record<string, number>, o: any) => { const pm = normalizePaymentMethod(o.payment_method || o.paymentMethod); acc[pm] = (acc[pm] || 0) + Number(o.total_amount || o.totalAmount || 0); return acc; }, {})).map(([pm, val]) => `${pm} R$ ${Number(val).toFixed(2)}`).join(' | ')}</span>}
+                      {summary.mesa.count > 0 && <span className="truncate max-w-[180px]">{Object.entries(summary.mesa.orders.reduce((acc: Record<string, number>, o: any) => { paymentParts(o.payment_method || o.paymentMethod, Number(o.total_amount || o.totalAmount || 0)).forEach(part => { const pm = normalizePaymentMethod(part.method); acc[pm] = (acc[pm] || 0) + part.amount; }); return acc; }, {})).map(([pm, val]) => `${pm} R$ ${Number(val).toFixed(2)}`).join(' | ')}</span>}
                     </div>
                   </div>
 
@@ -350,7 +353,7 @@ export default function CashSessionDetailsModal({ session, onClose }: CashSessio
                     </div>
                     <div className="text-[9px] font-mono text-stone-500 flex justify-between items-center">
                       <span>{summary.retirada.count} pedidos</span>
-                      {summary.retirada.count > 0 && <span className="truncate max-w-[180px]">{Object.entries(summary.retirada.orders.reduce((acc: Record<string, number>, o: any) => { const pm = normalizePaymentMethod(o.payment_method || o.paymentMethod); acc[pm] = (acc[pm] || 0) + Number(o.total_amount || o.totalAmount || 0); return acc; }, {})).map(([pm, val]) => `${pm} R$ ${Number(val).toFixed(2)}`).join(' | ')}</span>}
+                      {summary.retirada.count > 0 && <span className="truncate max-w-[180px]">{Object.entries(summary.retirada.orders.reduce((acc: Record<string, number>, o: any) => { paymentParts(o.payment_method || o.paymentMethod, Number(o.total_amount || o.totalAmount || 0)).forEach(part => { const pm = normalizePaymentMethod(part.method); acc[pm] = (acc[pm] || 0) + part.amount; }); return acc; }, {})).map(([pm, val]) => `${pm} R$ ${Number(val).toFixed(2)}`).join(' | ')}</span>}
                     </div>
                   </div>
 
@@ -549,7 +552,7 @@ export default function CashSessionDetailsModal({ session, onClose }: CashSessio
                     {filteredOrders.map((order: any) => {
                       const isExpanded = expandedOrderId === order.id;
                       const normType = normalizeOrderType(order.order_type || order.orderType);
-                      const normPayment = normalizePaymentMethod(order.payment_method || order.paymentMethod);
+                      const normPayment = paymentLabel(order.payment_method || order.paymentMethod);
                       const items = safeParseItems(order.items);
                       const totalAmt = Number(order.total_amount || order.totalAmount || 0);
                       const orderDate = new Date(order.created_at || order.createdAt);
@@ -946,7 +949,7 @@ export default function CashSessionDetailsModal({ session, onClose }: CashSessio
               <div className="space-y-1 text-xs pt-1">
                 <div className="flex justify-between text-stone-600">
                   <span>Forma de Pagamento:</span>
-                  <span className="font-bold">{normalizePaymentMethod(selectedReceiptOrder.payment_method || selectedReceiptOrder.paymentMethod)}</span>
+                  <span className="font-bold">{paymentLabel(selectedReceiptOrder.payment_method || selectedReceiptOrder.paymentMethod)}</span>
                 </div>
                 {(selectedReceiptOrder.change_for || selectedReceiptOrder.changeFor) && (
                   <div className="flex justify-between text-stone-600">

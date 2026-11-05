@@ -1,6 +1,6 @@
 // Cruza os pedidos do gestor com as fichas técnicas para estimar o CMV real.
 // Cada item é dividido em produto principal + adicionais escolhidos, e cada parte procura a sua ficha.
-import { custoFicha } from './calc';
+import { custoFicha, custoBase, custoUnitRef, unidadeRef } from './calc';
 import { norm } from './format';
 import type { AdicionalCardapio, Dados, Ficha, ItemPedido, Pedido, ProdutoCardapio, Tamanho } from './types';
 
@@ -38,6 +38,13 @@ function tamanhoDo(it: ItemPedido): Tamanho {
 }
 
 const limparNome = (s: string) => semColchetes(s).replace(/\((Pq|P|Md|M|Gr|G)\)\s*$/i, '').trim();
+
+// Custo de um adicional avulso no tamanho do copo: o que é por peso cresce com o fator;
+// o que é por unidade (chocolates) vai na mesma quantidade em todos os tamanhos.
+function custoAdicional(f: Ficha, fator: number, d: Dados) {
+  const recheio = f.recheio.reduce((s, it) => s + it.qtd * custoUnitRef(it, d) * (unidadeRef(it, d) === 'un' ? 1 : fator), 0);
+  return custoBase(f.baseIds.U, d) + recheio;
+}
 
 export function analisarVendas(pedidos: Pedido[], cardapio: ProdutoCardapio[], adicionais: AdicionalCardapio[], d: Dados): ResumoVendas {
   const prodPorNome = new Map(cardapio.map((m) => [norm(m.name), m]));
@@ -89,7 +96,21 @@ export function analisarVendas(pedidos: Pedido[], cardapio: ProdutoCardapio[], a
         q, base * q, ficha ? custoFicha(ficha, tam, d).total * q : null,
       );
 
-      // Adicionais escolhidos
+      // Adicionais escolhidos (Base = 330ml: 440ml +20%, 550ml +40%, 770ml +60%, Pote 1L Recheado +100%; chocolates por unidade não mudam)
+      const eh770 = prod?.id === 'acai-1371861' || /770\s*ml/i.test(nome);
+      const ehPote = prod?.id === 'acai-1371862' || prod?.id === 'acai-1371863' || /\b(1|2)\s*l(itro|itros)?\b/i.test(nome);
+      const eh550 = prod?.id === 'acai-1371860' || tam === 'G' || /550\s*ml/i.test(nome);
+      const eh440 = prod?.id === 'acai-1371859' || tam === 'M' || /440\s*ml/i.test(nome);
+      const fatorAdicional = ehPote
+        ? (d.config.fator1L || 2)
+        : eh770
+          ? (d.config.fator770 || 1.6)
+          : eh550
+            ? (d.config.fatorG || 1.4)
+            : eh440
+              ? (d.config.fatorM || 1.2)
+              : (d.config.fatorP || 1);
+
       for (const e of extras) {
         const adic = (e.id && adicionais.find((a) => a.id === e.id)) || adicPorNome.get(norm(e.name ?? ''));
         const idExtra = adic ? `extra:${adic.id}` : undefined;
@@ -97,7 +118,7 @@ export function analisarVendas(pedidos: Pedido[], cardapio: ProdutoCardapio[], a
         const nomeAd = adic?.name ?? e.name ?? 'Adicional';
         somar(
           { chave: `${idExtra ?? norm(nomeAd)}|A`, nome: nomeAd, produtoId: idExtra, categoria: 'Adicionais', tamanho: 'U', adicional: true, fichaId: fichaAd?.id },
-          q, (Number(e.price) || 0) * q, fichaAd ? custoFicha(fichaAd, 'U', d).total * q : null,
+          q, (Number(e.price) || 0) * q, fichaAd ? custoAdicional(fichaAd, fatorAdicional, d) * q : null,
         );
       }
     }

@@ -223,13 +223,22 @@ function App() {
     setCartBounce(true);
     setTimeout(() => setCartBounce(false), 500);
 
+    // Só soma na mesma linha se for o mesmo produto, tamanho, adicionais e observação.
+    // Dois copos de 550ml com adicionais diferentes ficam em linhas separadas.
+    const extrasKey = (i: CartItem) => (i.extras || []).map(e => e.id).sort().join(',');
     const existingIndex = cart.findIndex(
       (item) =>
-        item.menuItem.id === newItem.menuItem.id && item.size === newItem.size,
+        item.menuItem.id === newItem.menuItem.id &&
+        item.size === newItem.size &&
+        extrasKey(item) === extrasKey(newItem) &&
+        (item.notes || '') === (newItem.notes || ''),
     );
     if (existingIndex > -1) {
       const updatedCart = [...cart];
-      updatedCart[existingIndex].quantity += newItem.quantity;
+      updatedCart[existingIndex] = {
+        ...updatedCart[existingIndex],
+        quantity: updatedCart[existingIndex].quantity + newItem.quantity,
+      };
       saveCart(updatedCart);
     } else {
       saveCart([...cart, newItem]);

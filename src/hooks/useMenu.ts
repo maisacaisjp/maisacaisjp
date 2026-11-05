@@ -52,6 +52,7 @@ export function useMenu() {
           priceG: it.price_g ?? it.priceG ?? undefined,
           priceBig: it.price_big ?? it.priceBig ?? undefined,
           priceSuperBig: it.price_super_big ?? it.priceSuperBig ?? undefined,
+          price2L: it.price_2l ?? it.price2L ?? undefined,
           imageUrl: it.image_url ?? it.imageUrl ?? undefined,
           dayOfWeek: it.day_of_week ?? it.dayOfWeek ?? undefined,
           isBestseller: it.is_bestseller ?? it.isBestseller ?? false,

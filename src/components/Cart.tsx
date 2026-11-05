@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import confetti from "canvas-confetti";
 import { supabase } from '../lib/supabase';
-import { CartItem } from "../types";
+import { CartItem, SIZE_LABELS } from "../types";
+import { agruparExtras, nomeExtraAgrupado } from "../utils/produto";
 import { hapticLight, hapticMedium, hapticSuccess } from "../utils/haptics";
 import {
   RESTAURANT_WHATSAPP_PHONE,
@@ -27,7 +28,7 @@ import {
   Sparkles
 } from "lucide-react";
 import { useAnalytics } from '../hooks/useAnalytics';
-import { getCashbackConfig, getCustomerCashbackBalance, applyOrderCashback, DEFAULT_CASHBACK_PERCENT } from '../utils/cashback';
+import { getCashbackConfig, getCustomerCashbackInfo, applyOrderCashback, dataCurta, DEFAULT_CASHBACK_PERCENT } from '../utils/cashback';
 
 interface CartProps {
   items: CartItem[];
@@ -98,6 +99,7 @@ export default function Cart({
   const [customerCashbackBalance, setCustomerCashbackBalance] = useState<number>(0);
   const [useCashback, setUseCashback] = useState(false);
   const [loadingCashback, setLoadingCashback] = useState(false);
+  const [cashbackVence, setCashbackVence] = useState<{ data: string; valor: number } | null>(null);
 
   useEffect(() => {
     getCashbackConfig().then(cfg => setCashbackConfig(cfg));
@@ -107,15 +109,17 @@ export default function Cart({
     const clean = (telefone || '').replace(/\D/g, '');
     if (clean.length < 10) {
       setCustomerCashbackBalance(0);
+      setCashbackVence(null);
       setUseCashback(false);
       return;
     }
     let isCurrent = true;
     setLoadingCashback(true);
     const timer = setTimeout(async () => {
-      const bal = await getCustomerCashbackBalance(clean);
+      const info = await getCustomerCashbackInfo(clean);
       if (isCurrent) {
-        setCustomerCashbackBalance(bal);
+        setCustomerCashbackBalance(info.saldo);
+        setCashbackVence(info.proximoVencimento ? { data: info.proximoVencimento, valor: info.valorProximoVencimento } : null);
         setLoadingCashback(false);
       }
     }, 350);
@@ -299,7 +303,8 @@ export default function Cart({
               'M': '440ml',
               'G': '550ml',
               'Big': '770ml',
-              'Super Big': '1 Litro'
+              'Super Big': 'Pote Recheado 1 Litro',
+              '2L': '2 Litros'
             };
             itemName += ` (${sizeMap[item.size] || item.size})`;
           }
@@ -430,7 +435,8 @@ export default function Cart({
           'M': '440ml',
           'G': '550ml',
           'Big': '770ml',
-          'Super Big': '1 Litro'
+          'Super Big': 'Pote Recheado 1 Litro',
+          '2L': '2 Litros'
         };
         desc += ` (${sizeMap[item.size] || item.size})`;
       }
@@ -441,8 +447,8 @@ export default function Cart({
       text += `*${item.quantity}x* ${desc} (${priceStr})\n`;
       
       if (item.extras && item.extras.length > 0) {
-        item.extras.forEach((extra) => {
-          text += `   + ${extra.name} (+ R$ ${(extra.price * item.quantity).toFixed(2)})\n`;
+        agruparExtras(item.extras).forEach((g) => {
+          text += `   + ${nomeExtraAgrupado(g)} (+ R$ ${(g.extra.price * g.qtd * item.quantity).toFixed(2)})\n`;
         });
         text += `   *Subtotal item: R$ ${(item.priceCalculated * item.quantity).toFixed(2)}*\n`;
       }
@@ -683,14 +689,14 @@ export default function Cart({
                           </span>
                           {item.size && (
                             <span className="ml-1 text-[10px] font-semibold text-gray-500 bg-gray-100 px-1 py-0.2 rounded">
-                              {item.size}
+                              {SIZE_LABELS[item.size] || item.size}
                             </span>
                           )}
 
                           {/* Extras */}
                           {item.extras && item.extras.length > 0 && (
                             <div className="text-[10px] text-gray-500 mt-0.5">
-                              {item.extras.map((ex) => `+ ${ex.name} (R$${ex.price.toFixed(2)})`).join(', ')}
+                              {agruparExtras(item.extras).map((g) => `+ ${nomeExtraAgrupado(g)} (R$${(g.extra.price * g.qtd).toFixed(2)})`).join(', ')}
                             </div>
                           )}
 
@@ -1086,6 +1092,11 @@ export default function Cart({
                                 <span className="text-[10px] text-amber-800 font-semibold block">
                                   Saldo: <strong>R$ {customerCashbackBalance.toFixed(2)}</strong>
                                 </span>
+                                {cashbackVence && (
+                                  <span className="text-[10px] text-amber-700 block">
+                                    R$ {cashbackVence.valor.toFixed(2)} vence em {dataCurta(cashbackVence.data)}
+                                  </span>
+                                )}
                               </div>
                             </div>
 

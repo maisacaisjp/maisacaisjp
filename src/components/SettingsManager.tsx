@@ -8,7 +8,7 @@ import {
   Shield, CheckCheck, RefreshCw, Image as ImageIcon
 } from 'lucide-react';
 
-import { getCashbackConfig, saveCashbackConfig, DEFAULT_CASHBACK_PERCENT } from '../utils/cashback';
+import { getCashbackConfig, saveCashbackConfig, DEFAULT_CASHBACK_PERCENT, DEFAULT_CASHBACK_VALIDADE_DIAS } from '../utils/cashback';
 import CoverCropManager from './CoverCropManager';
 
 interface SettingsManagerProps {
@@ -202,6 +202,7 @@ export default function SettingsManager({
   // ────────────────── ESTADO: FIDELIDADE & CASHBACK ──────────────────
   const [cashbackEnabled, setCashbackEnabled] = useState(true);
   const [cashbackPercent, setCashbackPercent] = useState(String(DEFAULT_CASHBACK_PERCENT));
+  const [cashbackValidade, setCashbackValidade] = useState(String(DEFAULT_CASHBACK_VALIDADE_DIAS));
   const [savingCashback, setSavingCashback] = useState(false);
 
   useEffect(() => {
@@ -209,6 +210,7 @@ export default function SettingsManager({
       const cfg = await getCashbackConfig();
       setCashbackEnabled(cfg.enabled);
       setCashbackPercent(String(cfg.percent));
+      setCashbackValidade(String(cfg.validadeDias));
     }
     loadCashback();
   }, []);
@@ -217,7 +219,9 @@ export default function SettingsManager({
     setSavingCashback(true);
     const num = parseFloat(cashbackPercent);
     const validPercent = isNaN(num) || num < 0 ? DEFAULT_CASHBACK_PERCENT : num;
-    const ok = await saveCashbackConfig(cashbackEnabled, validPercent);
+    const dias = parseInt(cashbackValidade, 10);
+    const validDias = isNaN(dias) || dias < 1 ? DEFAULT_CASHBACK_VALIDADE_DIAS : dias;
+    const ok = await saveCashbackConfig(cashbackEnabled, validPercent, validDias);
     setSavingCashback(false);
     if (ok) {
       showSavedFeedback("Regras de Cashback salvas com sucesso!");
@@ -722,13 +726,33 @@ export default function SettingsManager({
                     </div>
                   </div>
 
+                  {/* Validade de cada crédito */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-stone-700">Validade do cashback (dias)</label>
+                    <p className="text-[11px] text-stone-500">
+                      Cada compra gera um crédito que vence depois desses dias. Ao usar o saldo, o sistema gasta primeiro o crédito que vence antes.
+                    </p>
+                    <div className="max-w-xs relative">
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={cashbackValidade}
+                        onChange={(e) => setCashbackValidade(e.target.value)}
+                        className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-xl text-xs font-bold text-stone-900 focus:bg-white focus:border-[#6a2092] outline-none pr-12"
+                        placeholder="Ex: 60"
+                      />
+                      <span className="absolute right-3 top-2.5 text-xs font-bold text-stone-400">dias</span>
+                    </div>
+                  </div>
+
                   {/* Simulador de Exemplo */}
                   <div className="p-3.5 bg-amber-50/60 rounded-xl border border-amber-200/70 text-xs text-amber-900 space-y-1">
                     <div className="font-bold flex items-center gap-1.5">
                       <span>💡 Simulação em Tempo Real:</span>
                     </div>
                     <p className="text-[11px] text-amber-800">
-                      Um cliente que fizer um pedido de <strong>R$ 30,00</strong> acumulará <strong>R$ {((30 * (parseFloat(cashbackPercent) || 0)) / 100).toFixed(2)}</strong> de crédito para abater em compras futuras.
+                      Um cliente que fizer um pedido de <strong>R$ 30,00</strong> acumulará <strong>R$ {((30 * (parseFloat(cashbackPercent) || 0)) / 100).toFixed(2)}</strong> de crédito para abater em compras futuras, válido por <strong>{parseInt(cashbackValidade, 10) || DEFAULT_CASHBACK_VALIDADE_DIAS} dias</strong>.
                     </p>
                   </div>
                 </div>

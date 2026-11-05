@@ -21,11 +21,16 @@ export const CATEGORIAS_LANC: Array<{ nome: string; noResultado: boolean; dica: 
 export const PAGAMENTOS = ['PIX', 'Dinheiro', 'Cartão de débito', 'Cartão de crédito', 'Boleto', 'Transferência'];
 
 export const CONFIG_PADRAO: Config = {
-  fatorP: 0.6, // 330ml ÷ 550ml
-  fatorM: 0.8, // 440ml ÷ 550ml
+  // Proporção das fichas técnicas pesadas no Multipedidos (04/11/2026): 100 g no 330ml vira 120 / 140 / 160 g e 200 g no pote.
+  // Chocolates por unidade (Kit Kat, Bis, Kinder, Bueno, Sonho de Valsa, Ouro Branco) não mudam com o tamanho.
+  fatorP: 1, // 330ml = porção base (100%)
+  fatorM: 1.2, // 440ml = +20%
+  fatorG: 1.4, // 550ml = +40%
+  fator770: 1.6, // 770ml = +60%
+  fator1L: 2, // Pote Recheado 1L = o dobro do 330ml
   cmvMeta: 32,
   taxaPagamento: 2,
-  custoPorEntrega: 0,
+  custoPorEntrega: 0.66,
   diasTrabalhados: 30,
 };
 

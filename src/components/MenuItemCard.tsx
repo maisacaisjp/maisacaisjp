@@ -28,7 +28,8 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
   if (item.priceM) prices.push(`440ml R$ ${item.priceM.toFixed(2).replace('.', ',')}`);
   if (item.priceG) prices.push(`550ml R$ ${item.priceG.toFixed(2).replace('.', ',')}`);
   if (item.priceBig) prices.push(`770ml R$ ${item.priceBig.toFixed(2).replace('.', ',')}`);
-  if (item.priceSuperBig) prices.push(`1L R$ ${item.priceSuperBig.toFixed(2).replace('.', ',')}`);
+  if (item.priceSuperBig) prices.push(`Pote 1L R$ ${item.priceSuperBig.toFixed(2).replace('.', ',')}`);
+  if (item.price2L) prices.push(`2L R$ ${item.price2L.toFixed(2).replace('.', ',')}`);
 
   let priceDisplay: React.ReactNode = null;
   if (prices.length > 2) {

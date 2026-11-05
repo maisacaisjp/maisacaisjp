@@ -14,6 +14,7 @@ export interface MenuItem {
   priceG?: number;
   priceBig?: number;
   priceSuperBig?: number;
+  price2L?: number;
   imageUrl?: string;
   imageUrl2?: string;
   dayOfWeek?: number;

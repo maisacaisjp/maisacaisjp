@@ -1,7 +1,17 @@
 import { MenuItem, ExtraIngredient } from './data/menu';
 export type { MenuItem, ExtraIngredient };
 
-export type ProductSize = 'P' | 'M' | 'G' | 'Big' | 'Super Big';
+export type ProductSize = 'P' | 'M' | 'G' | 'Big' | 'Super Big' | '2L';
+
+// Nome do tamanho como no Multipedidos: 330ml, 440ml, 550ml, 770ml, Pote Recheado 1 Litro (2 Litros só se cadastrado)
+export const SIZE_LABELS: Record<ProductSize, string> = {
+  P: '330ml',
+  M: '440ml',
+  G: '550ml',
+  Big: '770ml',
+  'Super Big': 'Pote Recheado 1 Litro',
+  '2L': '2 Litros',
+};
 export type PizzaSize = ProductSize; // Compatibilidade com código existente
 
 export interface CartItem {

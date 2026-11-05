@@ -7,8 +7,11 @@ import type { Config } from '../types';
 import { Btn, Card, Num } from '../ui';
 
 const CAMPOS: Array<{ chave: keyof Config; rotulo: string; dica: string }> = [
-  { chave: 'fatorM', rotulo: 'Fator dos complementos no 440ml', dica: 'Complementos do 440 = 550 × fator. Proporção de volume: 440 ÷ 550 = 0,80.' },
-  { chave: 'fatorP', rotulo: 'Fator dos complementos no 330ml', dica: 'Complementos do 330 = 550 × fator. Proporção de volume: 330 ÷ 550 = 0,60.' },
+  { chave: 'fatorP', rotulo: 'Fator base dos complementos no 330ml', dica: '1,00 = porção base informada (ex.: 100 g de mousse no 330ml).' },
+  { chave: 'fatorM', rotulo: 'Fator dos complementos no 440ml (+20%)', dica: '1,20 = 20% a mais que o 330ml (100 g viram 120 g), como nas fichas do Multipedidos.' },
+  { chave: 'fatorG', rotulo: 'Fator dos complementos no 550ml (+40%)', dica: '1,40 = 40% a mais que o 330ml (100 g viram 140 g), como nas fichas do Multipedidos.' },
+  { chave: 'fator770', rotulo: 'Fator dos adicionais no Copo 770ml (+60%)', dica: '1,60 = 60% a mais que o 330ml (100 g viram 160 g), como nas fichas do Multipedidos.' },
+  { chave: 'fator1L', rotulo: 'Fator dos adicionais no Pote 1L Recheado (2x)', dica: '2,00 = o dobro do 330ml (100 g viram 200 g). Chocolates por unidade não mudam com o tamanho.' },
   { chave: 'cmvMeta', rotulo: 'Meta de CMV (%)', dica: 'Açaiteria costuma trabalhar entre 28% e 35%.' },
   { chave: 'taxaPagamento', rotulo: 'Taxa média de pagamento (%)', dica: 'Média cobrada por maquininha/cartão sobre o faturamento (PIX e dinheiro não têm taxa).' },
   { chave: 'custoPorEntrega', rotulo: 'Custo variável por entrega (R$)', dica: 'Use se o motoboy ou o combustível for pago por entrega.' },

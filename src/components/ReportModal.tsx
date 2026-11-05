@@ -11,6 +11,7 @@ import {
   ResponsiveContainer
 } from 'recharts';
 import { getItemNameTextForPrint, formatItemNameForPrint } from '../utils/printHelpers';
+import { paymentParts, detailPaymentMethod } from '../utils/paymentAndOrderHelper';
 
 interface ReportModalProps {
   isOpen: boolean;
@@ -401,10 +402,15 @@ export const ReportModal: React.FC<ReportModalProps> = ({
             if (type === 'pagamentos') {
               const counts: Record<string, { count: number, rev: number }> = {};
               reportOrders.forEach(o => {
-                const pm = o.paymentMethod || 'Não informado';
-                counts[pm] = counts[pm] || { count: 0, rev: 0 };
-                counts[pm].count++;
-                counts[pm].rev += (Number(o.totalAmount) || 0);
+                // Pagamento dividido: cada parte conta na sua forma
+                const parts = o.paymentMethod
+                  ? paymentParts(o.paymentMethod, Number(o.totalAmount) || 0).map(p => ({ ...p, method: detailPaymentMethod(p.method) }))
+                  : [{ method: 'Não informado', amount: Number(o.totalAmount) || 0 }];
+                parts.forEach(p => {
+                  counts[p.method] = counts[p.method] || { count: 0, rev: 0 };
+                  counts[p.method].count++;
+                  counts[p.method].rev += p.amount;
+                });
               });
               const sorted = Object.entries(counts).sort((a,b) => b[1].rev - a[1].rev);
               return (

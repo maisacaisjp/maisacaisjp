@@ -5,7 +5,7 @@ import { useDados } from './store';
 import type { ItemReceita, Tamanho } from './types';
 import { Btn, NumOpcional, Num, Selo } from './ui';
 
-// Tabela de itens de receita. Com porTamanho=true mostra colunas 550 / 440 / 330 (440 e 330 opcionais = fator).
+// Tabela de itens de receita. Com porTamanho=true mostra colunas 330 (Base) / 440 (+20%) / 550 (+40%).
 export function ReceitaEditor({ itens, onChange, porTamanho = false, excluirPreparo }: {
   itens: ItemReceita[];
   onChange: (itens: ItemReceita[]) => void;
@@ -21,9 +21,9 @@ export function ReceitaEditor({ itens, onChange, porTamanho = false, excluirPrep
     if (primeiro) onChange([...itens, { id: uid(), ...primeiro, qtd: 0 }]);
     else alert('Cadastre antes um insumo na aba Insumos.');
   };
-  const tams: Tamanho[] = porTamanho ? ['G', 'M', 'P'] : ['U'];
-  const CAMPO: Record<string, 'qtdM' | 'qtdP'> = { M: 'qtdM', P: 'qtdP' };
-  const TITULO: Record<string, string> = { G: 'Qtd 550', M: 'Qtd 440', P: 'Qtd 330' };
+  const tams: Tamanho[] = porTamanho ? ['P', 'M', 'G'] : ['U'];
+  const CAMPO: Record<string, 'qtdM' | 'qtdG'> = { M: 'qtdM', G: 'qtdG' };
+  const TITULO: Record<string, string> = { P: 'Qtd 330 (Base)', M: 'Qtd 440 (+20%)', G: 'Qtd 550 (+40%)' };
 
   return (
     <div className="overflow-x-auto">
@@ -33,7 +33,7 @@ export function ReceitaEditor({ itens, onChange, porTamanho = false, excluirPrep
             <th className="min-w-48">Item</th>
             {porTamanho ? tams.map((t) => <th key={t} className="fin-num">{TITULO[t]}</th>) : <th className="fin-num">Qtd</th>}
             <th>Un.</th>
-            <th className="fin-num">Custo {porTamanho ? '550' : ''}</th>
+            <th className="fin-num">Custo {porTamanho ? '330' : ''}</th>
             <th />
           </tr>
         </thead>
@@ -68,33 +68,33 @@ export function ReceitaEditor({ itens, onChange, porTamanho = false, excluirPrep
                   {pend && <div className="mt-0.5"><Selo tom="alerta">{pend}</Selo></div>}
                 </td>
                 {tams.map((t) =>
-                  t === 'G' || t === 'U' ? (
-                    <td key={t} className="w-20" data-label={porTamanho ? TITULO[t] : `Quantidade (${un})`}><Num value={it.qtd} onChange={(v) => mudar(it.id, { qtd: v })} /></td>
+                  t === 'P' || t === 'U' ? (
+                    <td key={t} className="w-24" data-label={porTamanho ? TITULO[t] : `Quantidade (${un})`}><Num value={it.qtd} onChange={(v) => mudar(it.id, { qtd: v })} /></td>
                   ) : (
-                    <td key={t} className="w-20" data-label={TITULO[t]}>
-                      <NumOpcional
-                        value={it[CAMPO[t]]}
-                        placeholder={num(qtdNoTamanho({ ...it, [CAMPO[t]]: null }, t, dados.config), 1)}
-                        onChange={(v) => mudar(it.id, { [CAMPO[t]]: v })}
-                      />
-                    </td>
-                  ),
+                      <td key={t} className="w-24" data-label={TITULO[t]}>
+                        <NumOpcional
+                          value={it[CAMPO[t]]}
+                          placeholder={num(qtdNoTamanho({ ...it, [CAMPO[t]]: null }, t, dados.config, unidadeRef(it, dados)), 1)}
+                          onChange={(v) => mudar(it.id, { [CAMPO[t]]: v })}
+                        />
+                      </td>
+                      ),
                 )}
-                <td className="text-stone-500 max-md:hidden">{un}</td>
-                <td className="fin-num" data-label={`Custo ${porTamanho ? '550' : ''}`}>{brl(it.qtd * custoUnitRef(it, dados))}</td>
-                <td className="w-8 fin-acao">
-                  <button type="button" className="cursor-pointer text-stone-400 hover:text-rose-600" title={`Remover ${nomeRef(it, dados)}`} onClick={() => onChange(itens.filter((x) => x.id !== it.id))}>
-                    <Trash2 size={15} />
-                  </button>
-                </td>
-              </tr>
-            );
+                      <td className="text-stone-500 max-md:hidden">{un}</td>
+                      <td className="fin-num" data-label={`Custo ${porTamanho ? '330' : ''}`}>{brl(it.qtd * custoUnitRef(it, dados))}</td>
+                      <td className="w-8 fin-acao">
+                        <button type="button" className="cursor-pointer text-stone-400 hover:text-rose-600" title={`Remover ${nomeRef(it, dados)}`} onClick={() => onChange(itens.filter((x) => x.id !== it.id))}>
+                          <Trash2 size={15} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
           })}
-        </tbody>
+              </tbody>
       </table>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
         <Btn variante="neutro" onClick={adicionar}><Plus size={14} /> Adicionar item</Btn>
-        {porTamanho && <span className="text-xs text-stone-400">440 e 330 em branco = quantidade do 550 × fator (Ajustes). Digite para fixar um valor.</span>}
+        {porTamanho && <span className="text-xs text-stone-400">440 (+20%) e 550 (+40%) em branco = quantidade do 330 × fator (Ajustes). Digite para fixar um valor.</span>}
       </div>
     </div>
   );

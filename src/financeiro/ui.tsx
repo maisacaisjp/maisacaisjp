@@ -14,11 +14,12 @@ export function Card({ titulo, acoes, children, className = '' }: { titulo?: Rea
   );
 }
 
-type Variante = 'primario' | 'neutro' | 'perigo' | 'link';
+type Variante = 'primario' | 'neutro' | 'perigo' | 'sucesso' | 'link';
 const VARIANTES: Record<Variante, string> = {
   primario: 'bg-[#6a2092] text-white hover:bg-[#521872] font-semibold shadow-2xs',
   neutro: 'bg-white border border-stone-200 text-stone-700 hover:bg-stone-50',
   perigo: 'bg-white border border-rose-200 text-rose-600 hover:bg-rose-50',
+  sucesso: 'bg-emerald-600 text-white hover:bg-emerald-700 font-semibold shadow-2xs',
   link: 'text-stone-500 hover:text-[#6a2092]',
 };
 

@@ -62,7 +62,7 @@ import {
 import { ALL_MENU_ITEMS, MenuItem } from "../data/menu";
 import { useMenu } from "../hooks/useMenu";
 import { supabase } from '../lib/supabase';
-import { normalizeOrderType, isOrderActive, normalizePaymentMethod } from '../utils/paymentAndOrderHelper';
+import { normalizeOrderType, isOrderActive, normalizePaymentMethod, paymentParts, detailPaymentMethod } from '../utils/paymentAndOrderHelper';
 import { formatItemNameForPrint, getItemNameTextForPrint } from '../utils/printHelpers';
 import { motion } from 'framer-motion';
 import MenuManager from '../components/MenuManager';
@@ -295,26 +295,16 @@ export default function AdminDashboard() {
       let totalFat = 0;
       updatedRecent.forEach((o: any) => {
         if (o.status !== 'Cancelado' && o.status !== 'cancelado') {
-          const pmRaw = (o.paymentMethod || o.payment_method || 'Dinheiro').trim();
-          let pm = pmRaw;
-          const lower = pmRaw.toLowerCase();
-          if (lower.includes('pix') || lower.includes('mbway')) {
-            pm = 'PIX';
-          } else if (lower.includes('crédito') || lower.includes('credito')) {
-            pm = 'Cartão de Crédito';
-          } else if (lower.includes('débito') || lower.includes('debito')) {
-            pm = 'Cartão de Débito';
-          } else if (lower.includes('cartão') || lower.includes('cartao') || lower.includes('card')) {
-            pm = 'Cartão';
-          } else if (lower.includes('dinheiro') || lower.includes('cash') || lower.includes('numerario')) {
-            pm = 'Dinheiro';
-          }
-          if (!pmCounts[pm]) {
-            pmCounts[pm] = { count: 0, revenue: 0 };
-          }
           const amt = Number(o.totalAmount || o.total_amount || 0);
-          pmCounts[pm].count += 1;
-          pmCounts[pm].revenue += amt;
+          // Pagamento dividido: cada parte conta na sua forma
+          paymentParts(o.paymentMethod || o.payment_method, amt).forEach(part => {
+            const pm = detailPaymentMethod(part.method);
+            if (!pmCounts[pm]) {
+              pmCounts[pm] = { count: 0, revenue: 0 };
+            }
+            pmCounts[pm].count += 1;
+            pmCounts[pm].revenue += part.amount;
+          });
           totalFat += amt;
         }
       });
@@ -585,28 +575,18 @@ export default function AdminDashboard() {
       allOrdersAgg.forEach(order => {
         const amt = Number(order.totalAmount) || 0;
         faturamentoBruto += amt;
-        const pmRaw = (order.paymentMethod || (order as any).payment_method || 'Dinheiro').trim();
-        let pm = pmRaw;
-        const lower = pmRaw.toLowerCase();
-        if (lower.includes('pix') || lower.includes('mbway')) {
-          pm = 'PIX';
-        } else if (lower.includes('crédito') || lower.includes('credito')) {
-          pm = 'Cartão de Crédito';
-        } else if (lower.includes('débito') || lower.includes('debito')) {
-          pm = 'Cartão de Débito';
-        } else if (lower.includes('cartão') || lower.includes('cartao') || lower.includes('card')) {
-          pm = 'Cartão';
-        } else if (lower.includes('dinheiro') || lower.includes('cash') || lower.includes('numerario')) {
-          pm = 'Dinheiro';
-        }
-        if (!paymentMethodCounts[pm]) {
-          paymentMethodCounts[pm] = { count: 0, revenue: 0 };
-        }
-        paymentMethodCounts[pm].count += 1;
-        paymentMethodCounts[pm].revenue += amt;
-        if (pm === 'Dinheiro') faturamentoNumerario += amt;
-        else if (pm === 'PIX') faturamentoPIX += amt;
-        else if (pm.includes('Cartão')) faturamentoCartao += amt;
+        // Pagamento dividido: cada parte conta na sua forma
+        paymentParts(order.paymentMethod || (order as any).payment_method, amt).forEach(part => {
+          const pm = detailPaymentMethod(part.method);
+          if (!paymentMethodCounts[pm]) {
+            paymentMethodCounts[pm] = { count: 0, revenue: 0 };
+          }
+          paymentMethodCounts[pm].count += 1;
+          paymentMethodCounts[pm].revenue += part.amount;
+          if (pm === 'Dinheiro') faturamentoNumerario += part.amount;
+          else if (pm === 'PIX') faturamentoPIX += part.amount;
+          else if (pm.includes('Cartão')) faturamentoCartao += part.amount;
+        });
 
         const d = safeGetTime(order.createdAt);
         if (d) {
@@ -3632,7 +3612,7 @@ export default function AdminDashboard() {
                 <ReportCard
                   customDelay={0.10}
                   title="Ticket Médio"
-                  value={formatCurrency(dashboardData.ticketMedio)}
+                  value={formatCurrency(dashboardData?.ticketMedio ?? 0)}
                   icon={<TrendingUp size={14} strokeWidth={1.5} className="text-emerald-950" />}
                   onClick={() => setReportModal({isOpen: true, type: 'ticket_medio', title: 'Cálculo e Análise do Ticket Médio'})}
                   subtitle="Média por pedido e canais"

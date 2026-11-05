@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { Lock, Unlock, Printer, BarChart3, ArrowDownCircle, ArrowUpCircle, AlertCircle, Search, ShoppingBag, Banknote, Smartphone, Wallet, CreditCard, Trash2 } from 'lucide-react';
 import CashSessionDetailsModal from './reports/CashSessionDetailsModal';
-import { normalizePaymentMethod, normalizeOrderType, isOrderActive } from '../utils/paymentAndOrderHelper';
+import { normalizePaymentMethod, normalizeOrderType, isOrderActive, paymentParts } from '../utils/paymentAndOrderHelper';
 import PeriodFilterCompact, { PeriodFilterOption } from './PeriodFilterCompact';
 
 interface CaixaManagerProps {
@@ -218,11 +218,14 @@ export default function CaixaManager({ refreshSignal }: CaixaManagerProps = {}) 
         if (!isOrderActive(o)) return; // Exclui pedidos cancelados
         const amt = Number(o.total_amount || 0);
         validCount++;
-        const norm = normalizePaymentMethod(o.payment_method);
-        if (norm === 'Dinheiro') numerario += amt;
-        else if (norm === 'PIX') mbway += amt;
-        else if (norm === 'Cartão') cartao += amt;
-        else outros += amt;
+        // Pagamento dividido soma cada parte na sua forma
+        paymentParts(o.payment_method, amt).forEach(part => {
+          const norm = normalizePaymentMethod(part.method);
+          if (norm === 'Dinheiro') numerario += part.amount;
+          else if (norm === 'PIX') mbway += part.amount;
+          else if (norm === 'Cartão') cartao += part.amount;
+          else outros += part.amount;
+        });
       });
 
       setSummary({
@@ -421,8 +424,10 @@ export default function CaixaManager({ refreshSignal }: CaixaManagerProps = {}) 
         validOrdersCount++;
         const amt = Number(o.total_amount || 0);
         totalVendas += amt;
-        const pm = normalizePaymentMethod(o.payment_method);
-        paySummary[pm] = (paySummary[pm] || 0) + amt;
+        paymentParts(o.payment_method, amt).forEach(part => {
+          const pm = normalizePaymentMethod(part.method);
+          paySummary[pm] = (paySummary[pm] || 0) + part.amount;
+        });
 
         const oType = normalizeOrderType(o.order_type);
         if (oType === 'retirada' || oType === 'balcao') {

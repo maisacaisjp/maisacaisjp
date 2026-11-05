@@ -30,9 +30,17 @@ export function unidadeRef(it: Pick<ItemReceita, 'tipo' | 'refId'>, d: Dados) {
   return d.insumos.find((x) => x.id === it.refId)?.unidade ?? 'g';
 }
 
-export function qtdNoTamanho(it: ItemReceita, t: Tamanho, cfg: Config) {
-  if (t === 'M') return it.qtdM ?? it.qtd * cfg.fatorM;
-  if (t === 'P') return it.qtdP ?? it.qtd * cfg.fatorP;
+// Item por unidade (Kit Kat, Bis, Kinder...) vai na mesma quantidade em todos os tamanhos.
+export function qtdNoTamanho(it: ItemReceita, t: Tamanho, cfg: Config, unidade?: string) {
+  if (unidade === 'un') {
+    if (t === 'P') return it.qtdP ?? it.qtd;
+    if (t === 'M') return it.qtdM ?? it.qtd;
+    if (t === 'G') return it.qtdG ?? it.qtd;
+    return it.qtd;
+  }
+  if (t === 'P') return it.qtdP ?? it.qtd * (cfg.fatorP ?? 1);
+  if (t === 'M') return it.qtdM ?? it.qtd * (cfg.fatorM ?? 1.2);
+  if (t === 'G') return it.qtdG ?? it.qtd * (cfg.fatorG ?? 1.4);
   return it.qtd;
 }
 
@@ -41,8 +49,8 @@ export const ROTULO_TAMANHO: Record<Tamanho, string> = { P: '330ml', M: '440ml',
 
 export const tamanhosDa = (f: Pick<Ficha, 'tipo'>): Tamanho[] => (f.tipo === 'copo' ? TAMANHOS_COPO : ['U']);
 
-// Tamanho de referência da ficha (o copo G para combos)
-export const tamanhoRef = (f: Pick<Ficha, 'tipo'>): Tamanho => (f.tipo === 'copo' ? 'G' : 'U');
+// Tamanho de referência da ficha (o copo P de 330ml é a base para combos)
+export const tamanhoRef = (f: Pick<Ficha, 'tipo'>): Tamanho => (f.tipo === 'copo' ? 'P' : 'U');
 
 export function custoItens(itens: ItemReceita[], d: Dados) {
   return itens.reduce((s, it) => s + it.qtd * custoUnitRef(it, d), 0);
@@ -54,7 +62,7 @@ export function custoBase(baseId: string | undefined, d: Dados) {
 }
 
 export function custoRecheio(f: Ficha, t: Tamanho, d: Dados) {
-  return f.recheio.reduce((s, it) => s + qtdNoTamanho(it, t, d.config) * custoUnitRef(it, d), 0);
+  return f.recheio.reduce((s, it) => s + qtdNoTamanho(it, t, d.config, unidadeRef(it, d)) * custoUnitRef(it, d), 0);
 }
 
 export function custoFicha(f: Ficha, t: Tamanho, d: Dados) {

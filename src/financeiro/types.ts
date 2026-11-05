@@ -17,14 +17,15 @@ export interface Insumo {
 }
 
 // Linha de receita: usa um insumo ou um preparo.
-// qtd = quantidade no copo G (550ml) ou quantidade única; qtdM/qtdP = valor manual, null = calculado pelo fator.
+// qtd = quantidade base no copo P (330ml) ou quantidade única; qtdM/qtdG/qtdP = valor manual, null = calculado pelo fator.
 export interface ItemReceita {
   id: string;
   tipo: 'insumo' | 'preparo';
   refId: string;
   qtd: number;
-  qtdM?: number | null;
   qtdP?: number | null;
+  qtdM?: number | null;
+  qtdG?: number | null;
 }
 
 export interface Preparo {
@@ -86,6 +87,9 @@ export interface FaturamentoMes {
 export interface Config {
   fatorP: number;
   fatorM: number;
+  fatorG: number;
+  fator770: number;
+  fator1L: number;
   cmvMeta: number; // %
   taxaPagamento: number; // % sobre o faturamento
   custoPorEntrega: number; // R$ variável por entrega

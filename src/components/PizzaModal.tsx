@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { MenuItem, ExtraIngredient } from '../data/menu';
-import { CartItem } from '../types';
+import { CartItem, ProductSize, SIZE_LABELS } from '../types';
 import { X, Check, ShoppingBag } from 'lucide-react';
 import { useExtras } from '../hooks/useExtras';
 import { hapticLight } from '../utils/haptics';
+import { getSizeOptions, SIZE_DESCRIPTIONS } from '../utils/produto';
+import { regrasDoProduto, textoEscolhas, escolhaPendente } from '../data/variacoes';
+import VariacoesProduto from './VariacoesProduto';
 
 interface PizzaModalProps {
   item: MenuItem | null;
@@ -25,17 +28,24 @@ export default function PizzaModal({
   allMenuItems = [] 
 }: PizzaModalProps) {
   const extrasList = useExtras();
-  const [selectedSize, setSelectedSize] = useState<'P' | 'M' | 'G' | 'Big' | 'Super Big'>(initialSize);
+  const [selectedSize, setSelectedSize] = useState<ProductSize>(initialSize);
   const [selectedExtras, setSelectedExtras] = useState<ExtraIngredient[]>([]);
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState('');
-  
+  const [escolhas, setEscolhas] = useState<Record<string, string[]>>({});
+  const [avisoEscolha, setAvisoEscolha] = useState('');
+
   useEffect(() => {
     if (isOpen && item) {
-       setSelectedSize(item.priceM === undefined ? 'G' : initialSize);
+       // Abre no tamanho inicial (550ml); se o produto não tiver, no primeiro tamanho que estiver ativo
+       const opts = getSizeOptions(item).filter(o => !pausedItems.includes(`${item.id}-${o.pauseKey}`));
+       const inicial = opts.find(o => o.size === initialSize) || opts[0];
+       setSelectedSize(inicial ? inicial.size : initialSize);
        setSelectedExtras([]);
        setQuantity(1);
        setNotes('');
+       setEscolhas({});
+       setAvisoEscolha('');
     }
   }, [isOpen, item, initialSize]);
 
@@ -52,41 +62,34 @@ export default function PizzaModal({
 
   if (!isOpen || !item) return null;
 
-  const hasSizes = Boolean(item.priceP || item.priceM || item.priceG || item.priceBig || item.priceSuperBig);
-  const calculatedPriceP = item.priceP || (item.priceM ? Math.max(item.priceM - 2, 0) : undefined);
-  
-  // Calcular preço base conforme o tamanho selecionado
-  let basePrice = item.priceSingle || item.priceG || item.priceM || item.priceP || 0;
-  if (selectedSize === 'P' && calculatedPriceP !== undefined) basePrice = calculatedPriceP;
-  else if (selectedSize === 'M' && item.priceM !== undefined) basePrice = item.priceM;
-  else if (selectedSize === 'G' && item.priceG !== undefined) basePrice = item.priceG;
-  else if (selectedSize === 'Big' && item.priceBig !== undefined) basePrice = item.priceBig;
-  else if (selectedSize === 'Super Big' && item.priceSuperBig !== undefined) basePrice = item.priceSuperBig;
+  const sizeOptions = getSizeOptions(item);
+  const hasSizes = sizeOptions.length > 0;
+  const regras = regrasDoProduto(item);
+  const podeAdicionais = regras.adicionais !== null;
 
-  const extrasTotalPrice = selectedExtras.reduce((sum, extra) => sum + extra.price, 0);
+  // Preço base conforme o tamanho selecionado
+  const selectedOption = sizeOptions.find(o => o.size === selectedSize);
+  const basePrice = selectedOption ? selectedOption.price : (item.priceSingle || item.priceG || item.priceM || item.priceP || 0);
+
+  const extrasTotalPrice = podeAdicionais ? selectedExtras.reduce((sum, extra) => sum + extra.price, 0) : 0;
   const currentPrice = basePrice + extrasTotalPrice;
-
-  const handleToggleExtra = (extra: ExtraIngredient) => {
-    hapticLight();
-    setSelectedExtras(prev => {
-      const exists = prev.some(e => e.id === extra.id);
-      if (exists) {
-        return prev.filter(e => e.id !== extra.id);
-      } else {
-        return [...prev, extra];
-      }
-    });
-  };
+  const pendente = escolhaPendente(regras.escolhas, escolhas);
 
   const handleAdd = (openCart: boolean) => {
+    if (pendente) {
+      setAvisoEscolha(`${pendente.titulo}: escolha ${pendente.min === 1 ? 'pelo menos 1 opção' : `pelo menos ${pendente.min}`}.`);
+      return;
+    }
+    // As escolhas (creme, sabor) vão nas observações do item, antes do que o cliente escreveu
+    const obs = [textoEscolhas(regras.escolhas, escolhas), notes.trim()].filter(Boolean).join(' | ');
     onAddToCart({
       id: crypto.randomUUID(),
       menuItem: item,
       quantity: quantity,
-      size: hasSizes ? (selectedSize as any) : undefined,
-      extras: selectedExtras,
+      size: hasSizes ? selectedSize : undefined,
+      extras: podeAdicionais ? selectedExtras : [],
       priceCalculated: currentPrice,
-      notes: notes.trim() ? notes.trim() : undefined
+      notes: obs || undefined
     }, openCart);
     onClose();
   };
@@ -120,124 +123,43 @@ export default function PizzaModal({
              <div className="mb-6">
                 <h4 className="font-bold mb-3 text-sm uppercase tracking-wide text-gray-800">Escolha o Tamanho:</h4>
                 <div className="flex flex-col gap-2.5">
-                   {calculatedPriceP !== undefined && (
-                     <button 
-                       type="button"
-                       onClick={() => { hapticLight(); setSelectedSize('P'); }}
-                       disabled={pausedItems?.includes(`${item?.id}-P`)}
-                       className={`p-3 rounded-xl border-2 text-left transition-all ${pausedItems?.includes(`${item?.id}-P`) ? 'opacity-50 grayscale cursor-not-allowed bg-gray-100' : (selectedSize === 'P' ? 'border-[#4d0471] bg-[#4d0471]/5' : 'border-gray-200 hover:border-gray-300 bg-white')}`}
-                     >
-                        <div className="flex justify-between items-center">
-                           <span className="font-bold text-sm text-stone-900">330ml</span>
-                           <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedSize === 'P' ? 'border-[#4d0471] bg-[#4d0471]' : 'border-gray-300'}`}>
-                              {selectedSize === 'P' && <Check className="w-3 h-3 text-white" />}
-                           </div>
-                        </div>
-                        <span className="text-[#4d0471] font-bold mt-1 block text-base">R$ {calculatedPriceP.toFixed(2).replace('.', ',')}</span>
-                     </button>
-                   )}
-
-                   {item.priceM !== undefined && (
-                     <button 
-                       type="button"
-                       onClick={() => { hapticLight(); setSelectedSize('M'); }}
-                       disabled={pausedItems?.includes(`${item?.id}-M`)}
-                       className={`p-3 rounded-xl border-2 text-left transition-all ${pausedItems?.includes(`${item?.id}-M`) ? 'opacity-50 grayscale cursor-not-allowed bg-gray-100' : (selectedSize === 'M' ? 'border-[#4d0471] bg-[#4d0471]/5' : 'border-gray-200 hover:border-gray-300 bg-white')}`}
-                     >
-                        <div className="flex justify-between items-center">
-                           <span className="font-bold text-sm text-stone-900">440ml</span>
-                           <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedSize === 'M' ? 'border-[#4d0471] bg-[#4d0471]' : 'border-gray-300'}`}>
-                              {selectedSize === 'M' && <Check className="w-3 h-3 text-white" />}
-                           </div>
-                        </div>
-                        <span className="text-[#4d0471] font-bold mt-1 block text-base">R$ {item.priceM.toFixed(2).replace('.', ',')}</span>
-                     </button>
-                   )}
-
-                   {item.priceG !== undefined && (
-                     <button 
-                       type="button"
-                       onClick={() => { hapticLight(); setSelectedSize('G'); }}
-                       disabled={pausedItems?.includes(`${item?.id}-G`)}
-                       className={`p-3 rounded-xl border-2 text-left transition-all ${pausedItems?.includes(`${item?.id}-G`) ? 'opacity-50 grayscale cursor-not-allowed bg-gray-100' : (selectedSize === 'G' ? 'border-[#4d0471] bg-[#4d0471]/5' : 'border-gray-200 hover:border-gray-300 bg-white')}`}
-                     >
-                        <div className="flex justify-between items-center">
-                           <span className="font-bold text-sm text-stone-900">550ml</span>
-                           <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedSize === 'G' ? 'border-[#4d0471] bg-[#4d0471]' : 'border-gray-300'}`}>
-                              {selectedSize === 'G' && <Check className="w-3 h-3 text-white" />}
-                           </div>
-                        </div>
-                        <span className="text-[#4d0471] font-bold mt-1 block text-base">R$ {item.priceG.toFixed(2).replace('.', ',')}</span>
-                     </button>
-                   )}
-
-                   {item.priceBig !== undefined && (
-                     <button 
-                       type="button"
-                       onClick={() => { hapticLight(); setSelectedSize('Big'); }}
-                       disabled={pausedItems?.includes(`${item?.id}-Big`)}
-                       className={`p-3 rounded-xl border-2 text-left transition-all ${pausedItems?.includes(`${item?.id}-Big`) ? 'opacity-50 grayscale cursor-not-allowed bg-gray-100' : (selectedSize === 'Big' ? 'border-[#4d0471] bg-[#4d0471]/5' : 'border-gray-200 hover:border-gray-300 bg-white')}`}
-                     >
-                        <div className="flex justify-between items-center">
-                           <span className="font-bold text-sm text-stone-900">770ml</span>
-                           <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedSize === 'Big' ? 'border-[#4d0471] bg-[#4d0471]' : 'border-gray-300'}`}>
-                              {selectedSize === 'Big' && <Check className="w-3 h-3 text-white" />}
-                           </div>
-                        </div>
-                        <span className="text-[#4d0471] font-bold mt-1 block text-base">R$ {item.priceBig.toFixed(2).replace('.', ',')}</span>
-                     </button>
-                   )}
-
-                   {item.priceSuperBig !== undefined && (
-                     <button 
-                       type="button"
-                       onClick={() => { hapticLight(); setSelectedSize('Super Big'); }}
-                       disabled={pausedItems?.includes(`${item?.id}-SuperBig`)}
-                       className={`p-3 rounded-xl border-2 text-left transition-all ${pausedItems?.includes(`${item?.id}-SuperBig`) ? 'opacity-50 grayscale cursor-not-allowed bg-gray-100' : (selectedSize === 'Super Big' ? 'border-[#4d0471] bg-[#4d0471]/5' : 'border-gray-200 hover:border-gray-300 bg-white')}`}
-                     >
-                        <div className="flex justify-between items-center">
-                           <span className="font-bold text-sm text-stone-900">1 Litro (1L)</span>
-                           <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedSize === 'Super Big' ? 'border-[#4d0471] bg-[#4d0471]' : 'border-gray-300'}`}>
-                              {selectedSize === 'Super Big' && <Check className="w-3 h-3 text-white" />}
-                           </div>
-                        </div>
-                        <span className="text-[#4d0471] font-bold mt-1 block text-base">R$ {item.priceSuperBig.toFixed(2).replace('.', ',')}</span>
-                     </button>
-                   )}
+                   {sizeOptions.map(opt => {
+                     const paused = Boolean(pausedItems?.includes(`${item.id}-${opt.pauseKey}`));
+                     const selected = selectedSize === opt.size;
+                     return (
+                       <button
+                         key={opt.size}
+                         type="button"
+                         onClick={() => { hapticLight(); setSelectedSize(opt.size); }}
+                         disabled={paused}
+                         className={`p-3 rounded-xl border-2 text-left transition-all ${paused ? 'opacity-50 grayscale cursor-not-allowed bg-gray-100' : (selected ? 'border-[#4d0471] bg-[#4d0471]/5' : 'border-gray-200 hover:border-gray-300 bg-white')}`}
+                       >
+                          <div className="flex justify-between items-center">
+                             <span className="font-bold text-sm text-stone-900">
+                               {SIZE_LABELS[opt.size]}
+                               {SIZE_DESCRIPTIONS[opt.size] && <span className="ml-1.5 text-xs font-medium text-gray-500">{SIZE_DESCRIPTIONS[opt.size]}</span>}
+                             </span>
+                             <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${selected ? 'border-[#4d0471] bg-[#4d0471]' : 'border-gray-300'}`}>
+                                {selected && <Check className="w-3 h-3 text-white" />}
+                             </div>
+                          </div>
+                          <span className="text-[#4d0471] font-bold mt-1 block text-base">R$ {opt.price.toFixed(2).replace('.', ',')}</span>
+                       </button>
+                     );
+                   })}
                 </div>
              </div>
            )}
 
-           {/* Seleção de Adicionais Extras */}
-           {extrasList && extrasList.length > 0 && (
-             <div className="mb-6">
-               <h4 className="font-bold mb-3 text-sm uppercase tracking-wide text-gray-800">Adicionais Extras (Opcional):</h4>
-               <div className="flex flex-col gap-2">
-                 {extrasList.map((extra) => {
-                   const isSelected = selectedExtras.some(e => e.id === extra.id);
-                   return (
-                     <label 
-                       key={extra.id} 
-                       className={`flex items-center justify-between p-3 rounded-lg border-2 cursor-pointer transition-colors ${isSelected ? 'border-[#4d0471] bg-[#4d0471]/5' : 'border-gray-200 hover:border-gray-300'}`}
-                     >
-                       <div className="flex items-center gap-3 pr-4">
-                         <input 
-                           type="checkbox" 
-                           checked={isSelected}
-                           onChange={() => handleToggleExtra(extra)}
-                           className="w-5 h-5 accent-[#4d0471] rounded flex-shrink-0"
-                         />
-                         <span className="font-medium text-sm text-stone-900">{extra.name}</span>
-                       </div>
-                       <span className="text-[#4d0471] font-bold text-sm whitespace-nowrap flex-shrink-0">
-                         + R$ {extra.price.toFixed(2).replace('.', ',')}
-                       </span>
-                     </label>
-                   );
-                 })}
-               </div>
-             </div>
-           )}
+           {/* Creme gelado / sabor e adicionais, com as regras do Multipedidos */}
+           <VariacoesProduto
+             regras={regras}
+             extrasList={extrasList || []}
+             escolhas={escolhas}
+             onEscolhasChange={(v) => { setEscolhas(v); setAvisoEscolha(''); }}
+             extras={selectedExtras}
+             onExtrasChange={setSelectedExtras}
+           />
 
            {/* Campo de Observações */}
            <div className="mb-6">
@@ -253,7 +175,7 @@ export default function PizzaModal({
                onChange={(e) => setNotes(e.target.value)}
                maxLength={250}
                rows={3}
-               placeholder="Ex.: Sem granola, pouco leite condensado, caprichar no leite em pó..."
+               placeholder={podeAdicionais ? "Ex.: Sem granola, pouco leite condensado, caprichar no leite em pó..." : "Ex.: Bem gelado, sem canudo..."}
                className="w-full p-3 text-sm border-2 border-gray-200 rounded-xl focus:border-[#4d0471] focus:outline-none transition-colors resize-none placeholder:text-gray-400"
              />
            </div>
@@ -290,6 +212,12 @@ export default function PizzaModal({
                </div>
              </div>
            </div>
+
+           {avisoEscolha && (
+             <p className="mb-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-sm font-medium">
+               {avisoEscolha}
+             </p>
+           )}
 
            {/* Botões de Ação */}
            <div className="flex flex-col gap-2.5">

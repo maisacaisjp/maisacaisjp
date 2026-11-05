@@ -598,7 +598,7 @@ export const HistoricalSalesModal: React.FC<HistoricalSalesModalProps> = ({
                     {filteredSemestres.map((s) => (
                       <tr key={s.id} className="hover:bg-purple-50/30 transition-colors">
                         <td className="p-3 font-bold text-[#4d0471] whitespace-nowrap">{s.label}</td>
-                        <td className="p-3 text-stone-500 text-[11px] whitespace-nowrap font-mono">{s.periodo}</td>
+                        <td className="p-3 text-stone-500 text-[11px] whitespace-nowrap font-mono">{s.inicio} a {s.fim}</td>
                         <td className="p-3 font-mono font-medium text-stone-800">{formatNum(s.pedidos.total)}</td>
                         <td className="p-3 font-mono text-stone-600">{formatBRL(s.faturamento.mesas)}</td>
                         <td className="p-3 font-mono text-stone-600">{formatBRL(s.faturamento.balcao)}</td>
