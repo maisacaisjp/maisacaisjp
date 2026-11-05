@@ -72,6 +72,7 @@ createRoot(document.getElementById('root')!).render(
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<App />} />
+          <Route path="/conta" element={<App abrirConta />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/:tab" element={<AdminDashboard />} />
           <Route path="/ADMIN" element={<AdminDashboard />} />

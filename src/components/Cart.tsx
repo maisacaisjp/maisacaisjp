@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { CartItem, SIZE_LABELS } from "../types";
 import { agruparExtras, nomeExtraAgrupado } from "../utils/produto";
 import { brl, nomeBonito } from "../utils/formatacao";
+import { guardarUltimoPedido } from "../utils/contaCliente";
 import { hapticLight, hapticMedium, hapticSuccess } from "../utils/haptics";
 import {
   RESTAURANT_WHATSAPP_PHONE,
@@ -277,6 +278,7 @@ export default function Cart({
     const orderNumber = Math.floor(1000 + Math.random() * 9000);
 
     let newOrderId = null;
+    let trackingCode: string | null = null;
     let orderSavedSuccessfully = false;
     try {
       const { data: activeSession } = await supabase
@@ -332,7 +334,13 @@ export default function Cart({
         newOrderId = data[0].id;
         setSavedOrderId(newOrderId);
         setSavedTrackingCode(data[0].tracking_code);
+        trackingCode = data[0].tracking_code || null;
         orderSavedSuccessfully = true;
+        // Aviso "seu pedido está em preparo" no topo do cardápio, mesmo se o cliente fechar e voltar
+        if (trackingCode) {
+          guardarUltimoPedido({ codigo: trackingCode, id: newOrderId, criadoEm: new Date().toISOString() });
+          window.dispatchEvent(new Event('maisacai:pedido-enviado'));
+        }
 
         try {
           if (telefone) {
@@ -491,10 +499,13 @@ export default function Cart({
     if (pagamento === "Dinheiro" && trocoPara) {
       text += `Troco para: R$ ${trocoPara}\n`;
     }
-    if (pagamento.includes("Cartão")) {
+    if (pagamento.includes("Cartão") && orderType === "Delivery") {
       text += `(Levar maquininha de cartão)\n`;
     }
     text += `-----------------------------------`;
+    if (trackingCode) {
+      text += `\n📍 Acompanhe seu pedido:\n${window.location.origin}/track/${trackingCode}`;
+    }
 
     const encoded = encodeURIComponent(text);
     const wappUrl = `https://wa.me/${RESTAURANT_WHATSAPP_PHONE}?text=${encoded}`;

@@ -18,7 +18,7 @@ import { CartItem } from "./types";
 import { playVictorySound } from "./utils/sound";
 import { getStoreDate } from "./utils/date";
 import { hapticLight, hapticMedium, hapticSuccess } from "./utils/haptics";
-import { Search, ShoppingBag, X, MapPin, ArrowUp, Clock, Bike, Check, ChevronRight } from "lucide-react";
+import { Search, ShoppingBag, X, MapPin, ArrowUp, Clock, Bike, Check, ChevronRight, Receipt } from "lucide-react";
 import { brl, nomeBonito, tituloCategoria } from "./utils/formatacao";
 import Cart from "./components/Cart";
 import MenuItemCard from "./components/MenuItemCard";
@@ -27,6 +27,10 @@ import Footer from "./components/Footer";
 import PromoModal from "./components/PromoModal";
 import MenuDoDiaModal from "./components/MenuDoDiaModal";
 import GhostCursor from "./components/GhostCursor";
+import ContaCliente from "./components/ContaCliente";
+import { useExtras } from "./hooks/useExtras";
+import { montarItensParaRepetir } from "./utils/repetirPedido";
+import { PedidoCliente, ultimoPedido, esquecerUltimoPedido, rotuloStatus, STATUS_FINAIS, ehDeHoje } from "./utils/contaCliente";
 
 
 export const categoriesUI = [
@@ -77,14 +81,18 @@ export const categoriesUI = [
 import { useAnalytics } from './hooks/useAnalytics';
 
 export default // App principal
-function App() {
+function App({ abrirConta = false }: { abrirConta?: boolean }) {
   const { menuItems, categories: dbCategories, loading: menuLoading, usingFallback } = useMenu();
   const businessStatus = useBusinessHours();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [searchOpen, setSearchOpen] = useState(false);
-  const [toast, setToast] = useState<{ key: number; nome: string } | null>(null);
+  const [toast, setToast] = useState<{ key: number; nome: string; titulo?: string; aviso?: string } | null>(null);
+  // Área do cliente ("Meus pedidos") e pedido em andamento feito neste aparelho
+  const [contaAberta, setContaAberta] = useState(abrirConta);
+  const [pedidoAtivo, setPedidoAtivo] = useState<{ codigo: string; id: number; status: string; tipo: string } | null>(null);
+  const extrasAtuais = useExtras();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
   // Enquanto a página rola por clique numa aba, o scrollspy não troca a aba ativa
@@ -420,10 +428,48 @@ function App() {
     if (activeCategory) centralizarAba(activeCategory);
   }, [activeCategory, centralizarAba]);
 
+  // Pedido em andamento feito neste aparelho: aviso no topo até ser finalizado
+  useEffect(() => {
+    let ativo = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const verificar = async () => {
+      const ultimo = ultimoPedido();
+      if (!ultimo || !ehDeHoje(ultimo.criadoEm)) {
+        if (ultimo) esquecerUltimoPedido();
+        setPedidoAtivo(null);
+        return;
+      }
+      try {
+        const { data } = await supabase.rpc('get_order_by_tracking_code', { p_code: ultimo.codigo });
+        const o = Array.isArray(data) ? data[0] : null;
+        if (!ativo) return;
+        if (!o || STATUS_FINAIS.includes(o.status)) {
+          esquecerUltimoPedido();
+          setPedidoAtivo(null);
+          return;
+        }
+        setPedidoAtivo({ codigo: ultimo.codigo, id: o.id, status: o.status, tipo: o.order_type });
+      } catch {
+        // sem conexão: tenta de novo no próximo ciclo
+      }
+      if (ativo) timer = setTimeout(verificar, 20000);
+    };
+    verificar();
+    const aoVoltar = () => document.visibilityState === 'visible' && verificar();
+    document.addEventListener('visibilitychange', aoVoltar);
+    window.addEventListener('maisacai:pedido-enviado', verificar);
+    return () => {
+      ativo = false;
+      if (timer) clearTimeout(timer);
+      document.removeEventListener('visibilitychange', aoVoltar);
+      window.removeEventListener('maisacai:pedido-enviado', verificar);
+    };
+  }, []);
+
   // Aviso "Adicionado à sacola" some sozinho
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast(null), 2800);
+    const t = setTimeout(() => setToast(null), toast.aviso ? 6000 : 2800);
     return () => clearTimeout(t);
   }, [toast]);
 
@@ -447,6 +493,24 @@ function App() {
   const fecharBusca = () => {
     setSearchTerm("");
     setSearchOpen(false);
+  };
+
+  const repetirPedido = (pedido: PedidoCliente) => {
+    const { itens, foraDoCardapio } = montarItensParaRepetir(pedido, { menuItems, extras: extrasAtuais, pausedItems });
+    if (itens.length === 0) {
+      setContaAberta(false);
+      setToast({ key: Date.now(), titulo: 'Não foi possível repetir', nome: `Pedido #${pedido.id}`, aviso: 'Os itens desse pedido não estão disponíveis hoje.' });
+      return;
+    }
+    hapticMedium();
+    saveCart([...cart, ...itens]);
+    setContaAberta(false);
+    const qtd = itens.reduce((s, i) => s + i.quantity, 0);
+    setToast({
+      key: Date.now(),
+      nome: `${qtd} ${qtd === 1 ? 'item' : 'itens'} do pedido #${pedido.id}`,
+      aviso: foraDoCardapio.length ? `Ficou de fora (em falta hoje): ${foraDoCardapio.map(n => nomeBonito(n)).join(', ')}.` : undefined,
+    });
   };
 
   const abrirSacola = () => {
@@ -491,6 +555,14 @@ function App() {
         <div className="relative h-[168px] sm:h-[220px] lg:h-[260px] w-full max-w-6xl mx-auto lg:mt-4 lg:rounded-3xl overflow-hidden bg-brand-900">
           <img src={coverUrl || "/capa.png"} className="w-full h-full object-cover" alt="" />
           <div className="absolute inset-0 bg-gradient-to-t from-brand-900/70 via-brand-900/10 to-transparent" />
+          <button
+            type="button"
+            onClick={() => { hapticLight(); setContaAberta(true); }}
+            className="absolute top-3 right-3 sm:top-4 sm:right-4 h-10 px-3.5 rounded-full bg-white/90 backdrop-blur text-[13px] font-semibold text-stone-800 shadow-[0_4px_14px_rgba(0,0,0,0.15)] hover:bg-white flex items-center gap-1.5 transition cursor-pointer"
+          >
+            <Receipt className="w-4 h-4 text-brand-700" />
+            Meus pedidos
+          </button>
         </div>
 
         <div className="max-w-6xl mx-auto px-4 lg:px-6">
@@ -530,6 +602,25 @@ function App() {
                 <MapPin className="w-3.5 h-3.5" /> São José dos Pinhais
               </span>
             </div>
+
+            {pedidoAtivo && (
+              <a
+                href={`/track/${pedidoAtivo.codigo}`}
+                className="mt-3 flex items-center gap-3 rounded-2xl bg-brand-900 text-white px-3.5 py-3 hover:bg-brand-800 transition"
+              >
+                <span className="relative flex w-2.5 h-2.5 shrink-0">
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-gold opacity-75 animate-ping" />
+                  <span className="relative inline-flex w-2.5 h-2.5 rounded-full bg-gold" />
+                </span>
+                <span className="flex-1 min-w-0 leading-tight">
+                  <span className="block text-[12px] text-white/60">Seu pedido #{pedidoAtivo.id}</span>
+                  <span className="block font-display text-[15px] font-bold">{rotuloStatus(pedidoAtivo.status, pedidoAtivo.tipo)}</span>
+                </span>
+                <span className="text-[13px] font-semibold text-gold flex items-center gap-0.5 shrink-0">
+                  Acompanhar <ChevronRight className="w-4 h-4" />
+                </span>
+              </a>
+            )}
 
             {!carregandoStatus && !aberto && (
               <p className="mt-3 text-[13px] leading-relaxed text-stone-600 bg-amber-50 ring-1 ring-amber-200/70 rounded-xl px-3 py-2.5">
@@ -742,6 +833,8 @@ function App() {
         </div>
       )}
 
+      <ContaCliente isOpen={contaAberta} onClose={() => setContaAberta(false)} onRepetir={repetirPedido} />
+
       {/* Aviso: item adicionado */}
       {toast && (
         <div
@@ -754,8 +847,9 @@ function App() {
               <Check className="w-4 h-4" strokeWidth={3} />
             </span>
             <span className="flex-1 min-w-0 text-[14px] leading-snug">
-              <span className="block text-white/60 text-[12px]">Adicionado à sacola</span>
+              <span className="block text-white/60 text-[12px]">{toast.titulo || 'Adicionado à sacola'}</span>
               <span className="block font-semibold truncate">{toast.nome}</span>
+              {toast.aviso && <span className="block mt-0.5 text-[12px] text-amber-300 leading-snug">{toast.aviso}</span>}
             </span>
             <button
               type="button"

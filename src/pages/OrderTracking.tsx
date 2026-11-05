@@ -2,8 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
-import { CheckCircle, Clock, Truck, ChefHat, ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Check, MessageCircle, Receipt } from 'lucide-react';
 import { formatItemNameForPrint } from '../utils/printHelpers';
+import { brl } from '../utils/formatacao';
+import { etapasDoPedido, rotuloStatus, textoDoStatus } from '../utils/contaCliente';
+import { RESTAURANT_WHATSAPP_PHONE } from '../data/menu';
 
 export default function OrderTracking() {
   const { code } = useParams();
@@ -51,74 +54,101 @@ export default function OrderTracking() {
     };
   }, [code]);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">A carregar...</div>;
-
-  if (notFound || !order) {
+  if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4">
-        <h1 className="text-2xl font-bold mb-4">Pedido não encontrado</h1>
-        <Link to="/" className="text-red-700 underline">Voltar à loja</Link>
+      <div className="min-h-screen bg-page flex items-center justify-center">
+        <span className="w-8 h-8 border-[3px] border-brand-700 border-t-transparent rounded-full animate-spin" aria-label="Carregando" />
       </div>
     );
   }
 
-  const statusMap: Record<string, { icon: any, text: string, color: string }> = {
-    'Pendente': { icon: Clock, text: 'Pendente', color: 'text-gray-500' },
-    'Em Preparo': { icon: ChefHat, text: 'Em Preparo', color: 'text-orange-500' },
-    'Saiu para Entrega': { icon: Truck, text: 'Saiu para Entrega', color: 'text-blue-500' },
-    'Finalizado': { icon: CheckCircle, text: 'Finalizado', color: 'text-green-500' }
-  };
+  if (notFound || !order) {
+    return (
+      <div className="min-h-screen bg-page flex flex-col items-center justify-center p-6 text-center">
+        <h1 className="font-display text-[22px] font-extrabold text-stone-900">Pedido não encontrado</h1>
+        <p className="mt-1 text-[14px] text-stone-500 max-w-xs">Confira o link ou veja todos os seus pedidos entrando com seu WhatsApp.</p>
+        <div className="mt-5 flex flex-col gap-2 w-full max-w-xs">
+          <Link to="/conta" className="h-12 rounded-2xl bg-brand-700 text-white font-semibold text-[15px] flex items-center justify-center">Ver meus pedidos</Link>
+          <Link to="/" className="h-11 rounded-2xl text-stone-600 font-medium text-[14px] flex items-center justify-center">Voltar ao cardápio</Link>
+        </div>
+      </div>
+    );
+  }
 
-  const currentStatus = statusMap[order.status] || statusMap['Pendente'];
-  const StatusIcon = currentStatus.icon;
+  const cancelado = order.status === 'Cancelado';
+  const etapas = etapasDoPedido(order.orderType);
+  const atual = Math.max(0, etapas.indexOf(order.status));
+  const finalizado = order.status === 'Finalizado';
+  const msgLoja = encodeURIComponent(`Olá! Quero falar sobre o meu pedido #${order.id}.`);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-xl">
-        <div>
-          <Link to="/" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-900 mb-6">
-            <ArrowLeft size={16} className="mr-1" /> Voltar ao Início
-          </Link>
-          <h2 className="text-center text-3xl font-extrabold text-gray-900">
-            Acompanhar Pedido #{order.id}
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Cliente: {order.customerName}
-          </p>
-        </div>
+    <div className="min-h-screen bg-page font-sans">
+      <div className="max-w-md mx-auto px-4 py-5 sm:py-10">
+        <Link to="/" className="inline-flex items-center gap-1.5 h-10 -ml-1 px-1 text-[14px] font-medium text-stone-600 hover:text-stone-900">
+          <ArrowLeft className="w-4 h-4" /> Voltar ao cardápio
+        </Link>
 
-        <div className="mt-8 flex flex-col items-center justify-center space-y-4">
-          <div className={`p-6 rounded-full bg-gray-50 shadow-inner ${currentStatus.color}`}>
-            <StatusIcon size={64} />
+        {/* Status */}
+        <section className={`mt-2 rounded-3xl p-5 shadow-[0_12px_30px_rgba(38,1,58,0.18)] ${cancelado ? 'bg-rose-700' : 'bg-brand-900'} text-white`}>
+          <div className="flex items-center justify-between gap-3 text-[12px] font-semibold uppercase tracking-wide text-white/60">
+            <span>Pedido #{order.id}</span>
+            <span>{order.orderType === 'Delivery' ? 'Entrega' : 'Retirada'}</span>
           </div>
-          <h3 className={`text-2xl font-bold ${currentStatus.color}`}>
-            {currentStatus.text}
-          </h3>
-          <p className="text-gray-500 text-center">
-            {order.status === 'Pendente' && 'Aguardando o restaurante aceitar seu pedido.'}
-            {order.status === 'Em Preparo' && 'A nossa equipa está a preparar o seu pedido com muito carinho!'}
-            {order.status === 'Saiu para Entrega' && 'O seu pedido já está a caminho!'}
-            {order.status === 'Finalizado' && 'Pedido concluído. Bom apetite!'}
-          </p>
-        </div>
+          <h1 className="mt-2 font-display text-[28px] font-extrabold leading-tight">{rotuloStatus(order.status, order.orderType)}</h1>
+          <p className="mt-1 text-[15px] text-white/80">{textoDoStatus(order.status, order.orderType)}</p>
 
-        <div className="mt-8 border-t border-gray-100 pt-6">
-          <h4 className="font-semibold text-gray-900 mb-4">Resumo do Pedido</h4>
-          <div className="space-y-3">
+          {!cancelado && (
+            <ol className="mt-5 grid gap-2" style={{ gridTemplateColumns: `repeat(${etapas.length}, minmax(0, 1fr))` }} aria-label="Andamento do pedido">
+              {etapas.map((et, i) => (
+                <li key={et}>
+                  <span className={`block h-1.5 rounded-full transition-colors ${i <= atual ? 'bg-gold' : 'bg-white/20'}`} />
+                  <span className={`mt-1.5 flex items-center gap-1 text-[12px] font-medium leading-tight ${i <= atual ? 'text-white' : 'text-white/50'}`}>
+                    {(i < atual || finalizado) && <Check className="w-3 h-3 shrink-0" strokeWidth={3} />}
+                    {rotuloStatus(et, order.orderType)}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          )}
+          {!finalizado && !cancelado && (
+            <p className="mt-4 text-[12px] text-white/50">Esta página atualiza sozinha.</p>
+          )}
+        </section>
+
+        {/* Resumo */}
+        <section className="mt-4 bg-white rounded-3xl ring-1 ring-stone-200/80 p-5">
+          <h2 className="font-display text-[16px] font-bold text-stone-900">Resumo do pedido</h2>
+          <ul className="mt-3 space-y-2.5">
             {order.items.map((item: any, i: number) => (
-              <div key={i} className="flex justify-between text-sm">
-                <span className="text-gray-600">{item.quantity}x {formatItemNameForPrint(item)}</span>
-                <span className="font-medium">R$ {(item.priceCalculated * item.quantity).toFixed(2).replace('.', ',')}</span>
-              </div>
+              <li key={i} className="flex justify-between gap-3 text-[14px]">
+                <span className="text-stone-700 min-w-0">
+                  <strong className="font-semibold text-stone-900">{item.quantity}x</strong> {formatItemNameForPrint(item)}
+                  {item.notes && <span className="block text-[12px] text-stone-500 mt-0.5">{item.notes}</span>}
+                </span>
+                <span className="font-medium text-stone-900 tabular-nums shrink-0">{brl(item.priceCalculated * item.quantity)}</span>
+              </li>
             ))}
+          </ul>
+          <div className="mt-4 pt-4 border-t border-stone-100 flex justify-between items-baseline">
+            <span className="text-[15px] font-semibold text-stone-900">Total</span>
+            <span className="font-display text-[22px] font-extrabold text-stone-900 tabular-nums">{brl(Number(order.totalAmount))}</span>
           </div>
-          <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between font-bold text-lg">
-            <span>Total</span>
-            <span>R$ {order.totalAmount.toFixed(2).replace('.', ',')}</span>
-          </div>
-          <div className="mt-2 text-sm text-gray-500 text-right">
-            Pago em {order.paymentMethod}
-          </div>
+          <p className="mt-1 text-[13px] text-stone-500 text-right">Pagamento: {order.paymentMethod}</p>
+        </section>
+
+        {/* Ações */}
+        <div className="mt-4 grid gap-2">
+          <a
+            href={`https://wa.me/${RESTAURANT_WHATSAPP_PHONE}?text=${msgLoja}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="h-12 rounded-2xl bg-[#25D366] hover:bg-[#1EBE5D] text-white font-semibold text-[15px] flex items-center justify-center gap-2 transition"
+          >
+            <MessageCircle className="w-5 h-5" /> Falar com a loja
+          </a>
+          <Link to="/conta" className="h-12 rounded-2xl bg-white ring-1 ring-stone-200 text-brand-700 font-semibold text-[15px] flex items-center justify-center gap-2 hover:ring-brand-300 transition">
+            <Receipt className="w-5 h-5" /> Ver todos os meus pedidos
+          </Link>
         </div>
       </div>
     </div>
