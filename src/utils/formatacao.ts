@@ -3,8 +3,8 @@
 
 const moeda = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
-/** R$ 34,00 */
-export const brl = (n: number | null | undefined) => moeda.format(Number(n) || 0).replace(/ /g, ' ');
+/** R$ 34,00 (com espaço não-quebrável para nunca separar o R$ do valor) */
+export const brl = (n: number | null | undefined) => moeda.format(Number(n) || 0).replace(/\s/g, '\u00a0');
 
 const MINUSCULAS = new Set(['de', 'do', 'da', 'dos', 'das', 'com', 'e', 'ao', 'em', 'no', 'na', 'sem', 'a', 'o']);
 

@@ -1,9 +1,11 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { Lock, Unlock, Printer, BarChart3, ArrowDownCircle, ArrowUpCircle, AlertCircle, Search, ShoppingBag, Banknote, Smartphone, Wallet, CreditCard, Trash2 } from 'lucide-react';
 import CashSessionDetailsModal from './reports/CashSessionDetailsModal';
 import { normalizePaymentMethod, normalizeOrderType, isOrderActive, paymentParts } from '../utils/paymentAndOrderHelper';
 import PeriodFilterCompact, { PeriodFilterOption } from './PeriodFilterCompact';
+import { brl } from '../utils/formatacao';
+import { Paginacao, useLinhasQueCabem, usePaginacao } from './admin/ui';
 
 interface CaixaManagerProps {
   refreshSignal?: number;
@@ -21,6 +23,10 @@ export default function CaixaManager({ refreshSignal }: CaixaManagerProps = {}) 
   const [historyPeriod, setHistoryPeriod] = useState<PeriodFilterOption>('todos');
   const [historyStart, setHistoryStart] = useState('');
   const [historyEnd, setHistoryEnd] = useState('');
+  // Histórico: só as linhas que cabem na tela; o resto vai para as próximas páginas
+  const historicoRef = useRef<HTMLDivElement>(null);
+  const linhasHistorico = useLinhasQueCabem(historicoRef, 45, { reserva: 112, min: 3, deps: [history.length] });
+  const paginaHistorico = usePaginacao(history, linhasHistorico, [historyPeriod, historyStart, historyEnd]);
   const [closedResult, setClosedResult] = useState<any>(null);
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [selectedSessionForDetails, setSelectedSessionForDetails] = useState<any>(null);
@@ -547,26 +553,27 @@ export default function CaixaManager({ refreshSignal }: CaixaManagerProps = {}) 
       {/* 1. Barra Operacional Superior Compacta (Status e Ações Rápidas) */}
       {!session ? (
         <div className="space-y-3">
-          <div className="bg-slate-900 text-white rounded-xl p-3 sm:px-4 sm:py-2.5 flex flex-col md:flex-row items-center justify-between gap-3 border border-slate-800 shadow-2xs">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-slate-800 rounded-lg text-slate-300 border border-slate-700/60 shrink-0">
-                <Lock className="w-4 h-4" />
+          <div className="bg-white rounded-2xl border border-stone-200/80 shadow-[0_1px_2px_rgba(28,25,23,0.04)] p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center shrink-0">
+                <Lock className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-bold text-sm text-white tracking-tight leading-none">Caixa Fechado</h3>
-                <p className="text-[11px] text-slate-400 font-mono mt-0.5">Informe o fundo inicial de maneio para abrir o turno.</p>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-display text-[18px] font-bold text-stone-900 leading-tight">Caixa fechado</h3>
+                  <span className="text-[12px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 ring-1 ring-amber-200">Sem turno aberto</span>
+                </div>
+                <p className="text-[14px] text-stone-500 mt-1">Informe o fundo de troco inicial para abrir o turno e começar a vender.</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 w-full md:w-auto">
-              <button
-                onClick={() => setShowOpenModal(true)}
-                className="bg-[#6a2092] hover:bg-[#f3ce37] active:scale-[0.98] text-slate-950 font-bold px-4 py-2 rounded-lg text-xs font-mono uppercase tracking-wide transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer shrink-0 border border-[#6a2092]/30 shadow-sm"
-              >
-                <Unlock className="w-3.5 h-3.5 text-slate-950" />
-                <span>Abrir Caixa</span>
-              </button>
-            </div>
+            <button
+              onClick={() => setShowOpenModal(true)}
+              className="h-11 px-5 rounded-xl bg-[#6a2092] hover:bg-[#521872] active:scale-[0.98] text-white font-semibold text-[14px] transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer shrink-0 shadow-[0_6px_16px_rgba(106,32,146,0.25)]"
+            >
+              <Unlock className="w-4 h-4" />
+              <span>Abrir caixa</span>
+            </button>
           </div>
 
           {closedResult && (
@@ -578,7 +585,7 @@ export default function CaixaManager({ refreshSignal }: CaixaManagerProps = {}) 
                 </h4>
                 <button
                   onClick={() => handlePrintReport(closedResult)}
-                  className="px-2.5 py-1 bg-slate-900 hover:bg-black text-white rounded-md text-xs font-mono font-semibold transition-colors flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
+                  className="px-2.5 py-1 bg-[#6a2092] hover:bg-[#521872] text-white rounded-md text-xs font-mono font-semibold transition-colors flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
                 >
                   <Printer className="w-3.5 h-3.5" />
                   Imprimir Talão
@@ -588,20 +595,20 @@ export default function CaixaManager({ refreshSignal }: CaixaManagerProps = {}) 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                 <div className="bg-white p-2.5 rounded-lg border border-slate-200">
                   <span className="text-[10px] text-slate-400 font-mono font-medium uppercase tracking-wide block">Fundo Inicial</span>
-                  <span className="font-bold font-mono tabular-nums text-sm text-slate-900 mt-0.5 block">R$ {Number(closedResult.openingAmount || 0).toFixed(2)}</span>
+                  <span className="font-bold font-mono tabular-nums text-sm text-slate-900 mt-0.5 block">{brl(Number(Number(closedResult.openingAmount || 0)))}</span>
                 </div>
                 <div className="bg-white p-2.5 rounded-lg border border-slate-200">
                   <span className="text-[10px] text-slate-500 font-mono font-semibold uppercase tracking-wider block">Esperado</span>
-                  <span className="font-bold font-mono tabular-nums text-sm text-slate-900 mt-0.5 block">R$ {Number(closedResult.expected).toFixed(2)}</span>
+                  <span className="font-bold font-mono tabular-nums text-sm text-slate-900 mt-0.5 block">{brl(Number(Number(closedResult.expected)))}</span>
                 </div>
                 <div className="bg-white p-2.5 rounded-lg border border-slate-200">
                   <span className="text-[10px] text-slate-500 font-mono font-semibold uppercase tracking-wider block">Informado</span>
-                  <span className="font-bold font-mono tabular-nums text-sm text-slate-900 mt-0.5 block">R$ {Number(closedResult.counted).toFixed(2)}</span>
+                  <span className="font-bold font-mono tabular-nums text-sm text-slate-900 mt-0.5 block">{brl(Number(Number(closedResult.counted)))}</span>
                 </div>
                 <div className={`p-2.5 rounded-lg border ${closedResult.difference >= 0 ? 'bg-emerald-50/60 border-emerald-200' : 'bg-rose-50/60 border-rose-200'}`}>
                   <span className={`text-[10px] font-mono font-semibold uppercase tracking-wider block ${closedResult.difference >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>Diferença</span>
                   <span className={`font-bold font-mono tabular-nums text-sm mt-0.5 block ${closedResult.difference >= 0 ? 'text-emerald-800' : 'text-rose-800'}`}>
-                    {closedResult.difference >= 0 ? '+' : ''} R$ {Number(closedResult.difference).toFixed(2)}
+                    {closedResult.difference >= 0 ? '+' : ''} {brl(Number(Number(closedResult.difference)))}
                   </span>
                 </div>
               </div>
@@ -613,7 +620,7 @@ export default function CaixaManager({ refreshSignal }: CaixaManagerProps = {}) 
                     {Object.entries(closedResult.paySummary).map(([pm, val]: any) => (
                       <div key={pm} className="bg-slate-50 p-2 rounded border border-slate-200/80">
                         <span className="text-slate-500 font-mono block text-[10px]">{pm}</span>
-                        <span className="font-bold text-slate-900 font-mono text-xs mt-0.5 block">R$ {val.toFixed(2)}</span>
+                        <span className="font-bold text-slate-900 font-mono text-xs mt-0.5 block">{brl(Number(val))}</span>
                       </div>
                     ))}
                   </div>
@@ -625,21 +632,21 @@ export default function CaixaManager({ refreshSignal }: CaixaManagerProps = {}) 
       ) : (
         <div className="space-y-3">
           {/* Barra Operacional Sessão em Andamento */}
-          <div className="bg-slate-900 text-white rounded-xl p-3 sm:px-4 sm:py-2.5 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 border border-slate-800 shadow-2xs">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-emerald-500/10 border border-emerald-500/30 rounded-lg text-emerald-400 shrink-0">
-                <Unlock className="w-4 h-4" />
+          <div className="bg-white rounded-2xl border border-stone-200/80 shadow-[0_1px_2px_rgba(28,25,23,0.04)] p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+                <Unlock className="w-5 h-5" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-sm text-white tracking-tight leading-none">Sessão em Andamento</h3>
-                  <span className="bg-emerald-500/15 text-emerald-300/80 text-[10px] font-mono font-medium uppercase px-1.5 py-0.5 rounded border border-emerald-500/20 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                    Ativa
+                  <h3 className="font-display text-[18px] font-bold text-stone-900 leading-tight">Caixa aberto</h3>
+                  <span className="text-[12px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Turno em andamento
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-400 font-mono mt-1">
-                  Aberto às <span className="text-white font-semibold">{new Date(session.opened_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span> · Fundo Inicial: <span className="text-white font-bold">R$ {Number(session.opening_amount).toFixed(2)}</span>
+                <p className="text-[14px] text-stone-500 mt-1">
+                  Aberto às <span className="text-stone-900 font-semibold">{new Date(session.opened_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span> · Fundo inicial: <span className="text-stone-900 font-semibold">{brl(Number(Number(session.opening_amount)))}</span>
                 </p>
               </div>
             </div>
@@ -650,27 +657,27 @@ export default function CaixaManager({ refreshSignal }: CaixaManagerProps = {}) 
                   setMovementType('sangria');
                   setShowMovementModal(true);
                 }}
-                className="bg-slate-800 hover:bg-slate-700 text-rose-300 border border-rose-900/60 font-semibold px-3 py-2.5 rounded-lg text-xs font-mono transition-colors flex items-center gap-1.5 cursor-pointer"
+                className="h-11 px-4 rounded-xl bg-white ring-1 ring-stone-200 hover:ring-rose-300 hover:bg-rose-50 text-stone-800 font-semibold text-[14px] transition-colors flex items-center gap-2 cursor-pointer"
               >
-                <ArrowDownCircle className="w-3.5 h-3.5 text-rose-400" />
-                Sangria (-)
+                <ArrowDownCircle className="w-4 h-4 text-rose-600" />
+                Sangria
               </button>
               <button
                 onClick={() => {
                   setMovementType('suprimento');
                   setShowMovementModal(true);
                 }}
-                className="bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-emerald-900/60 font-semibold px-3 py-2.5 rounded-lg text-xs font-mono transition-colors flex items-center gap-1.5 cursor-pointer"
+                className="h-11 px-4 rounded-xl bg-white ring-1 ring-stone-200 hover:ring-emerald-300 hover:bg-emerald-50 text-stone-800 font-semibold text-[14px] transition-colors flex items-center gap-2 cursor-pointer"
               >
-                <ArrowUpCircle className="w-3.5 h-3.5 text-emerald-400" />
-                Suprimento (+)
+                <ArrowUpCircle className="w-4 h-4 text-emerald-600" />
+                Suprimento
               </button>
               <button
                 onClick={() => setShowCloseModal(true)}
-                className="bg-rose-600 hover:bg-rose-500 text-white font-semibold px-3.5 py-2 rounded-lg text-xs font-mono uppercase tracking-wide transition-colors flex items-center gap-1.5 whitespace-nowrap cursor-pointer shrink-0 ml-auto md:ml-0"
+                className="h-11 px-5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold text-[14px] transition-colors flex items-center gap-2 whitespace-nowrap cursor-pointer shrink-0 ml-auto md:ml-0"
               >
-                <Lock className="w-3.5 h-3.5" />
-                Fechar Caixa
+                <Lock className="w-4 h-4" />
+                Fechar caixa
               </button>
             </div>
           </div>
@@ -694,7 +701,7 @@ export default function CaixaManager({ refreshSignal }: CaixaManagerProps = {}) 
                   <Banknote size={11} strokeWidth={1.5} />
                 </div>
               </div>
-              <p className="text-xl sm:text-2xl font-bold font-mono tabular-nums text-slate-900 tracking-tight mt-0.5">R$ {summary.numerario.toFixed(2)}</p>
+              <p className="text-xl sm:text-2xl font-bold font-mono tabular-nums text-slate-900 tracking-tight mt-0.5">{brl(Number(summary.numerario))}</p>
             </div>
 
             <div className="bg-white border border-slate-200/90 p-3 rounded-xl shadow-2xs flex flex-col justify-between">
@@ -704,7 +711,7 @@ export default function CaixaManager({ refreshSignal }: CaixaManagerProps = {}) 
                   <Smartphone size={11} strokeWidth={1.5} />
                 </div>
               </div>
-              <p className="text-xl sm:text-2xl font-bold font-mono tabular-nums text-slate-900 tracking-tight mt-0.5">R$ {summary.mbway.toFixed(2)}</p>
+              <p className="text-xl sm:text-2xl font-bold font-mono tabular-nums text-slate-900 tracking-tight mt-0.5">{brl(Number(summary.mbway))}</p>
             </div>
 
             <div className="bg-white border border-slate-200/90 p-3 rounded-xl shadow-2xs flex flex-col justify-between">
@@ -714,7 +721,7 @@ export default function CaixaManager({ refreshSignal }: CaixaManagerProps = {}) 
                   <CreditCard size={11} strokeWidth={1.5} />
                 </div>
               </div>
-              <p className="text-xl sm:text-2xl font-bold font-mono tabular-nums text-slate-900 tracking-tight mt-0.5">R$ {summary.cartao.toFixed(2)}</p>
+              <p className="text-xl sm:text-2xl font-bold font-mono tabular-nums text-slate-900 tracking-tight mt-0.5">{brl(Number(summary.cartao))}</p>
             </div>
 
             <div className="bg-slate-950 border border-slate-800 p-3 rounded-xl shadow-2xs text-white flex flex-col justify-between col-span-2 sm:col-span-1">
@@ -727,7 +734,7 @@ export default function CaixaManager({ refreshSignal }: CaixaManagerProps = {}) 
                 </div>
               </div>
               <p className="text-lg font-semibold font-mono tabular-nums text-[#e9d5f7] tracking-tight mt-0.5">
-                R$ {currentExpected.toFixed(2)}
+                {brl(Number(currentExpected))}
               </p>
             </div>
           </div>
@@ -758,7 +765,7 @@ export default function CaixaManager({ refreshSignal }: CaixaManagerProps = {}) 
                       </div>
                     </div>
                     <div className={`font-mono font-bold tabular-nums text-xs sm:text-right ${mov.type === 'sangria' ? 'text-rose-700' : 'text-emerald-700'}`}>
-                      {mov.type === 'sangria' ? '-' : '+'} R$ {Number(mov.amount).toFixed(2)}
+                      {mov.type === 'sangria' ? '-' : '+'} {brl(Number(Number(mov.amount)))}
                     </div>
                   </div>
                 ))}
@@ -768,11 +775,11 @@ export default function CaixaManager({ refreshSignal }: CaixaManagerProps = {}) 
         </div>
       )}
 
-            <div className="bg-white rounded-xl border border-slate-200 p-6">
-        <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h3 className="font-semibold text-sm text-slate-800 tracking-tight">Histórico de Fechamentos Recentes</h3>
-            <span className="text-xs text-slate-500 font-mono">Turnos arquivados e balanços de caixa</span>
+      <div className="bg-white rounded-2xl border border-stone-200/80 shadow-[0_1px_2px_rgba(28,25,23,0.04),0_4px_16px_-8px_rgba(59,2,87,0.08)] overflow-hidden">
+        <div className="px-4 py-3 flex flex-wrap items-center justify-between gap-3 border-b border-stone-100">
+          <div className="flex items-baseline gap-2">
+            <h3 className="font-semibold text-[15px] text-stone-900">Fechamentos anteriores</h3>
+            <span className="text-[13px] text-stone-500">turnos arquivados e balanço de cada dia</span>
           </div>
           <PeriodFilterCompact
             value={historyPeriod}
@@ -785,57 +792,78 @@ export default function CaixaManager({ refreshSignal }: CaixaManagerProps = {}) 
             }}
           />
         </div>
-        <div className="overflow-x-auto border border-slate-200 rounded-lg">
-          <table className="min-w-full text-left border-collapse">
+        <div ref={historicoRef} className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-100 text-[11px] font-mono uppercase tracking-wide text-slate-400 bg-slate-50/60 font-medium">
-                <th className="py-2.5 px-3.5">Data</th>
-                <th className="py-2.5 px-3.5">Inicial</th>
-                <th className="py-2.5 px-3.5">Depósito</th>
-                <th className="py-2.5 px-3.5">Sangria</th>
-                <th className="py-2.5 px-3.5">Faturado</th>
-                <th className="py-2.5 px-3.5 text-right">Ação</th>
+              <tr className="border-b border-stone-100 text-[11px] uppercase tracking-wider text-stone-400 font-semibold bg-stone-50/60">
+                <th className="h-9 pl-4 pr-3 font-semibold">Dia</th>
+                <th className="h-9 px-3 font-semibold text-right">Fundo inicial</th>
+                <th className="h-9 px-3 font-semibold text-right">Suprimento</th>
+                <th className="h-9 px-3 font-semibold text-right">Sangria</th>
+                <th className="h-9 px-3 font-semibold text-right">Faturado</th>
+                <th className="h-9 pl-3 pr-4 font-semibold text-right">Ações</th>
               </tr>
             </thead>
-            <tbody className="text-xs font-mono">
+            <tbody className="text-[13px] divide-y divide-stone-100">
               {history.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-6 text-center text-slate-500">
+                  <td colSpan={6} className="py-10 text-center text-stone-500">
                     Nenhum fechamento registrado até o momento.
                   </td>
                 </tr>
               ) : (
-                history.map((h) => (
-                  <tr key={h.id} className="border-b border-slate-100 hover:bg-slate-50/70 transition-colors">
-                    <td className="py-3 px-3.5 text-slate-600 tabular-nums">
-                      {h.opened_at ? new Date(h.opened_at).toLocaleDateString('pt-BR') : '-'}
-                    </td>
-                    <td className="py-3 px-3.5 font-bold tabular-nums text-slate-900">R$ {Number(h.opening_amount || 0).toFixed(2)}</td>
-                    <td className="py-3 px-3.5 font-bold tabular-nums text-emerald-600">R$ {Number(h.total_suprimentos || 0).toFixed(2)}</td>
-                    <td className="py-3 px-3.5 font-bold tabular-nums text-rose-600">R$ {Number(h.total_sangrias || 0).toFixed(2)}</td>
-                    <td className="py-3 px-3.5 font-bold tabular-nums text-blue-600">R$ {Number(h.total_faturado || 0).toFixed(2)}</td>
-                    <td className="py-3 px-3.5 text-right flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => setSelectedSessionForDetails(h)}
-                        className="text-xs font-semibold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 p-2 rounded-full transition-colors inline-flex items-center cursor-pointer"
-                        title="Detalhes do Fechamento"
-                      >
-                        <Search className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteSession(h.id)}
-                        className="text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 p-2 rounded-full transition-colors inline-flex items-center cursor-pointer"
-                        title="Excluir Fechamento"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                paginaHistorico.itens.map((h) => {
+                  const sup = Number(h.total_suprimentos || 0);
+                  const sang = Number(h.total_sangrias || 0);
+                  const dia = h.opened_at ? new Date(h.opened_at) : null;
+                  return (
+                    <tr key={h.id} className="h-11 hover:bg-brand-50/40 transition-colors">
+                      <td className="pl-4 pr-3 tabular-nums whitespace-nowrap">
+                        {dia ? (
+                          <>
+                            <span className="font-semibold text-stone-800">{dia.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+                            <span className="text-stone-400 ml-1.5">{dia.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '')}</span>
+                          </>
+                        ) : '—'}
+                      </td>
+                      <td className="px-3 text-right tabular-nums whitespace-nowrap text-stone-600">{brl(Number(h.opening_amount || 0))}</td>
+                      <td className={`px-3 text-right tabular-nums whitespace-nowrap ${sup > 0 ? 'text-emerald-700 font-semibold' : 'text-stone-300'}`}>{sup > 0 ? `+ ${brl(sup)}` : '—'}</td>
+                      <td className={`px-3 text-right tabular-nums whitespace-nowrap ${sang > 0 ? 'text-rose-600 font-semibold' : 'text-stone-300'}`}>{sang > 0 ? `− ${brl(sang)}` : '—'}</td>
+                      <td className="px-3 text-right tabular-nums whitespace-nowrap font-bold text-stone-900 text-[14px]">{brl(Number(h.total_faturado || 0))}</td>
+                      <td className="pl-3 pr-4">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => setSelectedSessionForDetails(h)}
+                            className="h-8 px-2.5 rounded-lg text-[13px] font-semibold text-brand-700 hover:bg-brand-50 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+                            title="Ver detalhes do fechamento"
+                          >
+                            <Search className="w-4 h-4" /> Detalhes
+                          </button>
+                          <button
+                            onClick={() => handleDeleteSession(h.id)}
+                            className="w-8 h-8 rounded-lg text-stone-300 hover:text-rose-600 hover:bg-rose-50 transition-colors inline-flex items-center justify-center cursor-pointer"
+                            title="Excluir fechamento"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
+        <Paginacao
+          pagina={paginaHistorico.pagina}
+          totalPaginas={paginaHistorico.totalPaginas}
+          inicio={paginaHistorico.inicio}
+          mostrando={paginaHistorico.itens.length}
+          total={history.length}
+          onIr={paginaHistorico.irPara}
+          rotulo={history.length === 1 ? 'fechamento' : 'fechamentos'}
+        />
       </div>
 
       {/* Modal de Fechamento de Caixa */}
@@ -862,27 +890,27 @@ export default function CaixaManager({ refreshSignal }: CaixaManagerProps = {}) 
               <div className="bg-slate-50 border border-slate-200 rounded-lg p-3.5 space-y-2 text-xs font-mono">
                 <div className="flex justify-between text-slate-600">
                   <span>Fundo Inicial de Abertura</span>
-                  <span className="font-bold text-slate-900">R$ {Number(session.opening_amount).toFixed(2)}</span>
+                  <span className="font-bold text-slate-900">{brl(Number(Number(session.opening_amount)))}</span>
                 </div>
                 <div className="flex justify-between text-slate-600">
                   <span>(+) Vendas em Dinheiro</span>
-                  <span className="font-bold text-slate-900">+ R$ {summary.numerario.toFixed(2)}</span>
+                  <span className="font-bold text-slate-900">+ {brl(Number(summary.numerario))}</span>
                 </div>
                 {totalSuprimentos > 0 && (
                   <div className="flex justify-between text-emerald-700">
                     <span>(+) Suprimentos de Caixa</span>
-                    <span className="font-bold">+ R$ {totalSuprimentos.toFixed(2)}</span>
+                    <span className="font-bold">+ {brl(Number(totalSuprimentos))}</span>
                   </div>
                 )}
                 {totalSangrias > 0 && (
                   <div className="flex justify-between text-rose-700">
                     <span>(-) Sangrias Realizadas</span>
-                    <span className="font-bold">- R$ {totalSangrias.toFixed(2)}</span>
+                    <span className="font-bold">- {brl(Number(totalSangrias))}</span>
                   </div>
                 )}
                 <div className="pt-2 border-t border-slate-200 flex justify-between font-bold text-slate-900 text-sm">
                   <span>(=) Esperado em Dinheiro</span>
-                  <span className="text-base">R$ {currentExpected.toFixed(2)}</span>
+                  <span className="text-base">{brl(Number(currentExpected))}</span>
                 </div>
               </div>
 
@@ -909,7 +937,7 @@ export default function CaixaManager({ refreshSignal }: CaixaManagerProps = {}) 
                   <span className="text-xs text-slate-600 font-semibold">Diferença de Caixa:</span>
                   <span className={`text-base font-bold tabular-nums ${(Number(closingAmount) - currentExpected) >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
                     {(Number(closingAmount) - currentExpected) >= 0 ? '+' : ''}
-                    R$ {(Number(closingAmount) - currentExpected).toFixed(2)}
+                    {brl(Number((Number(closingAmount) - currentExpected)))}
                   </span>
                 </div>
               )}

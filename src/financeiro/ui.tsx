@@ -4,7 +4,7 @@ export function Card({ titulo, acoes, children, className = '' }: { titulo?: Rea
   return (
     <section className={`rounded-xl border border-stone-200/90 bg-white p-4 shadow-2xs ${className}`}>
       {(titulo || acoes) && (
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="mb-3 [@media(max-height:780px)]:mb-1.5 flex flex-wrap items-center justify-between gap-2">
           {titulo && <h2 className="text-sm font-bold text-stone-900">{titulo}</h2>}
           {acoes && <div className="flex flex-wrap items-center gap-2">{acoes}</div>}
         </div>
@@ -119,7 +119,7 @@ export function Indicador({ rotulo, valor, sub, tom }: { rotulo: string; valor: 
   return (
     <div className="rounded-xl border border-stone-200/90 bg-white p-4 shadow-2xs">
       <div className="text-[10px] font-semibold uppercase tracking-wider text-stone-500">{rotulo}</div>
-      <div className={`mt-1 text-2xl font-bold tabular-nums ${cor}`}>{valor}</div>
+      <div className={`mt-1 text-2xl [@media(max-height:780px)]:mt-0.5 [@media(max-height:780px)]:text-xl font-bold tabular-nums ${cor}`}>{valor}</div>
       {sub && <div className="mt-1 text-xs text-stone-500">{sub}</div>}
     </div>
   );

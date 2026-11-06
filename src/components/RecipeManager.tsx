@@ -11,6 +11,8 @@ import {
 } from '../types/recipe';
 import { recipeService } from '../services/recipeService';
 import { MenuItem } from '../data/menu';
+import { brl } from '../utils/formatacao';
+import { Paginacao, useListaQueCabe } from './admin/ui';
 
 interface RecipeManagerProps {
   menuItems: MenuItem[];
@@ -23,6 +25,20 @@ export default function RecipeManager({ menuItems }: RecipeManagerProps) {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('todos');
+
+  const filteredIngredients = useMemo(() => {
+    return ingredients.filter(i => {
+      if (categoryFilter !== 'todos' && i.category !== categoryFilter) return false;
+      if (search && !i.name.toLowerCase().includes(search.toLowerCase()) && !i.supplier?.toLowerCase().includes(search.toLowerCase())) return false;
+      return true;
+    });
+  }, [ingredients, categoryFilter, search]);
+
+  const pagInsumos = useListaQueCabe(filteredIngredients, 44, {
+    reserva: 120,
+    resetar: [categoryFilter, search],
+    deps: [activeTab],
+  });
 
   // Estado para Edição/Criação de Insumo
   const [editingIngredient, setEditingIngredient] = useState<Partial<Ingredient> | null>(null);
@@ -200,7 +216,7 @@ export default function RecipeManager({ menuItems }: RecipeManagerProps) {
   }, [selectedProductId, selectedSize, recipeItems, packagingCost, fixedOverhead, ingredientsMap, menuItems]);
 
   return (
-    <div className="space-y-4 pb-14 font-sans text-stone-900 animate-in fade-in duration-150">
+    <div className="space-y-4 pb-2 font-sans text-stone-900 animate-in fade-in duration-150">
       
       {/* ─────────────────────────────────────────────────────────────
           1. HEADER PRINCIPAL COM TÍTULO E BOTÕES DE AÇÃO
@@ -607,14 +623,8 @@ export default function RecipeManager({ menuItems }: RecipeManagerProps) {
                     <th className="py-2.5 px-3 font-bold text-center">Ações</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-stone-100 font-sans">
-                  {ingredients
-                    .filter(i => {
-                      if (categoryFilter !== 'todos' && i.category !== categoryFilter) return false;
-                      if (search && !i.name.toLowerCase().includes(search.toLowerCase()) && !i.supplier?.toLowerCase().includes(search.toLowerCase())) return false;
-                      return true;
-                    })
-                    .map((ing) => (
+                <tbody ref={pagInsumos.ref} className="divide-y divide-stone-100 font-sans">
+                  {pagInsumos.itens.map((ing) => (
                       <tr key={ing.id} className="hover:bg-amber-50/20 transition-colors">
                         <td className="py-2.5 px-3.5">
                           <span className="font-bold text-stone-900 block">{ing.name}</span>
@@ -626,13 +636,13 @@ export default function RecipeManager({ menuItems }: RecipeManagerProps) {
                           </span>
                         </td>
                         <td className="py-2.5 px-3 text-right font-mono text-stone-700">
-                          R$ {ing.purchase_cost.toFixed(2)} por {ing.purchase_quantity} {ing.purchase_unit}
+                          {brl(Number(ing.purchase_cost || 0))} por {ing.purchase_quantity || 1} {ing.purchase_unit}
                         </td>
                         <td className="py-2.5 px-3 text-right font-mono font-bold text-emerald-800">
-                          R$ {ing.cost_per_usage_unit.toFixed(4)} / {ing.usage_unit}
+                          R$ {Number(ing.cost_per_usage_unit || 0).toFixed(4)} / {ing.usage_unit}
                           {ing.usage_unit === 'g' && (
                             <span className="text-[10px] text-stone-400 block font-normal">
-                              (R$ {(ing.cost_per_usage_unit * 1000).toFixed(2)}/kg)
+                              ({brl(Number((ing.cost_per_usage_unit || 0) * 1000))}/kg)
                             </span>
                           )}
                         </td>
@@ -664,6 +674,9 @@ export default function RecipeManager({ menuItems }: RecipeManagerProps) {
                     ))}
                 </tbody>
               </table>
+            </div>
+            <div className="p-2 border-t border-stone-100 bg-stone-50/50">
+              <Paginacao {...pagInsumos.paginacao} rotulo="insumos" />
             </div>
           </div>
         </div>

@@ -115,19 +115,16 @@ export default function CategoryManager() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-xl border border-[#E7E5E1] shadow-[0_1px_2px_rgba(28,25,23,0.04),0_1px_8px_rgba(28,25,23,0.04)]">
-        <div>
-          <h3 className="font-bold text-xl text-[#1C1917]">Categorias</h3>
-          <p className="text-xs text-[#78716C] mt-0.5">
-            {categories.length > 0
-              ? `${categories.length} ${categories.length === 1 ? 'seção cadastrada' : 'seções cadastradas'} · arraste a alça para reordenar`
-              : 'Gerencie as seções do seu cardápio'}
-          </p>
-        </div>
+    <div className="bg-white rounded-2xl border border-stone-200/80 shadow-[0_1px_2px_rgba(28,25,23,0.04),0_4px_16px_-8px_rgba(59,2,87,0.08)] overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-stone-100">
+        <p className="text-[13px] text-stone-500">
+          {categories.length > 0 ? (
+            <><span className="font-semibold text-stone-800 tabular-nums">{categories.length}</span> {categories.length === 1 ? 'seção' : 'seções'} no cardápio · arraste a alça <GripVertical className="inline w-3.5 h-3.5 -mt-0.5 text-stone-400" /> para mudar a ordem</>
+          ) : 'Gerencie as seções do seu cardápio'}
+        </p>
         <div className="flex items-center gap-3">
           {(orderSaving || orderSaved) && (
-            <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full border transition-colors ${orderSaved ? 'bg-[#F0FDF4] text-[#15803D] border-[#15803D]/20' : 'bg-[#FAFAF9] text-[#78716C] border-[#E7E5E1]'}`}>
+            <span className={`inline-flex items-center gap-1.5 text-[13px] font-semibold px-3 h-8 rounded-full border transition-colors ${orderSaved ? 'bg-[#F0FDF4] text-[#15803D] border-[#15803D]/20' : 'bg-[#FAFAF9] text-[#78716C] border-[#E7E5E1]'}`}>
               {orderSaving ? (
                 <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Salvando ordem...</>
               ) : (
@@ -135,22 +132,22 @@ export default function CategoryManager() {
               )}
             </span>
           )}
-          <button onClick={() => { setEditingCat({ id: '', name: '', order_index: categories.length + 1 }); setIsModalOpen(true); }} className="flex items-center gap-2 px-4 py-2.5 bg-[#6a2092] hover:bg-[#521872] text-white font-bold rounded-lg text-sm transition-all duration-200 active:scale-95 shadow-sm cursor-pointer border border-[#521872]">
-            <Plus size={16}/> Nova Categoria
+          <button onClick={() => { setEditingCat({ id: '', name: '', order_index: categories.length + 1 }); setIsModalOpen(true); }} className="flex items-center gap-2 h-10 px-4 bg-brand-700 hover:bg-brand-800 text-white font-semibold rounded-xl text-[14px] transition-colors shadow-sm cursor-pointer">
+            <Plus size={16}/> Nova categoria
           </button>
         </div>
       </div>
 
-      {feedback && <div className="p-3 bg-[#EFF6FF] text-[#1D4ED8] rounded-lg text-sm border border-[#BFDBFE]">{feedback}</div>}
+      {feedback && <div className="mx-4 mt-3 p-3 bg-brand-50 text-brand-800 rounded-xl text-[13px] border border-brand-100">{feedback}</div>}
 
       {loading ? (
-        <div className="space-y-2.5">
-          {[0, 1, 2].map(i => (
-            <div key={i} className="h-[68px] rounded-xl border border-[#E7E5E1] bg-white animate-pulse" />
+        <div className="divide-y divide-stone-100">
+          {[0, 1, 2, 3].map(i => (
+            <div key={i} className="h-[52px] bg-stone-50/60 animate-pulse" />
           ))}
         </div>
       ) : categories.length === 0 ? (
-        <div className="bg-white rounded-xl border border-dashed border-[#D6D3D1] p-10 flex flex-col items-center justify-center text-center">
+        <div className="p-10 flex flex-col items-center justify-center text-center">
           <div className="w-12 h-12 rounded-xl bg-[#FAFAF9] border border-[#E7E5E1] flex items-center justify-center mb-3">
             <Layers className="w-6 h-6 text-[#A8A29E]" />
           </div>
@@ -161,7 +158,7 @@ export default function CategoryManager() {
           </button>
         </div>
       ) : (
-        <Reorder.Group axis="y" values={categories} onReorder={handleReorder} className="space-y-2.5">
+        <Reorder.Group axis="y" values={categories} onReorder={handleReorder} className="divide-y divide-stone-100">
           {categories.map((cat, index) => (
             <CategoryRow
               key={cat.id}
@@ -182,10 +179,10 @@ export default function CategoryManager() {
         >
           <form 
             onSubmit={handleSave} 
-            className="bg-white p-6 rounded-xl w-full max-w-md shadow-2xl border border-[#E7E5E1] space-y-4 max-h-[90vh] overflow-y-auto"
+            className="bg-white p-6 rounded-2xl w-full max-w-2xl shadow-2xl border border-stone-200 grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4 max-h-[92vh] overflow-y-auto adm-rolagem"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-center pb-2 border-b border-[#E7E5E1]">
+            <div className="sm:col-span-2 flex justify-between items-center pb-2 border-b border-stone-100">
               <h3 className="font-bold text-lg text-[#1C1917]">{categories.find(c=>c.id === editingCat.id) ? 'Editar Categoria' : 'Nova Categoria'}</h3>
               <button type="button" onClick={() => setIsModalOpen(false)} className="text-[#A8A29E] hover:text-[#1C1917] p-1"><X size={20}/></button>
             </div>
@@ -235,13 +232,13 @@ export default function CategoryManager() {
               <p className="text-xs text-[#78716C]">Dica: use o arrastar-e-soltar da listagem para definir a ordem de forma visual.</p>
             </div>
 
-            <label className="flex items-center gap-2 text-sm text-[#1C1917] font-medium">
+            <label className="sm:col-span-2 flex items-center gap-2 text-sm text-[#1C1917] font-medium">
               <input type="checkbox" checked={editingCat.is_active !== false} onChange={e => setEditingCat({...editingCat, is_active: e.target.checked})} className="w-4 h-4 accent-[#6a2092] rounded" />
               Categoria ativa (visível no cardápio)
             </label>
 
-            <div className="pt-2">
-              <button type="submit" className="w-full bg-[#6a2092] hover:bg-[#521872] text-white py-2.5 rounded-lg font-bold transition-colors shadow-sm border border-[#521872] cursor-pointer">Salvar Categoria</button>
+            <div className="sm:col-span-2 pt-1">
+              <button type="submit" className="w-full h-11 bg-brand-700 hover:bg-brand-800 text-white rounded-xl font-semibold transition-colors shadow-sm cursor-pointer">Salvar categoria</button>
             </div>
           </form>
         </div>
@@ -268,10 +265,10 @@ function CategoryRow({ cat, position, itemCount, onEdit, onDelete }: {
       whileDrag={{
         scale: 1.02,
         boxShadow: '0 24px 48px -12px rgba(28,25,23,0.28), 0 8px 16px -8px rgba(28,25,23,0.18)',
-        borderColor: '#6a2092',
+        borderRadius: 12,
         zIndex: 30,
       }}
-      className="group relative bg-white border border-[#E7E5E1] rounded-xl px-4 py-3.5 flex items-center gap-4 shadow-[0_1px_2px_rgba(28,25,23,0.04),0_1px_8px_rgba(28,25,23,0.04)] hover:border-[#6a2092]/50 hover:shadow-[0_4px_12px_rgba(28,25,23,0.08),0_2px_4px_rgba(28,25,23,0.06)] transition-colors cursor-default select-none"
+      className="group relative bg-white h-[52px] [@media(max-height:780px)]:h-11 px-4 flex items-center gap-3 hover:bg-brand-50/40 transition-colors cursor-default select-none"
     >
       <button
         onPointerDown={(e) => controls.start(e)}
@@ -282,21 +279,25 @@ function CategoryRow({ cat, position, itemCount, onEdit, onDelete }: {
         <GripVertical className="w-5 h-5" />
       </button>
 
-      <span className="w-8 h-8 shrink-0 rounded-lg bg-[#FAFAF9] border border-[#E7E5E1] text-xs font-bold font-mono text-[#78716C] flex items-center justify-center group-hover:border-[#6a2092]/40 transition-colors">
+      <span className="w-7 h-7 shrink-0 rounded-lg bg-stone-50 ring-1 ring-stone-200 text-[12px] font-semibold tabular-nums text-stone-500 flex items-center justify-center group-hover:ring-brand-300 transition-colors">
         {position}
       </span>
 
-      <div className="flex-1 min-w-0">
-        <div className="font-bold text-[#1C1917] truncate">{cat.name}</div>
-        <div className="text-xs text-[#78716C] font-mono truncate mt-0.5">
-          {cat.id}
-          {itemCount > 0 && <span className="text-[#A8A29E]"> · {itemCount} {itemCount === 1 ? 'produto' : 'produtos'}</span>}
-        </div>
+      <div className="flex-1 min-w-0 flex items-baseline gap-2">
+        <span className="text-[14px] font-semibold text-stone-900 truncate">{cat.name}</span>
+        <span className="text-[12px] text-stone-400 truncate hidden sm:inline">{cat.id}</span>
       </div>
 
-      <div className="flex gap-1.5 shrink-0">
-        <button onClick={onEdit} className="p-2 text-[#78716C] hover:text-[#1D4ED8] hover:bg-[#EFF6FF] rounded-lg transition-colors cursor-pointer" title="Editar categoria"><Edit2 size={16}/></button>
-        <button onClick={onDelete} className="p-2 text-[#78716C] hover:text-[#B91C1C] hover:bg-[#FEF2F2] rounded-lg transition-colors cursor-pointer" title="Excluir categoria"><Trash2 size={16}/></button>
+      {cat.is_active === false && (
+        <span className="shrink-0 h-6 px-2 rounded-full bg-stone-100 text-stone-500 text-[12px] font-semibold flex items-center">Oculta</span>
+      )}
+      <span className={`shrink-0 w-24 text-right text-[13px] tabular-nums ${itemCount > 0 ? 'text-stone-600' : 'text-stone-400'}`}>
+        {itemCount} {itemCount === 1 ? 'produto' : 'produtos'}
+      </span>
+
+      <div className="flex gap-1 shrink-0">
+        <button onClick={onEdit} className="w-8 h-8 flex items-center justify-center text-stone-500 hover:text-brand-700 hover:bg-brand-50 rounded-lg transition-colors cursor-pointer" title="Editar categoria"><Edit2 size={16}/></button>
+        <button onClick={onDelete} className="w-8 h-8 flex items-center justify-center text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer" title="Excluir categoria"><Trash2 size={16}/></button>
       </div>
     </Reorder.Item>
   );

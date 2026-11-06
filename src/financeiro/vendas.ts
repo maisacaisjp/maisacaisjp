@@ -28,16 +28,30 @@ export interface ResumoVendas {
   porDia: Record<string, number>;
 }
 
-const TAM_NOME: Record<string, Tamanho> = { pq: 'P', p: 'P', md: 'M', m: 'M', gr: 'G', g: 'G' };
+// Tamanho escrito no fim do nome do item, entre parênteses.
+// Pedidos antigos: (P) (M) (G). Cardápio e PDV atuais: (330ml) (440ml) (550ml) (770ml) (Pote Recheado 1 Litro) (2 Litros) / (1L) (2L).
+type TamPedido = 'P' | 'M' | 'G' | '770' | 'POTE' | '2L' | null;
+const RE_TAM = /\(\s*(Pq|P|Md|M|Gr|G|330\s*ml|440\s*ml|550\s*ml|770\s*ml|Pote Recheado 1 Litro|1\s*L(?:itro)?|2\s*L(?:itros)?)\s*\)\s*$/i;
 
 const semColchetes = (s: string) => s.replace(/\[[^\]]*\]/g, '').trim();
 
-function tamanhoDo(it: ItemPedido): Tamanho {
-  const n = semColchetes(it.name).match(/\((Pq|P|Md|M|Gr|G)\)\s*$/i);
-  return n ? TAM_NOME[n[1].toLowerCase()] : 'U';
+function tamanhoDo(it: ItemPedido): TamPedido {
+  const n = semColchetes(it.name).match(RE_TAM);
+  if (!n) return null;
+  const s = n[1].toLowerCase().replace(/\s+/g, '');
+  if (s === 'pq' || s === 'p' || s === '330ml') return 'P';
+  if (s === 'md' || s === 'm' || s === '440ml') return 'M';
+  if (s === 'gr' || s === 'g' || s === '550ml') return 'G';
+  if (s === '770ml') return '770';
+  if (s.startsWith('2l')) return '2L';
+  return 'POTE';
 }
 
-const limparNome = (s: string) => semColchetes(s).replace(/\((Pq|P|Md|M|Gr|G)\)\s*$/i, '').trim();
+const limparNome = (s: string) => semColchetes(s).replace(RE_TAM, '').trim();
+
+// Nome da ficha de tamanho único do combo no 770ml e no Pote Recheado 1L (criadas pelo SQL das fichas)
+const SUFIXO_FICHA: Partial<Record<NonNullable<TamPedido>, string>> = { '770': ' — 770ML', POTE: ' — POTE RECHEADO 1 LITRO' };
+const ROTULO_PEDIDO: Partial<Record<NonNullable<TamPedido>, string>> = { '770': ' (770ml)', POTE: ' (Pote 1L)', '2L': ' (2 Litros)' };
 
 // Custo de um adicional avulso no tamanho do copo: o que é por peso cresce com o fator;
 // o que é por unidade (chocolates) vai na mesma quantidade em todos os tamanhos.
@@ -88,19 +102,35 @@ export function analisarVendas(pedidos: Pedido[], cardapio: ProdutoCardapio[], a
       // Produto principal
       const t = tamanhoDo(it);
       const nome = limparNome(it.name);
-      const prod = prodPorNome.get(norm(nome));
-      const ficha = (prod && fichaPorProduto.get(prod.id)) || fichaPorNome.get(`p|${norm(prod?.name ?? nome)}`);
-      const tam: Tamanho = ficha ? (ficha.tipo === 'copo' ? (t === 'U' ? 'G' : t) : 'U') : t;
+      const prod = (it.id && cardapio.find((m) => m.id === it.id)) || prodPorNome.get(norm(nome));
+      const nomeProd = prod?.name ?? nome;
+      let ficha: Ficha | undefined;
+      let tam: Tamanho;
+      if (t === '770' || t === 'POTE' || t === '2L') {
+        // Combo no 770ml / Pote 1L: tem ficha própria; o que vende sem ficha nesse tamanho fica como "sem ficha"
+        const sufixo = SUFIXO_FICHA[t];
+        ficha = sufixo ? fichaPorNome.get(`p|${norm(nomeProd + sufixo)}`) : undefined;
+        if (!ficha) {
+          const f = (prod && fichaPorProduto.get(prod.id)) || fichaPorNome.get(`p|${norm(nomeProd)}`);
+          if (f && f.tipo !== 'copo') ficha = f; // produto de tamanho único (ex.: "AÇAÍ 770ML")
+        }
+        tam = 'U';
+      } else {
+        ficha = (prod && fichaPorProduto.get(prod.id)) || fichaPorNome.get(`p|${norm(nomeProd)}`);
+        const tCopo: Tamanho = t === 'P' || t === 'M' || t === 'G' ? t : 'U';
+        tam = ficha ? (ficha.tipo === 'copo' ? (tCopo === 'U' ? 'G' : tCopo) : 'U') : tCopo;
+      }
+      const rotulo = (t && ROTULO_PEDIDO[t]) || '';
       somar(
-        { chave: `${prod?.id ?? norm(nome)}|${tam}`, nome: prod?.name ?? nome, produtoId: prod?.id, categoria: prod?.category ?? it.category ?? '', tamanho: tam, adicional: false, fichaId: ficha?.id },
+        { chave: `${prod?.id ?? norm(nome)}|${tam}${rotulo}`, nome: nomeProd + rotulo, produtoId: prod?.id, categoria: prod?.category ?? it.category ?? '', tamanho: tam, adicional: false, fichaId: ficha?.id },
         q, base * q, ficha ? custoFicha(ficha, tam, d).total * q : null,
       );
 
       // Adicionais escolhidos (Base = 330ml: 440ml +20%, 550ml +40%, 770ml +60%, Pote 1L Recheado +100%; chocolates por unidade não mudam)
-      const eh770 = prod?.id === 'acai-1371861' || /770\s*ml/i.test(nome);
-      const ehPote = prod?.id === 'acai-1371862' || prod?.id === 'acai-1371863' || /\b(1|2)\s*l(itro|itros)?\b/i.test(nome);
-      const eh550 = prod?.id === 'acai-1371860' || tam === 'G' || /550\s*ml/i.test(nome);
-      const eh440 = prod?.id === 'acai-1371859' || tam === 'M' || /440\s*ml/i.test(nome);
+      const eh770 = t === '770' || prod?.id === 'acai-1371861' || /770\s*ml/i.test(nome);
+      const ehPote = t === 'POTE' || t === '2L' || prod?.id === 'acai-1371862' || prod?.id === 'acai-1371863' || /\b(1|2)\s*l(itro|itros)?\b/i.test(nome);
+      const eh550 = t === 'G' || prod?.id === 'acai-1371860' || /550\s*ml/i.test(nome);
+      const eh440 = t === 'M' || prod?.id === 'acai-1371859' || /440\s*ml/i.test(nome);
       const fatorAdicional = ehPote
         ? (d.config.fator1L || 2)
         : eh770

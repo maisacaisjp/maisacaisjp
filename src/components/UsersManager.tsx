@@ -180,48 +180,37 @@ export default function UsersManager() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center">
-        <div>
-          <h2 className="text-xl font-extrabold text-gray-900 flex items-center gap-2">
-            <Shield className="text-[#6a2092]" size={22} />
-            Gestão de Usuários & Permissões Granulares
-          </h2>
-          <p className="text-sm text-gray-500 mt-1 font-medium">
-            Defina o que cada funcionário pode visualizar e gerenciar no sistema.
-          </p>
+    <div className="space-y-4">
+      <div className="bg-white p-5 rounded-2xl border border-stone-200/80 shadow-[0_1px_2px_rgba(28,25,23,0.04),0_4px_16px_-8px_rgba(59,2,87,0.08)]">
+        <div className="flex flex-wrap items-baseline gap-x-2 mb-4">
+          <h3 className="text-[16px] font-bold text-stone-900 flex items-center gap-2">
+            <UserPlus className="text-brand-600" size={18} />
+            Novo acesso
+          </h3>
+          <p className="text-[13px] text-stone-500">usuário e senha para um funcionário, sem precisar de e-mail.</p>
         </div>
-      </div>
-
-      <div className="bg-white p-6 rounded-xl border border-[#E7E5E1] shadow-[0_1px_2px_rgba(28,25,23,0.04),0_1px_8px_rgba(28,25,23,0.04)]">
-        <h3 className="text-lg font-bold text-[#1C1917] flex items-center gap-2 mb-1">
-          <UserPlus className="text-[#6a2092]" size={20} />
-          Criar Novo Acesso
-        </h3>
-        <p className="text-sm text-[#78716C] mb-5">Crie um usuário e senha para um novo funcionário — sem precisar de e-mail de verdade.</p>
         <form onSubmit={handleCreateUser} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
             <div>
-              <label className="text-xs font-bold text-gray-600 uppercase">Nome</label>
+              <label className="text-[12px] font-semibold text-stone-500">Nome</label>
               <input type="text" value={newFullName} onChange={e => setNewFullName(e.target.value)} required
-                className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm mt-1" />
+                className="w-full h-10 px-3 bg-stone-50/70 border border-stone-200 rounded-xl text-[14px] mt-1 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-600/15 focus:border-brand-600" />
             </div>
             <div>
-              <label className="text-xs font-bold text-gray-600 uppercase">Usuário (sem espaço)</label>
+              <label className="text-[12px] font-semibold text-stone-500">Usuário (sem espaço)</label>
               <input type="text" value={newUsername} onChange={e => setNewUsername(e.target.value)} required
                 placeholder="ex: joao"
-                className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm mt-1" />
+                className="w-full h-10 px-3 bg-stone-50/70 border border-stone-200 rounded-xl text-[14px] mt-1 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-600/15 focus:border-brand-600" />
             </div>
             <div>
-              <label className="text-xs font-bold text-gray-600 uppercase">Senha</label>
+              <label className="text-[12px] font-semibold text-stone-500">Senha</label>
               <input type="text" value={newPassword} onChange={e => setNewPassword(e.target.value)} required minLength={6}
-                className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm mt-1" />
+                className="w-full h-10 px-3 bg-stone-50/70 border border-stone-200 rounded-xl text-[14px] mt-1 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-600/15 focus:border-brand-600" />
             </div>
             <div>
-              <label className="text-xs font-bold text-gray-600 uppercase">Função</label>
+              <label className="text-[12px] font-semibold text-stone-500">Função</label>
               <select value={newRole} onChange={e => setNewRole(e.target.value)}
-                className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm mt-1">
+                className="w-full h-10 px-3 bg-stone-50/70 border border-stone-200 rounded-xl text-[14px] mt-1 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-600/15 focus:border-brand-600">
                 <option value="owner">Dono (Owner - Acesso Total)</option>
                 <option value="staff">Funcionário (Staff)</option>
                 <option value="caixa">Operador de Caixa</option>
@@ -233,20 +222,17 @@ export default function UsersManager() {
 
           {newRole !== 'owner' && (
             <div>
-              <label className="text-xs font-bold text-gray-600 uppercase mb-2 block">Permissões</label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <label className="text-[12px] font-semibold text-stone-500 mb-2 block">Permissões <span className="font-normal text-stone-400">· passe o mouse para ver o que cada uma libera</span></label>
+              <div className="flex flex-wrap gap-1.5">
                 {PERMISSION_DEFINITIONS.map(perm => (
-                  <label key={perm.key} className={`p-3 rounded-xl border transition-all cursor-pointer flex items-start gap-3 ${newPermissions[perm.key] ? 'bg-emerald-50/60 border-emerald-300' : 'bg-gray-50/50 border-gray-200'}`}>
+                  <label key={perm.key} title={perm.description} className={`h-9 pl-2.5 pr-3 rounded-full border transition-colors cursor-pointer inline-flex items-center gap-2 text-[13px] font-semibold ${newPermissions[perm.key] ? 'bg-emerald-50 border-emerald-300 text-emerald-900' : 'bg-white border-stone-200 text-stone-600 hover:border-brand-300'}`}>
                     <input
                       type="checkbox"
                       checked={!!newPermissions[perm.key]}
                       onChange={() => setNewPermissions(prev => ({ ...prev, [perm.key]: !prev[perm.key] }))}
-                      className="mt-0.5 w-4 h-4 accent-emerald-600 rounded cursor-pointer shrink-0"
+                      className="w-4 h-4 accent-emerald-600 rounded cursor-pointer shrink-0"
                     />
-                    <div>
-                      <div className="font-bold text-xs leading-tight">{perm.label}</div>
-                      <div className="text-[11px] text-gray-500 font-normal leading-tight mt-0.5">{perm.description}</div>
-                    </div>
+                    {perm.label}
                   </label>
                 ))}
               </div>
@@ -254,8 +240,8 @@ export default function UsersManager() {
           )}
 
           <button type="submit" disabled={creatingUser}
-            className="px-6 py-2.5 bg-[#6a2092] text-white font-bold rounded-lg text-sm hover:bg-[#521872] transition-colors flex items-center gap-2 disabled:opacity-50 shadow-sm border border-[#521872] cursor-pointer">
-            <UserPlus size={18} /> Criar Acesso
+            className="h-10 px-5 bg-brand-700 text-white font-semibold rounded-xl text-[14px] hover:bg-brand-800 transition-colors flex items-center gap-2 disabled:opacity-50 shadow-sm cursor-pointer">
+            <UserPlus size={17} /> Criar acesso
           </button>
         </form>
       </div>
@@ -267,33 +253,34 @@ export default function UsersManager() {
       )}
 
       {/* Profiles List */}
-      <div className="bg-white rounded-xl border border-[#E7E5E1] shadow-[0_1px_2px_rgba(28,25,23,0.04),0_1px_8px_rgba(28,25,23,0.04)] overflow-hidden">
+      <div className="bg-white rounded-2xl border border-stone-200/80 shadow-[0_1px_2px_rgba(28,25,23,0.04),0_4px_16px_-8px_rgba(59,2,87,0.08)] overflow-hidden">
         {loading ? (
           <div className="p-8 text-center text-[#78716C] font-medium">Carregando usuários...</div>
         ) : profiles.length === 0 ? (
           <div className="p-8 text-center text-[#78716C] font-medium">Nenhum usuário cadastrado.</div>
         ) : (
-          <div className="divide-y divide-[#E7E5E1]">
+          <div className="divide-y divide-stone-100">
             {profiles.map(profile => {
               const isOwner = profile.role === 'owner';
               const perms = profile.permissions || {};
 
               return (
-                <div key={profile.id} className="p-6 space-y-4">
-                  <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 bg-[#FAFAF9] p-4 rounded-lg border border-[#E7E5E1]">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-[#1C1917] text-base">{profile.full_name || 'Sem nome'}</span>
-                      </div>
+                <div key={profile.id} className="px-5 py-4 space-y-3">
+                  <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="w-9 h-9 rounded-full bg-brand-50 text-brand-700 font-bold text-[14px] flex items-center justify-center shrink-0">
+                        {(profile.full_name || '?').trim().charAt(0).toUpperCase()}
+                      </span>
+                      <span className="font-semibold text-stone-900 text-[15px] truncate">{profile.full_name || 'Sem nome'}</span>
                     </div>
 
                     <div className="flex items-center gap-3">
-                      <span className="text-xs font-bold text-gray-600">Função:</span>
+                      <span className="text-[13px] text-stone-500">Função</span>
                       <select
                         value={profile.role || 'staff'}
                         onChange={(e) => handleChangeRole(profile.id, e.target.value)}
                         disabled={savingId === profile.id}
-                        className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-800 outline-none cursor-pointer"
+                        className="h-9 px-3 bg-white border border-stone-200 rounded-lg text-[13px] font-semibold text-stone-800 outline-none cursor-pointer focus:border-brand-600"
                       >
                         <option value="owner">Dono (Owner - Acesso Total)</option>
                         <option value="staff">Funcionário (Staff)</option>
@@ -313,30 +300,25 @@ export default function UsersManager() {
 
                   {/* Permissões Checklist Grid */}
                   <div>
-                    <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider mb-3">
-                      Permissões de Acesso {isOwner && '(Possui acesso total automático)'}
-                    </h4>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    {isOwner && <p className="text-[12px] text-stone-400 mb-1.5">Dono tem acesso total automático.</p>}
+                    <div className="flex flex-wrap gap-1.5">
                       {PERMISSION_DEFINITIONS.map(perm => {
                         const hasPerm = isOwner || !!perms[perm.key];
 
                         return (
                           <label
                             key={perm.key}
-                            className={`p-3 rounded-xl border transition-all cursor-pointer flex items-start gap-3 ${hasPerm ? 'bg-emerald-50/60 border-emerald-300 text-emerald-950' : 'bg-gray-50/50 border-gray-200 text-gray-600 hover:bg-gray-100'}`}
+                            title={perm.description}
+                            className={`h-8 pl-2.5 pr-3 rounded-full border transition-colors cursor-pointer inline-flex items-center gap-2 text-[13px] font-semibold ${hasPerm ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-white border-stone-200 text-stone-500 hover:border-brand-300'}`}
                           >
                             <input
                               type="checkbox"
                               checked={hasPerm}
                               disabled={isOwner || savingId === profile.id}
                               onChange={() => handleTogglePermission(profile.id, perm.key, !!perms[perm.key])}
-                              className="mt-0.5 w-4 h-4 accent-emerald-600 rounded cursor-pointer shrink-0"
+                              className="w-4 h-4 accent-emerald-600 rounded cursor-pointer shrink-0"
                             />
-                            <div>
-                              <div className="font-bold text-xs leading-tight">{perm.label}</div>
-                              <div className="text-[11px] text-gray-500 font-normal leading-tight mt-0.5">{perm.description}</div>
-                            </div>
+                            {perm.label}
                           </label>
                         );
                       })}

@@ -17,6 +17,7 @@ import {
   Layers,
   ArrowDown
 } from 'lucide-react';
+import { brl } from '../utils/formatacao';
 
 interface FunnelData {
   visitors: number;
@@ -290,14 +291,14 @@ export const SalesFunnelManager: React.FC<SalesFunnelManagerProps> = ({ onNaviga
   ];
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12 font-sans">
+    <div className="space-y-4 max-w-7xl mx-auto pb-2 font-sans">
       
       {/* ────────────────── CABEÇALHO PADRÃO BALCÃO DE COMANDA COM FILTRO UNIFICADO ────────────────── */}
       <div className="bg-white rounded-2xl border border-stone-200/90 shadow-2xs p-4 sm:p-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-stone-900 text-white flex items-center justify-center shadow-2xs border border-stone-800">
+            <div className="w-10 h-10 rounded-xl bg-[#6a2092] text-white flex items-center justify-center shadow-2xs">
               <Filter size={18} className="transform rotate-180 text-rose-500" />
             </div>
             <div>
@@ -347,7 +348,7 @@ export const SalesFunnelManager: React.FC<SalesFunnelManagerProps> = ({ onNaviga
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         
         {/* Card 1: Acessos */}
-        <div className="bg-white rounded-2xl border border-stone-200/80 p-4 sm:p-5 shadow-2xs flex flex-col justify-between">
+        <div className="bg-white rounded-2xl border border-stone-200/80 p-4 shadow-2xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-stone-400 mb-1">
               <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-stone-500">
@@ -366,7 +367,7 @@ export const SalesFunnelManager: React.FC<SalesFunnelManagerProps> = ({ onNaviga
         </div>
 
         {/* Card 2: Adições ao Carrinho */}
-        <div className="bg-white rounded-2xl border border-stone-200/80 p-4 sm:p-5 shadow-2xs flex flex-col justify-between">
+        <div className="bg-white rounded-2xl border border-stone-200/80 p-4 shadow-2xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-stone-400 mb-1">
               <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-stone-500">
@@ -380,12 +381,12 @@ export const SalesFunnelManager: React.FC<SalesFunnelManagerProps> = ({ onNaviga
           </div>
           <div className="mt-3 pt-2.5 border-t border-stone-100 flex items-center justify-between text-[11px] text-stone-500 font-mono">
             <span>Abandono:</span>
-            <span className="font-bold text-amber-700">{data.cartAbandonmentRate.toFixed(1)}%</span>
+            <span className="font-bold text-amber-700">{data.cartAbandonmentRate.toFixed(1).replace('.', ',')}%</span>
           </div>
         </div>
 
         {/* Card 3: Início de Checkout */}
-        <div className="bg-white rounded-2xl border border-stone-200/80 p-4 sm:p-5 shadow-2xs flex flex-col justify-between">
+        <div className="bg-white rounded-2xl border border-stone-200/80 p-4 shadow-2xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-stone-400 mb-1">
               <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-stone-500">
@@ -399,12 +400,12 @@ export const SalesFunnelManager: React.FC<SalesFunnelManagerProps> = ({ onNaviga
           </div>
           <div className="mt-3 pt-2.5 border-t border-stone-100 flex items-center justify-between text-[11px] text-stone-500 font-mono">
             <span>Desistência no fim:</span>
-            <span className="font-bold text-stone-700">{data.checkoutDropRate.toFixed(1)}%</span>
+            <span className="font-bold text-stone-700">{data.checkoutDropRate.toFixed(1).replace('.', ',')}%</span>
           </div>
         </div>
 
         {/* Card 4: Pedidos Concluídos */}
-        <div className="bg-stone-950 text-white rounded-2xl border border-stone-850 p-4 sm:p-5 shadow-2xs flex flex-col justify-between">
+        <div className="bg-[#3b0257] text-white rounded-2xl border border-[#4d0471] p-4 shadow-2xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-stone-400 mb-1">
               <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-stone-400">
@@ -418,16 +419,16 @@ export const SalesFunnelManager: React.FC<SalesFunnelManagerProps> = ({ onNaviga
           </div>
           <div className="mt-3 pt-2.5 border-t border-stone-850 flex items-center justify-between text-[11px] text-stone-400 font-mono">
             <span>Conversão Total:</span>
-            <span className="font-bold text-emerald-400">{data.conversionRate.toFixed(1)}%</span>
+            <span className="font-bold text-emerald-400">{data.conversionRate.toFixed(1).replace('.', ',')}%</span>
           </div>
         </div>
       </div>
 
       {/* ────────────────── SEÇÃO CENTRAL: FUNIL 3D COM PALETA DA MARCA (SEM ARCO-ÍRIS) ────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
         
         {/* COLUNA ESQUERDA (7 colunas): ILUSTRAÇÃO 3D ISOMÉTRICA DA MARCA */}
-        <div className="lg:col-span-7 bg-stone-900 rounded-2xl border border-stone-800 p-3 sm:p-4 shadow-xl relative overflow-hidden flex flex-col items-center justify-center">
+        <div className="lg:col-span-7 bg-[#2a0a3f] rounded-2xl border border-[#3b0257] p-3 sm:p-4 shadow-xl relative overflow-hidden flex flex-col items-center justify-center">
           
           {/* Luz de topo suave dourada e ambiente clean sem tons marrons */}
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(253,222,88,0.08),transparent_70%)] pointer-events-none" />
@@ -449,7 +450,7 @@ export const SalesFunnelManager: React.FC<SalesFunnelManagerProps> = ({ onNaviga
           <div className="w-full max-w-[460px] flex justify-center py-1 z-10">
             <svg 
               viewBox="0 0 600 560" 
-              className="w-full h-auto max-h-[370px] select-none filter drop-shadow-[0_15px_25px_rgba(0,0,0,0.8)]"
+              className="w-full h-auto max-h-[250px] [@media(max-height:780px)]:max-h-[190px] select-none filter drop-shadow-[0_15px_25px_rgba(0,0,0,0.8)]"
             >
               <defs>
                 {/* Sombra de texto nítida para contraste absoluto */}
@@ -701,7 +702,7 @@ export const SalesFunnelManager: React.FC<SalesFunnelManagerProps> = ({ onNaviga
           <div className="w-full mt-1 pt-2 border-t border-stone-800 flex items-center justify-between text-xs font-mono text-stone-400 z-10">
             <span className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-              Retenção Geral: <strong className="text-white">{data.conversionRate.toFixed(1)}%</strong>
+              Retenção Geral: <strong className="text-white">{data.conversionRate.toFixed(1).replace('.', ',')}%</strong>
             </span>
             <a 
               href="/" 
@@ -735,14 +736,15 @@ export const SalesFunnelManager: React.FC<SalesFunnelManagerProps> = ({ onNaviga
               <div 
                 key={stage.id}
                 onClick={() => setSelectedStage(isSelected ? null : stage.id)}
-                className={`bg-white rounded-xl border p-2.5 sm:px-3.5 sm:py-2.5 transition-all cursor-pointer shadow-2xs ${
+                title={isSelected ? 'Ocultar dica' : 'Ver dica para melhorar esta fase'}
+                className={`bg-white rounded-xl border px-3.5 py-2 transition-all cursor-pointer shadow-2xs ${
                   isSelected 
                     ? 'border-stone-900 ring-2 ring-stone-900/10' 
                     : 'border-stone-200/80 hover:border-stone-300'
                 }`}
               >
-                <div className="flex items-center justify-between gap-2.5">
-                  <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
                     <div 
                       className="w-7 h-7 rounded-lg flex items-center justify-center text-white font-bold text-xs shadow-2xs shrink-0"
                       style={{ backgroundColor: stage.primaryHex }}
@@ -753,43 +755,31 @@ export const SalesFunnelManager: React.FC<SalesFunnelManagerProps> = ({ onNaviga
                       <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-stone-400 block leading-tight">
                         Fase {stage.id} • {stage.verb}
                       </span>
-                      <h3 className="text-xs font-bold text-stone-900 leading-tight">
+                      <h3 className="text-[14px] font-semibold text-stone-900 leading-tight">
                         {stage.title}
                       </h3>
                     </div>
                   </div>
 
-                  <div className="text-right shrink-0">
-                    <p className="text-sm font-bold font-mono text-stone-900 tabular-nums leading-tight">
+                  <div className="ml-auto text-right shrink-0">
+                    <p className="text-[12px] text-stone-500 tabular-nums leading-tight">
+                      avanço <strong className="text-stone-900">{stage.conversionFromPrev}%</strong>
+                    </p>
+                    {stage.id > 1 && (
+                      <p className="text-[12px] text-stone-400 tabular-nums leading-tight">
+                        perda <strong className="text-rose-600">{stage.dropoff}%</strong>
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="w-20 text-right shrink-0">
+                    <p className="text-[16px] font-bold text-stone-900 tabular-nums leading-tight">
                       {stage.count.toLocaleString('pt-BR')}
                     </p>
-                    <span className="text-[9px] font-mono text-stone-400 block leading-tight">
+                    <span className="text-[12px] text-stone-400 block leading-tight">
                       {stage.unit}
                     </span>
                   </div>
-                </div>
-
-                {/* Métricas de Passagem e Perda */}
-                <div className="mt-1.5 pt-1.5 border-t border-stone-100 flex items-center justify-between text-[10px] font-mono">
-                  <div className="flex items-center gap-1 text-stone-600">
-                    <span>Avanço:</span>
-                    <strong className="text-stone-900 font-bold">
-                      {stage.conversionFromPrev}%
-                    </strong>
-                  </div>
-
-                  {stage.id > 1 && (
-                    <div className="flex items-center gap-1 text-stone-500">
-                      <span>Perda:</span>
-                      <strong className="text-rose-700 font-bold">
-                        {stage.dropoff}%
-                      </strong>
-                    </div>
-                  )}
-
-                  <span className="text-[9px] text-stone-400 hover:text-stone-600">
-                    {isSelected ? 'Ocultar ▲' : 'Dica ▼'}
-                  </span>
                 </div>
 
                 {/* Dica Expansível */}
@@ -814,7 +804,7 @@ export const SalesFunnelManager: React.FC<SalesFunnelManagerProps> = ({ onNaviga
       </div>
 
       {/* ────────────────── DIAGNÓSTICO SUTIL & ATALHOS DIRETOS ────────────────── */}
-      <div className="bg-white rounded-2xl border border-stone-200/90 p-4 sm:p-5 shadow-2xs space-y-3">
+      <div className="bg-white rounded-2xl border border-stone-200/90 p-4 sm:p-5 shadow-2xs space-y-3 adm-compactavel-esconder">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-amber-500" />
@@ -837,17 +827,14 @@ export const SalesFunnelManager: React.FC<SalesFunnelManagerProps> = ({ onNaviga
                   Gargalo no Carrinho
                 </span>
                 <span className="font-mono text-[9.5px] font-bold text-amber-900 bg-amber-100/90 px-1.5 py-0.5 rounded border border-amber-200">
-                  {data.cartAbandonmentRate.toFixed(0)}% Abandono
+                  {data.cartAbandonmentRate.toFixed(0).replace('.', ',')}% Abandono
                 </span>
               </div>
-              <p className="text-[11px] text-stone-500 leading-snug">
-                Itens na sacola sem avanço ao pagamento.
-              </p>
             </div>
-            <div className="pt-2 mt-2 border-t border-stone-200/60">
+            <div className="pt-2">
               <button
                 onClick={() => onNavigateToTab?.('gestao-cardapio')}
-                className="w-full h-7 px-2 rounded-lg bg-white hover:bg-amber-50 text-stone-800 hover:text-amber-900 border border-stone-200 text-[10.5px] font-bold flex items-center justify-between transition-all cursor-pointer shadow-2xs"
+                className="w-full h-8 px-2.5 rounded-lg bg-white hover:bg-amber-50 text-stone-800 hover:text-amber-900 border border-stone-200 text-[10.5px] font-bold flex items-center justify-between transition-all cursor-pointer shadow-2xs"
               >
                 <span>Ajustar Cardápio & Preços</span>
                 <ArrowRight size={12} className="text-stone-400" />
@@ -863,17 +850,14 @@ export const SalesFunnelManager: React.FC<SalesFunnelManagerProps> = ({ onNaviga
                   Retenção no Checkout
                 </span>
                 <span className="font-mono text-[9.5px] font-bold text-stone-700 bg-stone-200/70 px-1.5 py-0.5 rounded border border-stone-300">
-                  {data.checkoutDropRate.toFixed(0)}% Desistência
+                  {data.checkoutDropRate.toFixed(0).replace('.', ',')}% Desistência
                 </span>
               </div>
-              <p className="text-[11px] text-stone-500 leading-snug">
-                Desistências na entrega ou no pagamento.
-              </p>
             </div>
-            <div className="pt-2 mt-2 border-t border-stone-200/60">
+            <div className="pt-2">
               <button
                 onClick={() => onNavigateToTab?.('configuracoes')}
-                className="w-full h-7 px-2 rounded-lg bg-white hover:bg-amber-50 text-stone-800 hover:text-amber-900 border border-stone-200 text-[10.5px] font-bold flex items-center justify-between transition-all cursor-pointer shadow-2xs"
+                className="w-full h-8 px-2.5 rounded-lg bg-white hover:bg-amber-50 text-stone-800 hover:text-amber-900 border border-stone-200 text-[10.5px] font-bold flex items-center justify-between transition-all cursor-pointer shadow-2xs"
               >
                 <span>Configurar Zonas de Entrega</span>
                 <ArrowRight size={12} className="text-stone-400" />
@@ -889,17 +873,14 @@ export const SalesFunnelManager: React.FC<SalesFunnelManagerProps> = ({ onNaviga
                   Recompra & Clientes
                 </span>
                 <span className="font-mono text-[9.5px] font-bold text-emerald-800 bg-emerald-100/90 px-1.5 py-0.5 rounded border border-emerald-200">
-                  R$ {data.ticketMedio.toFixed(2)} Médio
+                  {brl(Number(data.ticketMedio))} Médio
                 </span>
               </div>
-              <p className="text-[11px] text-stone-500 leading-snug">
-                Histórico de clientes para fidelização e vendas.
-              </p>
             </div>
-            <div className="pt-2 mt-2 border-t border-stone-200/60">
+            <div className="pt-2">
               <button
                 onClick={() => onNavigateToTab?.('clientes')}
-                className="w-full h-7 px-2 rounded-lg bg-stone-900 hover:bg-stone-800 text-white text-[10.5px] font-bold flex items-center justify-between transition-all cursor-pointer shadow-2xs"
+                className="w-full h-8 px-2.5 rounded-lg bg-[#6a2092] hover:bg-[#521872] text-white text-[10.5px] font-bold flex items-center justify-between transition-all cursor-pointer shadow-2xs"
               >
                 <span>Acessar Base de Clientes (CRM)</span>
                 <ArrowRight size={12} className="text-stone-300" />

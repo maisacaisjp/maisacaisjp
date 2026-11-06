@@ -6,6 +6,7 @@ import { MESES_CURTOS, brl, num, pct } from '../format';
 import { useDados, useFaturamentoSistema } from '../store';
 import type { FaturamentoMes } from '../types';
 import { Btn, Card, Indicador, NumOpcional, Selo, Vazio } from '../ui';
+import { Paginacao, useListaQueCabe } from '../../components/admin/ui';
 
 const MES_NOME: Record<string, number> = { jan: 1, fev: 2, mar: 3, abr: 4, mai: 5, jun: 6, jul: 7, ago: 8, set: 9, out: 10, nov: 11, dez: 12 };
 
@@ -134,12 +135,14 @@ export default function Historico() {
   const doAno = resumoAnual.find((x) => x.ano === ano);
   const anterior = resumoAnual.find((x) => x.ano === ano - 1);
 
+  const pagMeses = useListaQueCabe(MESES_CURTOS.map((nome, i) => ({ nome, i })), 47, { reserva: 120, resetar: [ano] });
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="text-base font-bold text-stone-900">Histórico de faturamento</h1>
-          <p className="text-xs text-stone-500">Faturamento mês a mês dos anos anteriores. Meses sem valor informado usam o que o sistema registrou.</p>
+          <p className="text-xs text-stone-500 adm-compactavel-esconder">Faturamento mês a mês dos anos anteriores. Meses sem valor informado usam o que o sistema registrou.</p>
         </div>
         <div className="flex items-center gap-2">
           <Btn variante="neutro" onClick={() => setShowModal2020a2026(true)}>
@@ -179,52 +182,8 @@ export default function Historico() {
         </Card>
       )}
 
-      {resumoAnual.length === 0 ? (
-        <Vazio>Nenhum faturamento registrado ainda. Use "Colar da planilha" ou digite mês a mês abaixo.</Vazio>
-      ) : (
-        <Card titulo="Ano a ano">
-          <div className="overflow-x-auto">
-            <table className="fin-tabela">
-              <thead>
-                <tr><th>Ano</th><th className="min-w-40" /><th className="fin-num">Faturamento</th><th className="fin-num">Crescimento</th><th className="fin-num">Média/mês</th><th className="fin-num">Pedidos</th><th className="fin-num">Ticket médio</th><th className="fin-num">Meses</th></tr>
-              </thead>
-              <tbody>
-                {resumoAnual.map((x, i) => {
-                  const ant = resumoAnual[i - 1];
-                  const cresc = ant && ant.ano === x.ano - 1 && ant.meses === 12 && x.meses === 12 ? x.fat / ant.fat - 1 : NaN;
-                  return (
-                    <tr key={x.ano} className={`cursor-pointer hover:bg-stone-50 ${x.ano === ano ? 'bg-[#f7f2fb]' : ''}`} onClick={() => setAno(x.ano)}>
-                      <td className="fin-cheio font-semibold">{x.ano}</td>
-                      <td className="max-md:hidden"><div className="h-2.5 rounded-full bg-stone-100"><div className="h-2.5 rounded-full bg-[#6a2092]" style={{ width: `${(x.fat / maxAno) * 100}%` }} /></div></td>
-                      <td className="fin-num font-semibold" data-label="Faturamento">{brl(x.fat)}</td>
-                      <td className="fin-num" data-label="Crescimento">{Number.isFinite(cresc) ? <Selo tom={cresc >= 0 ? 'ok' : 'ruim'}>{cresc >= 0 ? '+' : ''}{pct(cresc)}</Selo> : <span className="text-stone-300">—</span>}</td>
-                      <td className="fin-num" data-label="Média/mês">{brl(x.fat / x.meses)}</td>
-                      <td className="fin-num" data-label="Pedidos">{x.ped ? num(x.ped) : '—'}</td>
-                      <td className="fin-num" data-label="Ticket médio">{x.ped && x.mesesComPedidos === x.meses ? brl(x.fat / x.ped) : '—'}</td>
-                      <td className="fin-num" data-label="Meses">{x.meses < 12 ? <Selo tom="alerta">{x.meses}/12</Selo> : '12'}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          <p className="mt-2 text-xs text-stone-400">Crescimento só é calculado entre anos completos (12 meses). Clique num ano para ver os meses.</p>
-        </Card>
-      )}
-
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Indicador rotulo={`Faturamento ${ano}`} valor={brl(doAno?.fat ?? 0)} sub={doAno ? `${doAno.meses} meses com dado` : 'sem dados'} />
-        <Indicador rotulo="Média mensal" valor={brl(doAno ? doAno.fat / doAno.meses : 0)} sub={anterior ? `${ano - 1}: ${brl(anterior.fat / anterior.meses)}/mês` : undefined} />
-        <Indicador rotulo="Melhor mês" valor={(() => {
-          let melhor: { m: number; v: number } | null = null;
-          for (let m = 1; m <= 12; m++) {
-            const v = valorMes(`${ano}-${String(m).padStart(2, '0')}`)?.faturamento ?? 0;
-            if (v && (!melhor || v > melhor.v)) melhor = { m, v };
-          }
-          return melhor ? `${MESES_CURTOS[melhor.m - 1]} · ${brl(melhor.v)}` : '—';
-        })()} />
-      </div>
-
+      {/* Meses do ano escolhido à esquerda; ano a ano e resumo à direita */}
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_460px] items-start">
       <Card
         titulo={`Meses de ${ano}`}
         acoes={
@@ -245,13 +204,13 @@ export default function Historico() {
           </div>
         }
       >
-        <div className="overflow-x-auto">
+        <div ref={pagMeses.ref} className="overflow-x-auto">
           <table className="fin-tabela">
             <thead>
               <tr><th>Mês</th><th className="fin-num">Faturamento (R$)</th><th className="fin-num">Pedidos</th><th className="fin-num">Ticket médio</th><th className="fin-num">No sistema</th><th className="fin-num">vs {ano - 1}</th></tr>
             </thead>
             <tbody>
-              {MESES_CURTOS.map((nome, i) => {
+              {pagMeses.itens.map(({ nome, i }) => {
                 const mes = `${ano}-${String(i + 1).padStart(2, '0')}`;
                 const h = hist.get(mes);
                 const sis = sistemaAno.porMes[mes];
@@ -272,8 +231,58 @@ export default function Historico() {
             </tbody>
           </table>
         </div>
-        <p className="mt-2 text-xs text-stone-400">Campo em branco usa o valor do sistema (em cinza). Digite para informar o valor real do mês.</p>
+        <Paginacao {...pagMeses.paginacao} rotulo="meses" className="mt-1" />
+        <p className="mt-1 text-xs text-stone-400 adm-compactavel-esconder">Campo em branco usa o valor do sistema (em cinza). Digite para informar o valor real do mês.</p>
       </Card>
+
+      <div className="space-y-4">
+      {resumoAnual.length === 0 ? (
+        <Vazio>Nenhum faturamento registrado ainda. Use "Colar da planilha" ou digite mês a mês ao lado.</Vazio>
+      ) : (
+        <Card titulo="Ano a ano">
+          <div className="overflow-x-auto">
+            <table className="fin-tabela">
+              <thead>
+                <tr><th>Ano</th><th className="min-w-40 xl:hidden" /><th className="fin-num">Faturamento</th><th className="fin-num">Cresc.</th><th className="fin-num xl:hidden">Média/mês</th><th className="fin-num">Pedidos</th><th className="fin-num">Ticket</th><th className="fin-num">Meses</th></tr>
+              </thead>
+              <tbody>
+                {resumoAnual.map((x, i) => {
+                  const ant = resumoAnual[i - 1];
+                  const cresc = ant && ant.ano === x.ano - 1 && ant.meses === 12 && x.meses === 12 ? x.fat / ant.fat - 1 : NaN;
+                  return (
+                    <tr key={x.ano} className={`cursor-pointer hover:bg-stone-50 ${x.ano === ano ? 'bg-[#f7f2fb]' : ''}`} onClick={() => setAno(x.ano)}>
+                      <td className="fin-cheio font-semibold">{x.ano}</td>
+                      <td className="max-md:hidden xl:hidden"><div className="h-2.5 rounded-full bg-stone-100"><div className="h-2.5 rounded-full bg-[#6a2092]" style={{ width: `${(x.fat / maxAno) * 100}%` }} /></div></td>
+                      <td className="fin-num font-semibold" data-label="Faturamento">{brl(x.fat)}</td>
+                      <td className="fin-num" data-label="Crescimento">{Number.isFinite(cresc) ? <Selo tom={cresc >= 0 ? 'ok' : 'ruim'}>{cresc >= 0 ? '+' : ''}{pct(cresc)}</Selo> : <span className="text-stone-300">—</span>}</td>
+                      <td className="fin-num xl:hidden" data-label="Média/mês">{brl(x.fat / x.meses)}</td>
+                      <td className="fin-num" data-label="Pedidos">{x.ped ? num(x.ped) : '—'}</td>
+                      <td className="fin-num" data-label="Ticket médio">{x.ped && x.mesesComPedidos === x.meses ? brl(x.fat / x.ped) : '—'}</td>
+                      <td className="fin-num" data-label="Meses">{x.meses < 12 ? <Selo tom="alerta">{x.meses}/12</Selo> : '12'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-2 text-xs text-stone-400 adm-compactavel-esconder">Crescimento só entre anos completos (12 meses). Clique num ano para ver os meses.</p>
+        </Card>
+      )}
+
+      <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+        <Indicador rotulo={`Faturamento ${ano}`} valor={brl(doAno?.fat ?? 0)} sub={doAno ? `${doAno.meses} meses com dado` : 'sem dados'} />
+        <Indicador rotulo="Média mensal" valor={brl(doAno ? doAno.fat / doAno.meses : 0)} sub={anterior ? `${ano - 1}: ${brl(anterior.fat / anterior.meses)}/mês` : undefined} />
+        <Indicador rotulo="Melhor mês" valor={(() => {
+          let melhor: { m: number; v: number } | null = null;
+          for (let m = 1; m <= 12; m++) {
+            const v = valorMes(`${ano}-${String(m).padStart(2, '0')}`)?.faturamento ?? 0;
+            if (v && (!melhor || v > melhor.v)) melhor = { m, v };
+          }
+          return melhor ? `${MESES_CURTOS[melhor.m - 1]} · ${brl(melhor.v)}` : '—';
+        })()} />
+      </div>
+      </div>
+      </div>
       <HistoricalSalesModal
         isOpen={showModal2020a2026}
         onClose={() => setShowModal2020a2026(false)}

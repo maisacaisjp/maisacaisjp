@@ -4,6 +4,7 @@ import { brl, pct, uid } from '../format';
 import { useDados } from '../store';
 import type { CustoFixo } from '../types';
 import { Btn, Card, Indicador, Num, Sel, Selo, Txt, Vazio } from '../ui';
+import { Paginacao, useListaQueCabe } from '../../components/admin/ui';
 
 export default function CustosFixos() {
   const { dados, atualizar } = useDados();
@@ -14,6 +15,7 @@ export default function CustosFixos() {
   const categorias = [...new Set([...CATEGORIAS_FIXO, ...dados.custosFixos.map((c) => c.categoria)])];
   const porCategoria = categorias.map((cat) => ({ cat, valor: ativos.filter((c) => c.categoria === cat).reduce((s, c) => s + c.valor, 0) })).filter((x) => x.valor > 0);
   const aConfirmar = dados.custosFixos.filter((c) => c.aConfirmar).length;
+  const pag = useListaQueCabe(dados.custosFixos, 50, { reserva: 150 });
 
   return (
     <div className="space-y-4">
@@ -23,15 +25,17 @@ export default function CustosFixos() {
         <Indicador rotulo="A confirmar" valor={aConfirmar} sub="itens marcados para revisar" tom={aConfirmar ? 'ruim' : 'ok'} />
       </div>
 
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px] items-start">
       <Card
         titulo="Custos fixos mensais"
         acoes={<Btn onClick={() => atualizar((d) => ({ ...d, custosFixos: [...d.custosFixos, { id: uid(), nome: 'Novo custo', categoria: 'Outros', valor: 0, ativo: true }] }))}><Plus size={14} /> Novo custo</Btn>}
       >
-        <p className="mb-3 text-xs text-stone-500">Aluguel, salários, energia, internet, contador, sistema… Tudo o que se paga todo mês, vendendo ou não.</p>
+        <p className="mb-3 text-xs text-stone-500 adm-compactavel-esconder">Aluguel, salários, energia, internet, contador, sistema… Tudo o que se paga todo mês, vendendo ou não.</p>
         {dados.custosFixos.length === 0 ? (
           <Vazio>Nenhum custo fixo cadastrado.</Vazio>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          <div ref={pag.ref} className="overflow-x-auto">
             <table className="fin-tabela">
               <thead>
                 <tr>
@@ -45,7 +49,7 @@ export default function CustosFixos() {
                 </tr>
               </thead>
               <tbody>
-                {dados.custosFixos.map((c) => (
+                {pag.itens.map((c) => (
                   <tr key={c.id} className={c.ativo ? '' : 'opacity-50'}>
                     <td data-label="Ativo"><input type="checkbox" className="h-4 w-4 accent-[#6a2092]" checked={c.ativo} onChange={(e) => mudar(c.id, { ativo: e.target.checked })} /></td>
                     <td className="fin-cheio" data-label="Custo"><Txt value={c.nome} onChange={(v) => mudar(c.id, { nome: v })} /></td>
@@ -81,22 +85,27 @@ export default function CustosFixos() {
               </tfoot>
             </table>
           </div>
+          <Paginacao {...pag.paginacao} rotulo="custos" className="mt-1" />
+          </>
         )}
       </Card>
 
       {porCategoria.length > 0 && (
         <Card titulo="Para onde vai o custo fixo">
-          <div className="space-y-2">
+          <div className="space-y-3">
             {porCategoria.sort((a, b) => b.valor - a.valor).map((x) => (
-              <div key={x.cat} className="grid grid-cols-[170px_1fr_100px] items-center gap-2 text-sm">
-                <span className="truncate text-stone-600">{x.cat}</span>
-                <div className="h-2.5 rounded-full bg-stone-100"><div className="h-2.5 rounded-full bg-[#6a2092]" style={{ width: `${(x.valor / total) * 100}%` }} /></div>
-                <span className="fin-num">{brl(x.valor)}</span>
+              <div key={x.cat} className="space-y-1 text-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="truncate text-stone-600">{x.cat}</span>
+                  <span className="fin-num font-medium">{brl(x.valor)}</span>
+                </div>
+                <div className="h-2 rounded-full bg-stone-100"><div className="h-2 rounded-full bg-[#6a2092]" style={{ width: `${(x.valor / total) * 100}%` }} /></div>
               </div>
             ))}
           </div>
         </Card>
       )}
+      </div>
     </div>
   );
 }

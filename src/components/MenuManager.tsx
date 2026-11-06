@@ -4,9 +4,14 @@ import { MenuItem, ALL_MENU_ITEMS } from '../data/menu';
 import { Plus, Edit2, Trash2, Save, X, Image as ImageIcon, Search, ChevronDown, Check } from 'lucide-react';
 import { CATEGORIA_CREMES, CREMES_GELADOS } from '../data/variacoes';
 import { getSizeOptions } from '../utils/produto';
+import { nomeBonito, tituloCategoria } from '../utils/formatacao';
+import { ChipFiltro, Paginacao, useLinhasQueCabem, usePaginacao } from './admin/ui';
 
 // Rótulo curto de cada tamanho para os botões de pausa
 const ROTULO_TAMANHO: Record<string, string> = { P: '330ml', M: '440ml', G: '550ml', Big: '770ml', 'Super Big': '1 Litro', '2L': '2 Litros' };
+const ROTULO_CURTO: Record<string, string> = { P: '330', M: '440', G: '550', Big: '770', 'Super Big': '1L', '2L': '2L' };
+// Coluna do banco com o preço de cada tamanho (edição rápida na lista)
+const CAMPO_PRECO: Record<string, string> = { P: 'price_p', M: 'price_m', G: 'price_g', Big: 'price_big', 'Super Big': 'price_super_big', '2L': 'price_2l' };
 
 // Linha do banco (snake_case) -> formato usado por getSizeOptions
 const tamanhosDoItem = (item: any) =>
@@ -25,11 +30,17 @@ const tamanhosDoItem = (item: any) =>
 
 /**
  * Cria a categoria CREMES com os sabores (uma única vez).
- * Os itens entram antes da categoria: se algo falhar, tenta de novo no próximo acesso.
+ * A categoria entra primeiro (os produtos dependem dela no banco). Se os sabores falharem,
+ * a categoria é removida para tentar de novo no próximo acesso.
  */
 async function garantirCremes(): Promise<boolean> {
   const { data: cat, error: catErr } = await supabase.from('categories').select('id').eq('id', CATEGORIA_CREMES);
   if (catErr || (cat && cat.length > 0)) return false;
+
+  const { error: novaCatErr } = await supabase
+    .from('categories')
+    .upsert({ id: CATEGORIA_CREMES, name: 'CREMES', order_index: 10, is_active: true }, { onConflict: 'id', ignoreDuplicates: true });
+  if (novaCatErr) throw novaCatErr;
 
   const sabores = CREMES_GELADOS.opcoes.map((o, i) => ({
     id: o.id,
@@ -42,16 +53,15 @@ async function garantirCremes(): Promise<boolean> {
     is_bestseller: false,
   }));
   const { error: itensErr } = await supabase.from('menu_items').upsert(sabores, { onConflict: 'id', ignoreDuplicates: true });
-  if (itensErr) throw itensErr;
+  if (itensErr) {
+    const { data: criados } = await supabase.from('menu_items').select('id').eq('category', CATEGORIA_CREMES);
+    if (!criados || criados.length === 0) await supabase.from('categories').delete().eq('id', CATEGORIA_CREMES);
+    throw itensErr;
+  }
 
-  // Sabores que já estavam indisponíveis entram pausados
+  // Sabores que estão indisponíveis entram pausados
   const pausados = CREMES_GELADOS.opcoes.filter(o => !o.disponivel).map(o => ({ id: o.id }));
   if (pausados.length) await supabase.from('paused_items').upsert(pausados, { onConflict: 'id' });
-
-  const { error: novaCatErr } = await supabase
-    .from('categories')
-    .insert({ id: CATEGORIA_CREMES, name: 'CREMES', order_index: 10, is_active: true });
-  if (novaCatErr) throw novaCatErr;
   return true;
 }
 
@@ -418,203 +428,196 @@ export default function MenuManager() {
     setIsModalOpen(true);
   };
 
-  if (loading) return <div className="p-8 text-center">Carregando dados do banco...</div>;
+  const listaRef = useRef<HTMLDivElement>(null);
+  const porPagina = useLinhasQueCabem(listaRef, 57, { reserva: 130, min: 3, deps: [loading, activeCategory] });
 
   const filteredItems = (activeCategory === 'all' ? items : items.filter(i => i.category === activeCategory))
     .filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase()) || String(i.id).toLowerCase().includes(searchTerm.toLowerCase()) || (i.ingredients && i.ingredients.toLowerCase().includes(searchTerm.toLowerCase())));
+  const paginacao = usePaginacao(filteredItems, porPagina, [activeCategory, searchTerm]);
+
+  if (loading) return <div className="p-8 text-center text-stone-500">Carregando produtos…</div>;
 
   const itensDaCategoria = activeCategory === 'all' ? [] : items.filter(i => i.category === activeCategory);
   const categoriaToda = itensDaCategoria.length > 0 && itensDaCategoria.every(i => pausedItems.includes(i.id));
+  const totalPausados = items.filter(i => pausedItems.includes(i.id)).length;
+  const contarCategoria = (id: string) => items.filter(i => i.category === id).length;
 
   return (
-    <div className="bg-white rounded-xl border border-[#E7E5E1] shadow-[0_1px_2px_rgba(28,25,23,0.04),0_1px_8px_rgba(28,25,23,0.04)] p-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-[#1C1917]">Gerenciar Cardápio</h2>
-          <p className="text-sm text-[#78716C]">Controle total sobre seus produtos e categorias.</p>
-        </div>
-        <div className="flex gap-2">
-          {items.length === 0 && (
-            <button onClick={handleMigrate} className="px-4 py-2.5 bg-amber-600 text-white rounded-lg font-semibold text-sm hover:bg-amber-700 transition-colors">
-              Puxar Cardápio Inicial (Migrar)
+    <div className="bg-white rounded-2xl border border-stone-200/80 shadow-[0_1px_2px_rgba(28,25,23,0.04),0_4px_16px_-8px_rgba(59,2,87,0.08)]">
+      {/* Barra de ferramentas: busca, resumo e ação principal */}
+      <div className="px-4 pt-4 pb-3 space-y-3 border-b border-stone-100">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative w-full sm:w-80">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Buscar produto, sabor ou código"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full h-10 pl-9 pr-3 rounded-xl border border-stone-200 bg-stone-50/60 text-[14px] text-stone-900 placeholder:text-stone-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-brand-600/15 focus:border-brand-600 transition"
+            />
+          </div>
+          <p className="text-[13px] text-stone-500">
+            <span className="font-semibold text-stone-800 tabular-nums">{items.length}</span> produtos
+            {totalPausados > 0 && (
+              <> · <span className="font-semibold text-rose-600 tabular-nums">{totalPausados}</span> pausados</>
+            )}
+          </p>
+          <div className="ml-auto flex items-center gap-2">
+            {items.length === 0 && (
+              <button onClick={handleMigrate} className="h-10 px-4 bg-amber-600 text-white rounded-xl font-semibold text-[14px] hover:bg-amber-700 transition-colors cursor-pointer">
+                Puxar cardápio inicial
+              </button>
+            )}
+            <button onClick={openNewModal} className="h-10 px-4 bg-brand-700 text-white font-semibold rounded-xl text-[14px] hover:bg-brand-800 transition-colors flex items-center gap-2 cursor-pointer shadow-sm">
+              <Plus size={16} /> Novo produto
             </button>
-          )}
-          <button onClick={openNewModal} className="px-4 py-2.5 bg-[#6a2092] text-white font-bold rounded-lg text-sm hover:bg-[#521872] transition-colors flex items-center gap-2 border border-[#521872] cursor-pointer shadow-sm">
-            <Plus size={16} /> Novo Produto
-          </button>
+          </div>
         </div>
+
+        {/* Categorias (quebram linha em vez de esconder) */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <ChipFiltro ativo={activeCategory === 'all'} onClick={() => setActiveCategory('all')} contador={items.length}>Todos</ChipFiltro>
+          {categories.map(cat => (
+            <ChipFiltro key={cat.id} ativo={activeCategory === cat.id} onClick={() => setActiveCategory(cat.id)} contador={contarCategoria(cat.id)}>
+              {tituloCategoria(cat.name)}
+            </ChipFiltro>
+          ))}
+        </div>
+
+        {activeCategory !== 'all' && itensDaCategoria.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-3 px-3 py-2 rounded-xl bg-stone-50 border border-stone-100">
+            <p className="text-[13px] text-stone-600">
+              <span className="font-semibold text-stone-900">{tituloCategoria(categories.find(c => c.id === activeCategory)?.name || activeCategory)}</span>
+              {' · '}{itensDaCategoria.length} {itensDaCategoria.length === 1 ? 'produto' : 'produtos'}
+              {activeCategory === CATEGORIA_CREMES && (
+                <span className="text-stone-500"> · sabores do copo e dos combos: pausou aqui, some do cardápio e do PDV na hora.</span>
+              )}
+            </p>
+            <button
+              onClick={() => togglePauseCategory(activeCategory, categoriaToda)}
+              className={`h-8 px-3 rounded-lg font-semibold text-[13px] transition-colors cursor-pointer ${categoriaToda ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-white text-rose-700 hover:bg-rose-50 border border-rose-200'}`}
+            >
+              {categoriaToda ? 'Ativar categoria inteira' : 'Pausar categoria inteira'}
+            </button>
+          </div>
+        )}
       </div>
 
       {feedback && (
-        <div className="fixed bottom-6 right-6 z-50 bg-stone-900 text-white px-4 py-2.5 rounded-xl shadow-2xl border border-stone-700 text-xs font-bold flex items-center gap-2.5 animate-in fade-in slide-in-from-bottom-4 duration-200">
+        <div className="fixed bottom-6 right-6 z-50 bg-stone-900 text-white px-4 py-2.5 rounded-xl shadow-2xl border border-stone-700 text-[13px] font-semibold flex items-center gap-2.5 animate-in fade-in slide-in-from-bottom-4 duration-200">
           <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
           <span>{feedback}</span>
         </div>
       )}
 
-      {/* Category Filter */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        <div className="flex overflow-x-auto gap-1.5 pb-2 scrollbar-hide flex-1">
-          <button 
-            onClick={() => setActiveCategory('all')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all duration-200 active:scale-95 cursor-pointer ${activeCategory === 'all' ? 'bg-[#6a2092] text-white shadow-md' : 'bg-[#FAFAF9] text-[#78716C] border border-[#E7E5E1] hover:bg-gray-100'}`}
-          >
-            Todos os Produtos
-          </button>
-          {categories.map(cat => (
-            <button 
-              key={cat.id}
-              onClick={() => setActiveCategory(cat.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all duration-200 active:scale-95 cursor-pointer ${activeCategory === cat.id ? 'bg-[#6a2092] text-white shadow-md' : 'bg-[#FAFAF9] text-[#78716C] border border-[#E7E5E1] hover:bg-gray-100'}`}
-            >
-              {cat.name}
-            </button>
-          ))}
-        </div>
-        <div className="w-full sm:w-72 flex-shrink-0 relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search size={16} className="text-stone-400" />
-          </div>
-          <input
-            type="text"
-            placeholder="Buscar produto..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-stone-300 bg-white text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#6a2092]/20 focus:border-[#6a2092] shadow-sm transition-all"
-          />
-        </div>
-      </div>
-
-      {activeCategory !== 'all' && itensDaCategoria.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-4 px-4 py-3 rounded-xl bg-[#FAFAF9] border border-[#E7E5E1]">
-          <div className="text-xs text-stone-600">
-            <span className="font-bold text-stone-900">{categories.find(c => c.id === activeCategory)?.name || activeCategory}</span>
-            {' · '}{itensDaCategoria.length} {itensDaCategoria.length === 1 ? 'produto' : 'produtos'}
-            {activeCategory === CATEGORIA_CREMES && (
-              <span className="block mt-0.5 text-stone-500">Sabores do copo e dos combos. Pausou aqui, some do cardápio e do PDV na hora.</span>
-            )}
-          </div>
-          <button
-            onClick={() => togglePauseCategory(activeCategory, categoriaToda)}
-            className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-colors cursor-pointer ${categoriaToda ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-rose-100 text-rose-700 hover:bg-rose-200 border border-rose-200'}`}
-          >
-            {categoriaToda ? 'Ativar categoria' : 'Pausar categoria'}
-          </button>
-        </div>
-      )}
-
-      {/* Items Table (Quick Edit) */}
-      <div className="bg-white rounded-xl border border-[#E7E5E1] shadow-[0_1px_2px_rgba(28,25,23,0.04)] overflow-hidden overflow-x-auto">
-        <table className="min-w-full text-left border-collapse">
+      {/* Lista (edição rápida): cabe na tela, o resto vai para as próximas páginas */}
+      <div ref={listaRef} className="overflow-x-auto">
+        <table className="w-full table-fixed text-left border-collapse">
+          <colgroup>
+            <col className="w-[34%]" />
+            <col />
+            <col className="w-[136px]" />
+            <col className="w-[92px]" />
+          </colgroup>
           <thead>
-            <tr className="bg-[#FAFAF9] border-b border-[#E7E5E1] text-[11px] font-mono font-bold text-[#78716C] uppercase tracking-wider">
-              <th className="py-3 px-4">Produto</th>
-              <th className="py-3 px-4">Preço(s)</th>
-              <th className="py-3 px-4 text-center">Status</th>
-              <th className="py-3 px-4 text-right">Ações</th>
+            <tr className="border-b border-stone-100 text-[11px] font-semibold text-stone-400 uppercase tracking-wider">
+              <th className="h-9 pl-4 pr-3 font-semibold">Produto</th>
+              <th className="h-9 px-3 font-semibold">Preço por tamanho <span className="normal-case tracking-normal font-normal">· toque no tamanho para pausar só ele</span></th>
+              <th className="h-9 px-3 font-semibold">Disponível</th>
+              <th className="h-9 pl-3 pr-4 font-semibold text-right">Ações</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#F0EFED] text-sm">
-            {filteredItems.map(item => {
+          <tbody className="divide-y divide-stone-100">
+            {paginacao.itens.map(item => {
               const isPaused = pausedItems.includes(item.id);
-              
+              const tamanhos = tamanhosDoItem(item);
+              const precoUnico = item.price_single !== null && item.price_single !== undefined && item.price_single !== '';
+              const imagem = item.image_url ? (item.image_url.startsWith('http') || item.image_url.startsWith('/') ? item.image_url : '/' + item.image_url) : '';
               return (
-                <tr key={item.id} className="hover:bg-stone-50/50 transition-colors">
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-lg bg-stone-100 flex items-center justify-center overflow-hidden shrink-0 border border-stone-200">
-                        {item.image_url ? (
-                          <img src={item.image_url.startsWith('http') ? item.image_url : (item.image_url.startsWith('/') ? item.image_url : '/' + item.image_url)} alt={item.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <ImageIcon size={16} className="text-stone-400" />
-                        )}
+                <tr key={item.id} className={`h-14 transition-colors ${isPaused ? 'bg-stone-50/70' : 'hover:bg-brand-50/40'}`}>
+                  <td className="pl-4 pr-3 py-2">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-10 h-10 rounded-lg bg-stone-100 flex items-center justify-center overflow-hidden shrink-0 ring-1 ring-stone-200/70 ${isPaused ? 'opacity-50 grayscale' : ''}`}>
+                        {imagem ? <img src={imagem} alt="" loading="lazy" className="w-full h-full object-cover" /> : <ImageIcon size={16} className="text-stone-400" />}
                       </div>
-                      <div>
-                        <div className="font-bold text-[#1C1917] line-clamp-1">{item.name}</div>
-                        <span className="text-[10px] uppercase font-mono font-semibold text-stone-500 bg-stone-100 px-1.5 py-0.5 rounded">
-                          {categories.find(c => c.id === item.category)?.name || item.category}
-                        </span>
+                      <div className="min-w-0">
+                        <p className={`text-[14px] font-semibold truncate ${isPaused ? 'text-stone-500' : 'text-stone-900'}`} title={item.name}>{nomeBonito(item.name)}</p>
+                        <p className="text-[12px] text-stone-500 truncate">{tituloCategoria(categories.find(c => c.id === item.category)?.name || item.category)}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="px-3 py-2">
                     {item.category === CATEGORIA_CREMES ? (
-                      <span className="text-xs font-semibold text-stone-500">Sabor · sem custo</span>
-                    ) : item.price_single !== null ? (
-                      <div className="flex items-center gap-1">
-                        <span className="text-stone-500 font-mono">R$</span>
-                        <input 
-                          type="text" 
-                          defaultValue={item.price_single}
+                      <span className="text-[13px] text-stone-500">Sabor · sem custo</span>
+                    ) : tamanhos.length < 2 && (precoUnico || tamanhos.length === 0) ? (
+                      <label className="inline-flex items-center h-8 rounded-lg border border-stone-200 bg-white overflow-hidden focus-within:border-brand-600 focus-within:ring-2 focus-within:ring-brand-600/15">
+                        <span className="h-full px-2 flex items-center text-[12px] font-semibold text-stone-400 border-r border-stone-200 bg-stone-50">R$</span>
+                        <input
+                          key={`${item.id}-single-${item.price_single}`}
+                          type="text"
+                          inputMode="decimal"
+                          defaultValue={item.price_single !== null && item.price_single !== undefined ? String(item.price_single).replace('.', ',') : ''}
                           onBlur={(e) => handleQuickPriceEdit(item.id, 'price_single', e.target.value)}
-                          className="w-16 px-2 py-1 text-sm font-mono font-bold border border-stone-200 rounded-md focus:border-[#6a2092] focus:ring-1 focus:ring-[#6a2092]/20 outline-none"
+                          className="w-16 h-full px-2 text-[13px] font-semibold text-stone-900 tabular-nums text-right outline-none"
+                          aria-label={`Preço de ${item.name}`}
                         />
-                      </div>
+                      </label>
                     ) : (
-                      <div className="flex items-center gap-3">
-                        <div className="flex flex-col">
-                          <span className="text-[9px] font-mono text-stone-400">Peq</span>
-                          <div className="flex items-center gap-0.5">
-                            <span className="text-stone-400 font-mono text-xs">R$</span>
-                            <input type="text" defaultValue={item.price_p} onBlur={(e) => handleQuickPriceEdit(item.id, 'price_p', e.target.value)} className="w-12 px-1.5 py-0.5 text-xs font-mono font-bold border border-stone-200 rounded-md outline-none focus:border-[#6a2092]" />
-                          </div>
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-[9px] font-mono text-stone-400">Méd</span>
-                          <div className="flex items-center gap-0.5">
-                            <span className="text-stone-400 font-mono text-xs">R$</span>
-                            <input type="text" defaultValue={item.price_m} onBlur={(e) => handleQuickPriceEdit(item.id, 'price_m', e.target.value)} className="w-12 px-1.5 py-0.5 text-xs font-mono font-bold border border-stone-200 rounded-md outline-none focus:border-[#6a2092]" />
-                          </div>
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-[9px] font-mono text-stone-400">Grd</span>
-                          <div className="flex items-center gap-0.5">
-                            <span className="text-stone-400 font-mono text-xs">R$</span>
-                            <input type="text" defaultValue={item.price_g} onBlur={(e) => handleQuickPriceEdit(item.id, 'price_g', e.target.value)} className="w-12 px-1.5 py-0.5 text-xs font-mono font-bold border border-stone-200 rounded-md outline-none focus:border-[#6a2092]" />
-                          </div>
-                        </div>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {tamanhos.map(t => {
+                          const campo = CAMPO_PRECO[t.size];
+                          const chave = `${item.id}-${t.pauseKey}`;
+                          const pausado = pausedItems.includes(chave);
+                          const valorCampo = item[campo];
+                          return (
+                            <div key={chave} className={`inline-flex items-center h-8 rounded-lg border overflow-hidden transition-colors focus-within:ring-2 focus-within:ring-brand-600/15 ${pausado ? 'border-rose-200 bg-rose-50/60' : 'border-stone-200 bg-white focus-within:border-brand-600'}`}>
+                              {tamanhos.length > 1 ? (
+                                <button
+                                  onClick={() => togglePauseItem(chave)}
+                                  title={pausado ? `Ativar ${ROTULO_TAMANHO[t.size] || t.size}` : `Pausar só o ${ROTULO_TAMANHO[t.size] || t.size}`}
+                                  className={`h-full px-2 text-[12px] font-semibold border-r transition-colors cursor-pointer ${pausado ? 'text-rose-600 line-through border-rose-200' : 'text-stone-500 border-stone-200 bg-stone-50 hover:text-brand-700 hover:bg-brand-50'}`}
+                                >
+                                  {ROTULO_CURTO[t.size] || t.size}
+                                </button>
+                              ) : (
+                                <span className="h-full px-2 flex items-center text-[12px] font-semibold text-stone-500 border-r border-stone-200 bg-stone-50">{ROTULO_CURTO[t.size] || t.size}</span>
+                              )}
+                              <input
+                                key={`${item.id}-${campo}-${valorCampo}`}
+                                type="text"
+                                inputMode="decimal"
+                                defaultValue={valorCampo !== null && valorCampo !== undefined ? String(valorCampo).replace('.', ',') : ''}
+                                placeholder={String(t.price).replace('.', ',')}
+                                onBlur={(e) => campo && e.target.value && handleQuickPriceEdit(item.id, campo, e.target.value)}
+                                className={`w-12 h-full px-1.5 text-[13px] font-semibold tabular-nums text-right outline-none bg-transparent ${pausado ? 'text-rose-400' : 'text-stone-900'}`}
+                                aria-label={`Preço ${ROTULO_TAMANHO[t.size] || t.size} de ${item.name}`}
+                              />
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </td>
-                  <td className="py-3 px-4 text-center">
+                  <td className="px-3 py-2">
                     <button
                       onClick={() => togglePauseItem(item.id)}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${!isPaused ? 'bg-emerald-500' : 'bg-stone-300'}`}
+                      className="inline-flex items-center gap-2 cursor-pointer"
+                      aria-pressed={!isPaused}
+                      title={isPaused ? 'Ativar no cardápio' : 'Pausar no cardápio'}
                     >
-                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${!isPaused ? 'translate-x-6' : 'translate-x-1'}`} />
+                      <span className={`relative inline-flex h-6 w-10 shrink-0 items-center rounded-full transition-colors ${!isPaused ? 'bg-emerald-500' : 'bg-stone-300'}`}>
+                        <span className={`inline-block h-[18px] w-[18px] transform rounded-full bg-white shadow-sm transition-transform ${!isPaused ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                      </span>
+                      <span className={`text-[13px] font-semibold ${isPaused ? 'text-rose-600' : 'text-emerald-700'}`}>{isPaused ? 'Pausado' : 'Ativo'}</span>
                     </button>
-                    <div className={`text-[10px] font-mono font-bold mt-1 ${isPaused ? 'text-red-500' : 'text-emerald-600'}`}>
-                      {isPaused ? 'PAUSADO' : 'ATIVO'}
-                    </div>
-                    {(() => {
-                      const tamanhos = tamanhosDoItem(item);
-                      if (tamanhos.length < 2) return null;
-                      return (
-                        <div className="mt-2 flex flex-wrap justify-center gap-1 max-w-[180px] mx-auto" title="Pausar só um tamanho">
-                          {tamanhos.map(t => {
-                            const chave = `${item.id}-${t.pauseKey}`;
-                            const pausado = pausedItems.includes(chave);
-                            return (
-                              <button
-                                key={chave}
-                                onClick={() => togglePauseItem(chave)}
-                                title={pausado ? `Ativar ${ROTULO_TAMANHO[t.size] || t.size}` : `Pausar ${ROTULO_TAMANHO[t.size] || t.size}`}
-                                className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border transition-colors cursor-pointer ${pausado ? 'bg-rose-100 text-rose-700 border-rose-300 line-through' : 'bg-stone-100 text-stone-700 border-stone-200 hover:bg-stone-200'}`}
-                              >
-                                {ROTULO_TAMANHO[t.size] || t.size}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      );
-                    })()}
                   </td>
-                  <td className="py-3 px-4 text-right">
+                  <td className="pl-3 pr-4 py-2">
                     <div className="flex items-center justify-end gap-1">
-                      <button onClick={() => { setEditingItem(item); setIsModalOpen(true); }} className="p-1.5 text-stone-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-200" title="Editar Completo">
+                      <button onClick={() => { setEditingItem(item); setIsModalOpen(true); }} className="w-8 h-8 flex items-center justify-center text-stone-500 hover:text-brand-700 hover:bg-brand-50 rounded-lg transition-colors cursor-pointer" title="Editar produto">
                         <Edit2 size={16} />
                       </button>
-                      <button onClick={() => handleDelete(item.id)} className="p-1.5 text-stone-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-200" title="Excluir">
+                      <button onClick={() => handleDelete(item.id)} className="w-8 h-8 flex items-center justify-center text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer" title="Excluir">
                         <Trash2 size={16} />
                       </button>
                     </div>
@@ -624,14 +627,27 @@ export default function MenuManager() {
             })}
           </tbody>
         </table>
+
+        {items.length > 0 && filteredItems.length === 0 && (
+          <div className="py-12 text-center text-[14px] text-stone-500">Nenhum produto encontrado para “{searchTerm}”.</div>
+        )}
+        {items.length === 0 && (
+          <div className="text-center py-12 text-[14px] text-stone-500">
+            Nenhum produto cadastrado no banco de dados ainda.<br />
+            Clique em “Puxar cardápio inicial” para importar os dados do código.
+          </div>
+        )}
       </div>
 
-      {items.length === 0 && (
-         <div className="text-center py-12 text-gray-500">
-           Nenhum produto cadastrado no banco de dados ainda. <br/>
-           Clique em "Puxar Cardápio Inicial" para importar os dados do código.
-         </div>
-      )}
+      <Paginacao
+        pagina={paginacao.pagina}
+        totalPaginas={paginacao.totalPaginas}
+        inicio={paginacao.inicio}
+        mostrando={paginacao.itens.length}
+        total={filteredItems.length}
+        onIr={paginacao.irPara}
+        rotulo={filteredItems.length === 1 ? 'produto' : 'produtos'}
+      />
 
       {/* Editor Modal */}
       {isModalOpen && editingItem && (
@@ -723,7 +739,7 @@ export default function MenuManager() {
 
                 <div className="pt-2 border-t border-stone-200 mt-2 flex items-center justify-between">
                   <span className="block text-[10px] font-mono font-bold text-stone-500 uppercase tracking-wider">Enviar do PC:</span>
-                  <label className="cursor-pointer bg-stone-900 hover:bg-stone-950 text-white px-3 py-1 rounded text-[10px] font-bold uppercase transition-colors shadow-sm">
+                  <label className="cursor-pointer bg-[#6a2092] hover:bg-[#521872] text-white px-3 py-1 rounded text-[10px] font-bold uppercase transition-colors shadow-sm">
                     {uploadingImage ? 'Enviando...' : 'Escolher Arquivo'}
                     <input 
                       type="file" 

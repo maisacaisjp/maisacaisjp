@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 import { getItemNameTextForPrint, formatItemNameForPrint } from '../utils/printHelpers';
 import { paymentParts, detailPaymentMethod } from '../utils/paymentAndOrderHelper';
+import { brl } from '../utils/formatacao';
 
 interface ReportModalProps {
   isOpen: boolean;
@@ -113,15 +114,15 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                     <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
                       <span className="text-[10px] font-mono font-bold text-emerald-800 uppercase tracking-wider block mb-0.5">Entradas (Vendas)</span>
-                      <span className="text-lg font-black font-mono text-emerald-700">R$ {totEntradas.toFixed(2)}</span>
+                      <span className="text-lg font-black font-mono text-emerald-700">{brl(Number(totEntradas))}</span>
                     </div>
                     <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl">
                       <span className="text-[10px] font-mono font-bold text-rose-800 uppercase tracking-wider block mb-0.5">Saídas (Despesas)</span>
-                      <span className="text-lg font-black font-mono text-rose-700">R$ {totSaidas.toFixed(2)}</span>
+                      <span className="text-lg font-black font-mono text-rose-700">{brl(Number(totSaidas))}</span>
                     </div>
                     <div className="p-3 bg-stone-900 border border-stone-800 rounded-xl text-white">
                       <span className="text-[10px] font-mono font-bold text-stone-400 uppercase tracking-wider block mb-0.5">Lucro Líquido</span>
-                      <span className={`text-lg font-black font-mono ${lucroTotal >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>R$ {lucroTotal.toFixed(2)}</span>
+                      <span className={`text-lg font-black font-mono ${lucroTotal >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{brl(Number(lucroTotal))}</span>
                     </div>
                     <div className="p-3 bg-stone-100 border border-stone-200 rounded-xl">
                       <span className="text-[10px] font-mono font-bold text-stone-600 uppercase tracking-wider block mb-0.5">Margem Líquida</span>
@@ -172,9 +173,9 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                           <tr key={day.date} className="hover:bg-stone-50 transition-colors">
                             <td className="px-3.5 py-2.5 font-bold text-stone-900">{day.date}</td>
                             <td className="px-3.5 py-2.5 text-center text-stone-600">{day.orders}</td>
-                            <td className="px-3.5 py-2.5 text-right font-bold text-emerald-600">R$ {Number(day.revenue || 0).toFixed(2)}</td>
-                            <td className="px-3.5 py-2.5 text-right font-bold text-rose-600">R$ {Number(day.expenses || 0).toFixed(2)}</td>
-                            <td className="px-3.5 py-2.5 text-right font-bold text-stone-900">R$ {Number(day.profit || 0).toFixed(2)}</td>
+                            <td className="px-3.5 py-2.5 text-right font-bold text-emerald-600">{brl(Number(Number(day.revenue || 0)))}</td>
+                            <td className="px-3.5 py-2.5 text-right font-bold text-rose-600">{brl(Number(Number(day.expenses || 0)))}</td>
+                            <td className="px-3.5 py-2.5 text-right font-bold text-stone-900">{brl(Number(Number(day.profit || 0)))}</td>
                             <td className="px-3.5 py-2.5 text-right font-bold text-stone-600">{Number(day.margin || 0).toFixed(1)}%</td>
                           </tr>
                         ))}
@@ -184,9 +185,9 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                           <tr>
                             <td className="px-3.5 py-2.5 uppercase">Total Geral</td>
                             <td className="px-3.5 py-2.5 text-center">{cashData.reduce((acc: number, c: any) => acc + (c.orders || 0), 0)}</td>
-                            <td className="px-3.5 py-2.5 text-right text-emerald-700">R$ {totEntradas.toFixed(2)}</td>
-                            <td className="px-3.5 py-2.5 text-right text-rose-700">R$ {totSaidas.toFixed(2)}</td>
-                            <td className="px-3.5 py-2.5 text-right text-stone-900">R$ {lucroTotal.toFixed(2)}</td>
+                            <td className="px-3.5 py-2.5 text-right text-emerald-700">{brl(Number(totEntradas))}</td>
+                            <td className="px-3.5 py-2.5 text-right text-rose-700">{brl(Number(totSaidas))}</td>
+                            <td className="px-3.5 py-2.5 text-right text-stone-900">{brl(Number(lucroTotal))}</td>
                             <td className="px-3.5 py-2.5 text-right">{margemTotal.toFixed(1)}%</td>
                           </tr>
                         </tfoot>
@@ -220,7 +221,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                   <div className="flex justify-between items-center bg-blue-50 border border-blue-200 p-3.5 rounded-xl">
                     <div>
                       <span className="text-[10.5px] font-mono font-bold text-blue-900 uppercase">Faturamento Total do Período</span>
-                      <p className="text-xl font-black font-mono text-blue-700">R$ {reportOrders.reduce((acc, o) => acc + (Number(o.totalAmount) || 0), 0).toFixed(2)}</p>
+                      <p className="text-xl font-black font-mono text-blue-700">{brl(Number(reportOrders.reduce((acc, o) => acc + (Number(o.totalAmount) || 0), 0)))}</p>
                     </div>
                     <span className="text-xs font-mono font-bold px-2.5 py-1 bg-blue-100 text-blue-800 rounded-lg">{reportOrders.length} pedidos</span>
                   </div>
@@ -242,8 +243,8 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                             <tr key={date} className="hover:bg-stone-50">
                               <td className="px-3.5 py-2 font-bold text-stone-900">{date}</td>
                               <td className="px-3.5 py-2 text-center text-stone-600">{item.count}</td>
-                              <td className="px-3.5 py-2 text-right font-bold text-stone-700">R$ {(item.revenue / (item.count || 1)).toFixed(2)}</td>
-                              <td className="px-3.5 py-2 text-right font-bold text-emerald-600">R$ {item.revenue.toFixed(2)}</td>
+                              <td className="px-3.5 py-2 text-right font-bold text-stone-700">{brl(Number((item.revenue / (item.count || 1))))}</td>
+                              <td className="px-3.5 py-2 text-right font-bold text-emerald-600">{brl(Number(item.revenue))}</td>
                             </tr>
                           ))}
                           {dailyList.length === 0 && (
@@ -274,7 +275,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                               <td className="py-2 px-3 text-stone-500">{new Date(o.createdAt).toLocaleString('pt-BR')}</td>
                               <td className="py-2 px-3 text-stone-700">{o.customerName || 'Cliente Balcão'}</td>
                               <td className="py-2 px-3 uppercase text-[10px] text-stone-600">{o.orderType || 'balcao'}</td>
-                              <td className="py-2 px-3 text-right font-bold text-emerald-600">R$ {Number(o.totalAmount || 0).toFixed(2)}</td>
+                              <td className="py-2 px-3 text-right font-bold text-emerald-600">{brl(Number(Number(o.totalAmount || 0)))}</td>
                             </tr>
                           ))}
                           {reportOrders.length === 0 && (
@@ -311,7 +312,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                     <div className="flex flex-wrap items-center gap-2.5 font-mono text-xs">
                       <div className="bg-white px-3 py-1.5 rounded-lg border border-amber-200">
                         <span className="text-[9.5px] text-amber-700 uppercase block font-bold">Faturamento Total</span>
-                        <span className="text-base font-black text-stone-900">R$ {totalFaturado.toFixed(2)}</span>
+                        <span className="text-base font-black text-stone-900">{brl(Number(totalFaturado))}</span>
                       </div>
                       <span className="text-lg font-black text-amber-700">÷</span>
                       <div className="bg-white px-3 py-1.5 rounded-lg border border-amber-200">
@@ -321,7 +322,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                       <span className="text-lg font-black text-amber-700">=</span>
                       <div className="bg-amber-500 text-stone-950 px-3 py-1.5 rounded-lg shadow-2xs font-bold border border-amber-600">
                         <span className="text-[9.5px] uppercase block font-bold text-amber-950">Ticket Médio Geral</span>
-                        <span className="text-base font-black">R$ {ticketGeral.toFixed(2)}</span>
+                        <span className="text-base font-black">{brl(Number(ticketGeral))}</span>
                       </div>
                     </div>
                   </div>
@@ -337,8 +338,8 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                             <span className="text-[10px] font-bold text-stone-500 uppercase block mb-0.5">
                               {orderTypeKey === 'entrega' ? 'Entrega / Delivery' : orderTypeKey === 'mesa' ? 'Mesa' : 'Balcão / Retirada'}
                             </span>
-                            <p className="text-lg font-black text-stone-900">R$ {tAvg.toFixed(2)}</p>
-                            <span className="text-[9.5px] text-stone-400 mt-0.5 block">{data.count} pedidos • R$ {data.rev.toFixed(2)}</span>
+                            <p className="text-lg font-black text-stone-900">{brl(Number(tAvg))}</p>
+                            <span className="text-[9.5px] text-stone-400 mt-0.5 block">{data.count} pedidos • {brl(Number(data.rev))}</span>
                           </div>
                         );
                       })}
@@ -386,7 +387,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                         <tr key={idx} className="hover:bg-stone-50">
                           <td className="py-2 px-3.5 font-medium text-stone-900">{formatItemNameForPrint({ name })}</td>
                           <td className="py-2 px-3.5 text-center text-stone-600">{data.qty}</td>
-                          <td className="py-2 px-3.5 text-right font-bold text-emerald-700">R$ {data.rev.toFixed(2)}</td>
+                          <td className="py-2 px-3.5 text-right font-bold text-emerald-700">{brl(Number(data.rev))}</td>
                         </tr>
                       ))}
                       {sorted.length === 0 && (
@@ -428,7 +429,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                         <tr key={idx} className="hover:bg-stone-50">
                           <td className="py-2 px-3.5 font-medium text-stone-900">{pm}</td>
                           <td className="py-2 px-3.5 text-center text-stone-600">{data.count}</td>
-                          <td className="py-2 px-3.5 text-right font-bold text-emerald-700">R$ {data.rev.toFixed(2)}</td>
+                          <td className="py-2 px-3.5 text-right font-bold text-emerald-700">{brl(Number(data.rev))}</td>
                         </tr>
                       ))}
                       {sorted.length === 0 && (
@@ -445,7 +446,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
               <div>
                 <div className="flex justify-between items-center bg-stone-50 p-3.5 rounded-xl mb-4 border border-stone-200">
                   <span className="font-bold text-xs font-mono text-stone-700">Total no período:</span>
-                  <span className="font-black text-xl font-mono text-emerald-700">R$ {reportOrders.reduce((acc, o: any) => acc + (Number(o.totalAmount) || 0), 0).toFixed(2)}</span>
+                  <span className="font-black text-xl font-mono text-emerald-700">{brl(Number(reportOrders.reduce((acc, o: any) => acc + (Number(o.totalAmount) || 0), 0)))}</span>
                 </div>
                 <div className="overflow-x-auto border border-stone-200 rounded-xl max-h-[360px]">
                   <table className="w-full text-left border-collapse text-xs">
@@ -469,7 +470,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                               {o.status}
                             </span>
                           </td>
-                          <td className="py-2 px-3.5 text-right font-bold text-emerald-700">R$ {Number(o.totalAmount || 0).toFixed(2)}</td>
+                          <td className="py-2 px-3.5 text-right font-bold text-emerald-700">{brl(Number(Number(o.totalAmount || 0)))}</td>
                         </tr>
                       ))}
                       {reportOrders.length === 0 && (

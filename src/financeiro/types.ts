@@ -51,7 +51,7 @@ export interface Ficha {
   categoria: string;
   tipo: 'copo' | 'unico' | 'adicional';
   baseIds: Partial<Record<Tamanho, string>>;
-  recheio: ItemReceita[]; // complementos (no copo, quantidades do G)
+  recheio: ItemReceita[]; // complementos (no copo, qtd = 330ml; qtdM/qtdG = 440/550 quando pesados)
   precos: Partial<Record<Tamanho, number>>;
   obs?: string;
 }
@@ -96,6 +96,81 @@ export interface Config {
   diasTrabalhados: number;
 }
 
+// ─── Contábil ────────────────────────────────────────────────────────────────
+export type Regime = 'simples' | 'mei' | 'manual';
+
+export interface ConfigImposto {
+  regime: Regime;
+  aliquotaManual: number | null; // %; no Simples, se preenchida substitui a calculada pela RBT12
+  dasMei: number; // R$ por mês (MEI)
+}
+
+// Bem do imobilizado (máquina de açaí, freezer, balcão, moto...)
+export interface Bem {
+  id: string;
+  nome: string;
+  categoria: string;
+  dataAquisicao: string; // yyyy-mm-dd
+  valor: number;
+  vidaUtilAnos: number;
+  baixadoEm?: string; // vendido ou descartado
+  lancamentoId?: string; // lançamento de origem (Equipamentos / investimento)
+  obs?: string;
+}
+
+export type Frequencia = 'semanal' | 'mensal' | 'anual';
+
+export interface Obrigacao {
+  id: string;
+  nome: string;
+  descricao?: string;
+  frequencia: Frequencia;
+  dia: number; // semanal: 1 = segunda ... 7 = domingo; mensal/anual: dia do mês (ou n-ésimo dia útil)
+  mes?: number; // anual
+  diaUtil?: boolean; // mensal: "5º dia útil"
+  ajuste?: 'antecipa' | 'posterga'; // vencimento no fim de semana
+  antecedencia: number; // dias de aviso antes do vencimento
+  responsavel: 'loja' | 'contador';
+  condicao?: 'simples' | 'mei' | 'funcionarios';
+  ativo: boolean;
+  destino?: SecaoContabil | 'lancamentos';
+  personalizada?: boolean;
+}
+
+export type SecaoContabil = 'dre' | 'balanco' | 'impostos' | 'obrigacoes' | 'imobilizado' | 'escrituracao';
+
+export interface BalancoAno {
+  caixa: number;
+  bancos: number;
+  cartoesReceber: number;
+  estoque: number;
+  outrosAtivos: number;
+  fornecedores: number;
+  salariosPagar: number;
+  impostosRecolher: number;
+  emprestimosCP: number;
+  outrasContasPagar: number;
+  emprestimosLP: number;
+  capitalSocial: number;
+  lucrosAnteriores: number | null; // null = usa o fechamento do ano anterior
+  resultadoManual: number | null; // null = usa o DRE anual calculado
+  retiradasManual: number | null; // null = soma das retiradas lançadas
+  obs?: string;
+  fechadoEm?: string;
+  lucrosFinais?: number; // gravado ao fechar: vira o saldo inicial do ano seguinte
+}
+
+export interface Contabil {
+  imposto: ConfigImposto;
+  temFuncionarios: boolean;
+  bens: Bem[];
+  obrigacoes: Obrigacao[];
+  concluidas: Record<string, string>; // "<obrigacao>|<período>" → data em que foi feita
+  mapa: Record<string, string>; // "lanc:<cat>" | "desp:<cat>" | "fixo:<cat>" → código da conta
+  balancos: Record<string, BalancoAno>; // por ano
+  inicioAgenda: string; // yyyy-mm-dd: vencimentos anteriores não são cobrados
+}
+
 export interface Dados {
   versao: 1;
   insumos: Insumo[];
@@ -106,6 +181,17 @@ export interface Dados {
   lancamentos: Lancamento[];
   historico: FaturamentoMes[];
   config: Config;
+  contabil: Contabil;
+}
+
+// Gasto registrado na aba Despesas do gestor (tabela expenses)
+export interface DespesaCaixa {
+  id: number | string;
+  description: string;
+  amount: number;
+  category: string;
+  payment_method: string;
+  created_at: string;
 }
 
 // Somente leitura, vindo do gestor
@@ -128,6 +214,7 @@ export interface AdicionalCardapio {
 }
 
 export interface ItemPedido {
+  id?: string; // o PDV grava o id do produto
   name: string;
   category?: string;
   quantity: number;

@@ -23,11 +23,14 @@ AS $$
       m.sort_order,
       '- ' || m.name ||
       CASE
-        WHEN m.price_p IS NOT NULL OR m.price_m IS NOT NULL OR m.price_g IS NOT NULL THEN
+        WHEN m.price_p IS NOT NULL OR m.price_m IS NOT NULL OR m.price_g IS NOT NULL OR m.price_big IS NOT NULL OR m.price_super_big IS NOT NULL OR m.price_2l IS NOT NULL THEN
           ': ' || concat_ws(' | ',
             CASE WHEN m.price_p IS NOT NULL THEN '330ml R$ ' || replace(to_char(m.price_p, 'FM9990.00'), '.', ',') END,
             CASE WHEN m.price_m IS NOT NULL THEN '440ml R$ ' || replace(to_char(m.price_m, 'FM9990.00'), '.', ',') END,
-            CASE WHEN m.price_g IS NOT NULL THEN '550ml R$ ' || replace(to_char(m.price_g, 'FM9990.00'), '.', ',') END)
+            CASE WHEN m.price_g IS NOT NULL THEN '550ml R$ ' || replace(to_char(m.price_g, 'FM9990.00'), '.', ',') END,
+            CASE WHEN m.price_big IS NOT NULL THEN '770ml R$ ' || replace(to_char(m.price_big, 'FM9990.00'), '.', ',') END,
+            CASE WHEN m.price_super_big IS NOT NULL THEN '1L R$ ' || replace(to_char(m.price_super_big, 'FM9990.00'), '.', ',') END,
+            CASE WHEN m.price_2l IS NOT NULL THEN '2L R$ ' || replace(to_char(m.price_2l, 'FM9990.00'), '.', ',') END)
         ELSE ': R$ ' || replace(to_char(m.price_single, 'FM9990.00'), '.', ',')
       END ||
       CASE WHEN coalesce(m.ingredients, '') <> '' THEN ' — ' || regexp_replace(m.ingredients, '\s+', ' ', 'g') ELSE '' END

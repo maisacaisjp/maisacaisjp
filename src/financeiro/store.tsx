@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import { dadosIniciais, migrar } from './constantes';
-import type { AdicionalCardapio, Dados, Pedido, ProdutoCardapio } from './types';
+import type { AdicionalCardapio, Dados, Pedido, ProdutoCardapio, SecaoContabil } from './types';
 
 // Os dados do Financeiro ficam na tabela financeiro_maisacai (FINANCEIRO_MAIS_ACAI.sql),
 // visível só para o dono logado. O navegador guarda uma cópia para não perder nada se a internet cair.
@@ -9,7 +9,7 @@ const TABELA = 'financeiro_maisacai';
 const LINHA = 'principal';
 const CACHE = 'maisacai_financeiro_cache_v1';
 
-export type Aba = 'painel' | 'fichas' | 'insumos' | 'preparos' | 'fixos' | 'lancamentos' | 'vendas' | 'historico' | 'ajustes';
+export type Aba = 'painel' | 'contabil' | 'fichas' | 'insumos' | 'preparos' | 'fixos' | 'lancamentos' | 'vendas' | 'historico' | 'ajustes';
 export type StatusSalvo = 'carregando' | 'salvo' | 'salvando' | 'pendente' | 'erro' | 'conflito' | 'sem-tabela' | 'sem-permissao';
 
 interface Ctx {
@@ -27,6 +27,8 @@ interface Ctx {
   irPara: (aba: Aba, fichaId?: string) => void;
   fichaSel: string | null;
   setFichaSel: (id: string | null) => void;
+  secao: SecaoContabil;
+  abrirContabil: (s: SecaoContabil) => void;
 }
 
 const DadosCtx = createContext<Ctx | null>(null);
@@ -51,7 +53,7 @@ const ehTabelaAusente = (e: { code?: string; message?: string }) =>
   e.code === '42P01' || e.code === 'PGRST205' || /does not exist|schema cache/i.test(e.message ?? '');
 const ehSemPermissao = (e: { code?: string; message?: string }) => e.code === '42501' || /permission denied|row-level security/i.test(e.message ?? '');
 
-export function FinanceiroProvider({ children }: { children: ReactNode }) {
+export function FinanceiroProvider({ children, abaInicial = 'painel', secaoInicial = 'dre' }: { children: ReactNode; abaInicial?: Aba; secaoInicial?: SecaoContabil }) {
   const [dados, setDados] = useState<Dados>(() => lerCache() ?? dadosIniciais());
   const [status, setStatus] = useState<StatusSalvo>('carregando');
   const [erroSalvar, setErroSalvar] = useState<string | null>(null);
@@ -59,7 +61,8 @@ export function FinanceiroProvider({ children }: { children: ReactNode }) {
   const [cardapio, setCardapio] = useState<ProdutoCardapio[]>([]);
   const [adicionais, setAdicionais] = useState<AdicionalCardapio[]>([]);
   const [cardapioErro, setCardapioErro] = useState<string | null>(null);
-  const [aba, setAba] = useState<Aba>('painel');
+  const [aba, setAba] = useState<Aba>(abaInicial);
+  const [secao, setSecao] = useState<SecaoContabil>(secaoInicial);
   const [fichaSel, setFichaSel] = useState<string | null>(null);
 
   const ultimaVersao = useRef<string | null>(null); // updated_at conhecido no banco
@@ -188,6 +191,11 @@ export function FinanceiroProvider({ children }: { children: ReactNode }) {
     },
     fichaSel,
     setFichaSel,
+    secao,
+    abrirContabil: (s) => {
+      setSecao(s);
+      setAba('contabil');
+    },
   };
   return <DadosCtx.Provider value={ctx}>{children}</DadosCtx.Provider>;
 }
@@ -205,7 +213,7 @@ const proximoMes = (mes: string) => {
   return m === 12 ? `${a + 1}-01` : `${a}-${String(m + 1).padStart(2, '0')}`;
 };
 
-async function lerPedidos(de: string, ate: string, campos: string): Promise<Pedido[]> {
+export async function lerPedidos(de: string, ate: string, campos: string): Promise<Pedido[]> {
   const todos: Pedido[] = [];
   for (let offset = 0; ; offset += 1000) {
     const { data, error } = await supabase

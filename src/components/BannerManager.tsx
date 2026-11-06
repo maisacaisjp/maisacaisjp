@@ -80,27 +80,7 @@ export default function BannerManager() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header Banner */}
-      <div className="bg-white rounded-xl border border-[#E7E5E1] shadow-[0_1px_2px_rgba(28,25,23,0.04),0_1px_8px_rgba(28,25,23,0.04)] p-6">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-xl bg-[#f5eefa] border border-[#e4d0f2] text-[#6a2092] flex items-center justify-center shrink-0">
-              <Megaphone className="w-6 h-6" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-[#1C1917]">Banner Promocional / Pop-up do Site</h2>
-              <p className="text-sm text-[#78716C]">Crie avisos, ofertas especiais e mensagens que aparecem na tela do cliente ao abrir a loja.</p>
-            </div>
-          </div>
-          
-          <div className={`px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 border ${promoConfig.active ? 'bg-[#F0FDF4] text-[#15803D] border-[#BBF7D0]' : 'bg-[#FAFAF9] text-[#78716C] border-[#E7E5E1]'}`}>
-            <span className={`w-2 h-2 rounded-full ${promoConfig.active ? 'bg-[#16A34A] animate-pulse' : 'bg-[#A8A29E]'}`} />
-            {promoConfig.active ? 'POP-UP ATIVO NA LOJA' : 'POP-UP DESATIVADO'}
-          </div>
-        </div>
-      </div>
-
+    <div className="space-y-4">
       {feedback && (
         <div className="p-4 bg-[#EFF6FF] border border-[#BFDBFE] text-[#1D4ED8] rounded-xl text-sm font-semibold flex items-center gap-2">
           <Sparkles className="w-4 h-4 shrink-0" />
@@ -109,104 +89,102 @@ export default function BannerManager() {
       )}
 
       {/* Main Grid: Form + Live Preview */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Form Column */}
         <div className="lg:col-span-7 space-y-6">
           <div className="bg-white rounded-xl border border-[#E7E5E1] shadow-[0_1px_2px_rgba(28,25,23,0.04),0_1px_8px_rgba(28,25,23,0.04)] p-6">
-            <form onSubmit={handleSave} className="space-y-5">
-              {/* Active Toggle */}
-              <div className={`p-4 rounded-xl border transition-all ${promoConfig.active ? 'bg-[#F0FDF4] border-[#BBF7D0]' : 'bg-[#FAFAF9] border-[#E7E5E1]'}`}>
+            <form onSubmit={handleSave} className="space-y-4">
+              {/* Liga/desliga o pop-up */}
+              <div className={`px-4 py-3 rounded-xl border transition-all ${promoConfig.active ? 'bg-[#F0FDF4] border-[#BBF7D0]' : 'bg-[#FAFAF9] border-[#E7E5E1]'}`}>
                 <label className="flex items-center gap-3 cursor-pointer">
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     id="promo-active"
                     checked={promoConfig.active}
                     onChange={e => setPromoConfig({...promoConfig, active: e.target.checked})}
                     className="w-5 h-5 accent-[#6a2092] rounded border-[#E7E5E1] cursor-pointer"
                   />
                   <div>
-                    <span className="font-bold text-sm text-[#1C1917] block">Exibir este Pop-up na entrada do site</span>
-                    <span className="text-xs text-[#78716C]">Quando marcado, todo cliente que abrir o cardápio verá este aviso.</span>
+                    <span className="font-semibold text-[14px] text-[#1C1917] block">Exibir este pop-up na entrada do site</span>
+                    <span className="text-[13px] text-[#78716C]">Todo cliente que abrir o cardápio verá este aviso.</span>
                   </div>
                 </label>
               </div>
 
-              {/* Title Input */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wide text-[#A8A29E]">Título da Promoção ou Aviso</label>
-                <input 
-                  type="text" 
-                  value={promoConfig.title} 
-                  onChange={e => setPromoConfig({...promoConfig, title: e.target.value})}
-                  placeholder="Ex: Promoção de Terça-feira!"
-                  className="w-full p-2.5 bg-[#FAFAF9] border border-[#E7E5E1] rounded-lg text-sm text-[#1C1917] font-semibold focus:outline-none focus:border-[#6a2092] focus:ring-1 focus:ring-[#6a2092]/20"
-                />
-              </div>
-
-              {/* Message Textarea */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wide text-[#A8A29E]">Mensagem Detalhada</label>
-                <textarea 
-                  rows={4}
-                  value={promoConfig.message} 
-                  onChange={e => setPromoConfig({...promoConfig, message: e.target.value})}
-                  placeholder="Escreva os detalhes da promoção ou mensagem..."
-                  className="w-full p-2.5 bg-[#FAFAF9] border border-[#E7E5E1] rounded-lg text-sm text-[#1C1917] focus:outline-none focus:border-[#6a2092] focus:ring-1 focus:ring-[#6a2092]/20"
-                />
-              </div>
-
-              {/* Image Section */}
-              <div className="space-y-2 pt-1 border-t border-[#F0EFED]">
-                <label className="text-xs font-semibold uppercase tracking-wide text-[#A8A29E]">Imagem Promocional (Opcional)</label>
-                
-                <input 
-                  type="text" 
-                  value={promoConfig.image_url} 
-                  onChange={e => setPromoConfig({...promoConfig, image_url: e.target.value})}
-                  className="w-full p-2.5 bg-[#FAFAF9] border border-[#E7E5E1] rounded-lg text-sm text-[#1C1917] font-mono focus:outline-none focus:border-[#6a2092] focus:ring-1 focus:ring-[#6a2092]/20"
-                  placeholder="URL da imagem (http://...)"
-                />
-
-                <div className="pt-2">
-                  <label className="block text-xs font-medium text-[#78716C] mb-1">Ou envie do seu dispositivo:</label>
-                  <input 
-                    type="file" 
-                    accept="image/jpeg, image/png, image/webp" 
-                    onChange={handleImageUpload}
-                    disabled={uploadingImage}
-                    className="block w-full text-sm text-[#78716C]
-                      file:mr-4 file:py-2 file:px-4
-                      file:rounded-lg file:border-0
-                      file:text-sm file:font-semibold
-                      file:bg-[#6a2092]/10 file:text-[#6a2092]
-                      hover:file:bg-[#6a2092]/20
-                      cursor-pointer border border-[#E7E5E1] rounded-lg p-1 bg-white"
+              {/* Título e texto do botão lado a lado */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-[12px] font-semibold text-stone-500">Título da promoção ou aviso</label>
+                  <input
+                    type="text"
+                    value={promoConfig.title}
+                    onChange={e => setPromoConfig({...promoConfig, title: e.target.value})}
+                    placeholder="Ex: Promoção de Terça-feira!"
+                    className="w-full h-10 px-3 bg-[#FAFAF9] border border-[#E7E5E1] rounded-xl text-[14px] text-[#1C1917] font-semibold focus:outline-none focus:bg-white focus:border-[#6a2092] focus:ring-2 focus:ring-[#6a2092]/15"
                   />
-                  {uploadingImage && <p className="text-xs text-[#78716C] mt-1 font-medium">Enviando imagem...</p>}
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[12px] font-semibold text-stone-500">Texto do botão (WhatsApp)</label>
+                  <input
+                    type="text"
+                    value={promoConfig.button_text}
+                    onChange={e => setPromoConfig({...promoConfig, button_text: e.target.value})}
+                    placeholder="Vazio = sem botão"
+                    className="w-full h-10 px-3 bg-[#FAFAF9] border border-[#E7E5E1] rounded-xl text-[14px] text-[#1C1917] focus:outline-none focus:bg-white focus:border-[#6a2092] focus:ring-2 focus:ring-[#6a2092]/15"
+                  />
                 </div>
               </div>
 
-              {/* Button Text */}
-              <div className="space-y-1.5 pt-1 border-t border-[#F0EFED]">
-                <label className="text-xs font-semibold uppercase tracking-wide text-[#A8A29E]">Texto do Botão de Ação (WhatsApp)</label>
-                <input 
-                  type="text" 
-                  value={promoConfig.button_text} 
-                  onChange={e => setPromoConfig({...promoConfig, button_text: e.target.value})}
-                  placeholder="Ex: Falar no WhatsApp (deixe vazio para ocultar)"
-                  className="w-full p-2.5 bg-[#FAFAF9] border border-[#E7E5E1] rounded-lg text-sm text-[#1C1917] focus:outline-none focus:border-[#6a2092] focus:ring-1 focus:ring-[#6a2092]/20"
+              {/* Mensagem */}
+              <div className="space-y-1.5">
+                <label className="text-[12px] font-semibold text-stone-500">Mensagem</label>
+                <textarea
+                  rows={3}
+                  value={promoConfig.message}
+                  onChange={e => setPromoConfig({...promoConfig, message: e.target.value})}
+                  placeholder="Escreva os detalhes da promoção ou mensagem..."
+                  className="w-full px-3 py-2.5 bg-[#FAFAF9] border border-[#E7E5E1] rounded-xl text-[14px] text-[#1C1917] resize-none focus:outline-none focus:bg-white focus:border-[#6a2092] focus:ring-2 focus:ring-[#6a2092]/15"
                 />
               </div>
 
-              {/* Submit Button */}
-              <div className="pt-3">
-                <button 
-                  type="submit" 
-                  className="w-full py-3 bg-[#6a2092] hover:bg-[#521872] text-white rounded-lg font-bold text-sm transition-colors flex items-center justify-center gap-2 shadow-sm border border-[#521872] cursor-pointer"
-                >
-                  <Save size={18} /> Salvar Promoção
-                </button>
+              {/* Imagem: link ou arquivo, na mesma linha */}
+              <div className="space-y-1.5">
+                <label className="text-[12px] font-semibold text-stone-500">Imagem (opcional): cole um link ou envie do computador</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <input
+                    type="text"
+                    value={promoConfig.image_url}
+                    onChange={e => setPromoConfig({...promoConfig, image_url: e.target.value})}
+                    className="w-full h-10 px-3 bg-[#FAFAF9] border border-[#E7E5E1] rounded-xl text-[14px] text-[#1C1917] focus:outline-none focus:bg-white focus:border-[#6a2092] focus:ring-2 focus:ring-[#6a2092]/15"
+                    placeholder="https://..."
+                  />
+                  <div>
+                    <input
+                      type="file"
+                      accept="image/jpeg, image/png, image/webp"
+                      onChange={handleImageUpload}
+                      disabled={uploadingImage}
+                      aria-label="Enviar imagem do computador"
+                      className="block w-full h-10 text-[13px] text-[#78716C]
+                        file:mr-3 file:h-full file:px-3
+                        file:rounded-lg file:border-0
+                        file:text-[13px] file:font-semibold
+                        file:bg-[#6a2092]/10 file:text-[#6a2092]
+                        hover:file:bg-[#6a2092]/20
+                        cursor-pointer border border-[#E7E5E1] rounded-xl p-1 bg-white"
+                    />
+                    {uploadingImage && <p className="text-xs text-[#78716C] mt-1 font-medium">Enviando imagem...</p>}
+                  </div>
+                </div>
               </div>
+
+              {/* Salvar */}
+              <button
+                type="submit"
+                className="w-full h-11 bg-[#6a2092] hover:bg-[#521872] text-white rounded-xl font-semibold text-[14px] transition-colors flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+              >
+                <Save size={17} /> Salvar promoção
+              </button>
             </form>
           </div>
         </div>
@@ -214,9 +192,15 @@ export default function BannerManager() {
         {/* Live Preview Column */}
         <div className="lg:col-span-5 space-y-4">
           <div className="bg-white rounded-xl border border-[#E7E5E1] shadow-[0_1px_2px_rgba(28,25,23,0.04),0_1px_8px_rgba(28,25,23,0.04)] p-6">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-[#A8A29E] mb-3 flex items-center gap-1.5">
-              <Sparkles size={14} className="text-[#6a2092]" /> Pré-visualização do Pop-up na Loja
-            </h3>
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-[#A8A29E] flex items-center gap-1.5">
+                <Sparkles size={14} className="text-[#6a2092]" /> Como o cliente vê
+              </h3>
+              <span className={`h-7 px-2.5 rounded-full text-[12px] font-semibold flex items-center gap-1.5 border ${promoConfig.active ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-stone-50 text-stone-500 border-stone-200'}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${promoConfig.active ? 'bg-emerald-500 animate-pulse' : 'bg-stone-400'}`} />
+                {promoConfig.active ? 'Ativo na loja' : 'Desativado'}
+              </span>
+            </div>
 
             {/* Mobile / Screen Mockup Frame */}
             <div className="bg-[#1C1917] p-4 rounded-2xl shadow-inner border border-gray-800 relative">

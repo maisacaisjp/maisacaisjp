@@ -10,6 +10,7 @@ import {
 
 import { getCashbackConfig, saveCashbackConfig, DEFAULT_CASHBACK_PERCENT, DEFAULT_CASHBACK_VALIDADE_DIAS } from '../utils/cashback';
 import CoverCropManager from './CoverCropManager';
+import { brl } from '../utils/formatacao';
 
 interface SettingsManagerProps {
   onTestPrint?: (order: any) => void;
@@ -243,30 +244,17 @@ export default function SettingsManager({
   ];
 
   return (
-    <div className="max-w-6xl mx-auto pb-16 font-sans">
+    <div className="pb-8 font-sans">
       
-      {/* ────────────────── HEADER PRINCIPAL ────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-stone-200">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#6a2092] text-white flex items-center justify-center border border-[#521872] shadow-2xs">
-              <Sliders size={16} />
-            </div>
-            <h1 className="text-xl font-bold text-stone-900 tracking-tight">Configurações do Sistema</h1>
-          </div>
-          <p className="text-xs text-stone-500 mt-1">Gerencie a identidade da loja, regras operacionais e integração do terminal.</p>
-        </div>
-
-        {savedStatus && (
-          <div className="animate-in fade-in slide-in-from-top-2 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold">
-            <CheckCheck size={14} className="text-emerald-600" />
+      {savedStatus && (
+          <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-2 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-stone-900 text-white shadow-2xl text-[13px] font-semibold">
+            <CheckCheck size={15} className="text-emerald-400" />
             <span>{savedStatus}</span>
           </div>
         )}
-      </div>
 
       {/* ────────────────── LAYOUT EM 2 COLUNAS: ABAS LATERAIS + CONTEÚDO ────────────────── */}
-      <div className="mt-6 grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
         
         {/* Coluna Esquerda: Navegação Lateral Fixa */}
         <aside className="md:col-span-4 lg:col-span-3 space-y-1">
@@ -299,7 +287,7 @@ export default function SettingsManager({
 
         {/* Coluna Direita: Conteúdo com Largura Máxima (~650px) para Leitura Confortável */}
         <main className="md:col-span-8 lg:col-span-9">
-          <div className="max-w-2xl bg-white rounded-2xl border border-stone-200 shadow-2xs overflow-hidden">
+          <div className="bg-white rounded-2xl border border-stone-200/80 shadow-[0_1px_2px_rgba(28,25,23,0.04),0_4px_16px_-8px_rgba(59,2,87,0.08)] overflow-hidden">
             
             {/* ═══════════ 1. EMPRESA & MARCA ═══════════ */}
             {activeTab === 'empresa' && (
@@ -314,10 +302,12 @@ export default function SettingsManager({
                   </div>
                 </div>
 
+                {/* Logo e capa lado a lado em tela larga */}
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-stretch">
                 {/* Área de Logo com Drop/Preview Redondo */}
                 <div>
                   <label className="text-xs font-bold text-stone-800 block mb-2">Logo do Painel de Controle</label>
-                  <div className="p-4 bg-stone-50 rounded-xl border border-stone-200 flex flex-col sm:flex-row items-center gap-4">
+                  <div className="h-[calc(100%-1.75rem)] p-4 bg-stone-50 rounded-xl border border-stone-200 flex flex-col sm:flex-row items-center gap-4">
                     <div className="w-16 h-16 rounded-full overflow-hidden bg-black border-2 border-stone-300 flex items-center justify-center p-1 shadow-xs shrink-0">
                       {adminLogoUrl ? (
                         <img src={adminLogoUrl} alt="Logo" className="w-full h-full object-cover rounded-full" />
@@ -360,7 +350,7 @@ export default function SettingsManager({
                 {/* Atalho para Capa do Cardápio */}
                 <div>
                   <label className="text-xs font-bold text-stone-800 block mb-2">Capa do Cardápio Digital (Banner)</label>
-                  <div className="p-4 bg-purple-50/50 rounded-xl border border-purple-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="h-[calc(100%-1.75rem)] p-4 bg-purple-50/50 rounded-xl border border-purple-100 flex flex-col sm:flex-row items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-purple-100 text-[#6a2092] flex items-center justify-center shrink-0">
                         <ImageIcon size={20} />
@@ -379,6 +369,7 @@ export default function SettingsManager({
                       <span>Enquadrar Capa</span>
                     </button>
                   </div>
+                </div>
                 </div>
 
                 {/* Formulário de Dados da Empresa */}
@@ -448,12 +439,12 @@ export default function SettingsManager({
                   </div>
                 </div>
 
-                <div className="space-y-3">
+                <div className="rounded-xl border border-stone-200 divide-y divide-stone-100 overflow-hidden">
                   {hours.map((h) => (
                     <div 
                       key={h.day_of_week} 
-                      className={`p-3 rounded-xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                        h.is_closed ? 'bg-stone-50/70 border-stone-200 opacity-75' : 'bg-white border-stone-200 shadow-2xs'
+                      className={`px-3 py-2 min-h-11 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${
+                        h.is_closed ? 'bg-stone-50/80' : 'bg-white hover:bg-brand-50/30'
                       }`}
                     >
                       <div className="flex items-center justify-between sm:justify-start gap-3 w-40">
@@ -686,6 +677,8 @@ export default function SettingsManager({
 
                 {/* Configuração da Porcentagem */}
                 <div className={`space-y-4 transition-opacity ${cashbackEnabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
+                  {/* Porcentagem e validade lado a lado */}
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
                   <div>
                     <label className="text-xs font-bold text-stone-800 block mb-1">
                       Porcentagem de Cashback por Compra (%)
@@ -745,6 +738,7 @@ export default function SettingsManager({
                       <span className="absolute right-3 top-2.5 text-xs font-bold text-stone-400">dias</span>
                     </div>
                   </div>
+                  </div>
 
                   {/* Simulador de Exemplo */}
                   <div className="p-3.5 bg-amber-50/60 rounded-xl border border-amber-200/70 text-xs text-amber-900 space-y-1">
@@ -752,7 +746,7 @@ export default function SettingsManager({
                       <span>💡 Simulação em Tempo Real:</span>
                     </div>
                     <p className="text-[11px] text-amber-800">
-                      Um cliente que fizer um pedido de <strong>R$ 30,00</strong> acumulará <strong>R$ {((30 * (parseFloat(cashbackPercent) || 0)) / 100).toFixed(2)}</strong> de crédito para abater em compras futuras, válido por <strong>{parseInt(cashbackValidade, 10) || DEFAULT_CASHBACK_VALIDADE_DIAS} dias</strong>.
+                      Um cliente que fizer um pedido de <strong>R$ 30,00</strong> acumulará <strong>{brl(Number(((30 * (parseFloat(cashbackPercent) || 0)) / 100)))}</strong> de crédito para abater em compras futuras, válido por <strong>{parseInt(cashbackValidade, 10) || DEFAULT_CASHBACK_VALIDADE_DIAS} dias</strong>.
                     </p>
                   </div>
                 </div>
@@ -844,7 +838,7 @@ export default function SettingsManager({
                     </div>
                     <button 
                       onClick={onChangePassword} 
-                      className="mt-4 w-full py-2.5 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-xs font-bold transition-colors inline-flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                      className="mt-4 w-full py-2.5 bg-[#6a2092] hover:bg-[#521872] text-white rounded-xl text-xs font-bold transition-colors inline-flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
                     >
                       <Key size={13} />
                       <span>Alterar Senha</span>

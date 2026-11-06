@@ -6,6 +6,7 @@ import { ReceitaEditor } from '../ReceitaEditor';
 import { useDados } from '../store';
 import type { AdicionalCardapio, Ficha, ProdutoCardapio } from '../types';
 import { Btn, Card, Num, Sel, Selo, Txt, Vazio, tomCmv } from '../ui';
+import { Paginacao, useListaQueCabe } from '../../components/admin/ui';
 
 const ehCopo = (p: ProdutoCardapio) => Boolean(p.price_p || p.price_m || p.price_g);
 
@@ -49,8 +50,6 @@ export default function Fichas() {
   const { dados, atualizar, cardapio, adicionais, cardapioErro, fichaSel, setFichaSel } = useDados();
   const [busca, setBusca] = useState('');
   const [grupo, setGrupo] = useState<Grupo>('todas');
-  const [verTodas, setVerTodas] = useState(false);
-  const LIMITE = 12;
 
   const fichas = useMemo(
     () =>
@@ -60,6 +59,8 @@ export default function Fichas() {
         .sort((a, b) => a.nome.localeCompare(b.nome, 'pt', { numeric: true })),
     [dados.fichas, busca, grupo],
   );
+  // Lista da esquerda: só as fichas que cabem na tela, com páginas
+  const pagLista = useListaQueCabe(fichas, 34, { reserva: 210, resetar: [busca, grupo] });
   const sel = dados.fichas.find((f) => f.id === fichaSel) ?? null;
   useEffect(() => {
     if (!sel && dados.fichas.length) setFichaSel(dados.fichas[0].id);
@@ -99,8 +100,8 @@ export default function Fichas() {
             ))}
           </div>
         </div>
-        <ul className="space-y-1">
-          {(verTodas || busca ? fichas : fichas.slice(0, LIMITE)).map((f) => {
+        <ul ref={pagLista.ref} className="space-y-0.5">
+          {pagLista.itens.map((f) => {
             const t = tamanhoRef(f);
             const c = custoFicha(f, t, dados).total;
             const preco = f.precos[t] ?? 0;
@@ -111,7 +112,7 @@ export default function Fichas() {
                 <button
                   type="button"
                   onClick={() => setFichaSel(f.id)}
-                  className={`flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-sm ${f.id === fichaSel ? 'bg-[#f5eefa] font-semibold text-[#4d0471]' : 'hover:bg-stone-50'}`}
+                  className={`flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg px-2 h-8 text-left text-[13px] ${f.id === fichaSel ? 'bg-[#f5eefa] font-semibold text-[#4d0471]' : 'hover:bg-stone-50'}`}
                 >
                   <span className="truncate">{f.nome}</span>
                   <span className="flex shrink-0 items-center gap-1">
@@ -124,11 +125,7 @@ export default function Fichas() {
           })}
           {!fichas.length && <li className="py-4 text-center text-sm text-stone-400">{dados.fichas.length ? 'Nenhuma ficha encontrada' : 'Nenhuma ficha ainda'}</li>}
         </ul>
-        {!busca && fichas.length > LIMITE && (
-          <button type="button" className="mt-1 w-full cursor-pointer rounded-lg py-1.5 text-xs font-semibold text-[#6a2092] hover:bg-[#f5eefa]" onClick={() => setVerTodas((v) => !v)}>
-            {verTodas ? 'Mostrar menos' : `Ver todas (${fichas.length})`}
-          </button>
-        )}
+        {fichas.length > 0 && <Paginacao {...pagLista.paginacao} rotulo="fichas" compacto className="mt-2" />}
         <div className="mt-3 space-y-2 border-t border-stone-100 pt-3">
           <div className="text-xs font-medium text-stone-500">Nova ficha a partir do cardápio</div>
           {cardapioErro ? (
@@ -183,7 +180,7 @@ function EditorFicha({ ficha }: { ficha: Ficha }) {
   const precoDiferente = precosAtuais && tams.some((t) => (precosAtuais[t] ?? 0) !== (ficha.precos[t] ?? 0));
 
   return (
-    <div className="min-w-0 space-y-4">
+    <div className="min-w-0 space-y-3">
       <Card>
         <div className="grid gap-3 md:grid-cols-[1fr_240px_170px]">
           <label className="text-xs text-stone-500">Nome<Txt value={ficha.nome} onChange={(v) => mudar({ nome: v })} className="mt-1 text-base font-semibold" /></label>
@@ -225,7 +222,15 @@ function EditorFicha({ ficha }: { ficha: Ficha }) {
             />
           </label>
         </div>
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {ficha.obs !== undefined ? (
+            <label className="flex-1 min-w-56">
+              <span className="sr-only">Observações</span>
+              <Txt value={ficha.obs} onChange={(v) => mudar({ obs: v })} placeholder="Observações da ficha" />
+            </label>
+          ) : (
+            <Btn variante="link" onClick={() => mudar({ obs: '' })}>+ adicionar observação</Btn>
+          )}
           <Btn
             variante="neutro"
             onClick={() => {
@@ -235,7 +240,7 @@ function EditorFicha({ ficha }: { ficha: Ficha }) {
               setFichaSel(copia.id);
             }}
           >
-            <Copy size={14} /> Duplicar (para sabor parecido)
+            <Copy size={14} /> Duplicar
           </Btn>
           <Btn
             variante="perigo"
@@ -248,12 +253,6 @@ function EditorFicha({ ficha }: { ficha: Ficha }) {
             <Trash2 size={14} /> Excluir
           </Btn>
         </div>
-        {ficha.obs !== undefined && (
-          <label className="mt-3 block text-xs text-stone-500">
-            Observações
-            <textarea className="fin-campo mt-1" rows={2} value={ficha.obs} onChange={(e) => mudar({ obs: e.target.value })} />
-          </label>
-        )}
       </Card>
 
       <Card
@@ -273,13 +272,12 @@ function EditorFicha({ ficha }: { ficha: Ficha }) {
                   <span className="text-sm font-bold text-[#4d0471]">{t === 'U' ? 'Tamanho único' : `Copo ${ROTULO_TAMANHO[t]}`}</span>
                   <Selo tom={tomCmv(cmv, dados.config.cmvMeta)}>CMV {pct(cmv)}</Selo>
                 </div>
-                <div className="space-y-2">
-                  <label className="grid grid-cols-[1fr_110px] items-center gap-2 text-[11px] text-stone-500">Preço (R$)<Num value={preco} onChange={(v) => mudar({ precos: { ...ficha.precos, [t]: v } })} /></label>
+                <div className="grid grid-cols-[96px_minmax(0,1fr)] gap-2">
+                  <label className="block text-[11px] text-stone-500">Preço (R$)<Num value={preco} onChange={(v) => mudar({ precos: { ...ficha.precos, [t]: v } })} className="mt-0.5" /></label>
                   <label className="block text-[11px] text-stone-500">Base do copo<Sel value={ficha.baseIds[t] ?? ''} onChange={(v) => mudar({ baseIds: { ...ficha.baseIds, [t]: v || undefined } })} opcoes={opcoesBase} className="mt-0.5" /></label>
                 </div>
                 <dl className="mt-2 space-y-0.5 text-xs">
-                  <div className="flex justify-between text-stone-500"><dt>Base</dt><dd className="tabular-nums">{brl(c.base)}</dd></div>
-                  <div className="flex justify-between text-stone-500"><dt>Complementos</dt><dd className="tabular-nums">{brl(c.recheio)}</dd></div>
+                  <div className="flex justify-between text-stone-500"><dt>Base + complementos</dt><dd className="tabular-nums">{brl(c.base)} + {brl(c.recheio)}</dd></div>
                   <div className="flex justify-between border-t border-stone-200 pt-1 font-semibold text-stone-900"><dt>Custo total</dt><dd className="tabular-nums">{brl(c.total)}</dd></div>
                   <div className="flex justify-between font-semibold text-emerald-700"><dt>Lucro bruto</dt><dd className="tabular-nums">{preco ? brl(preco - c.total) : '—'}</dd></div>
                   <div className="flex justify-between text-stone-500" title={`Preço para o CMV ficar em ${dados.config.cmvMeta}%`}><dt>Preço p/ CMV {dados.config.cmvMeta}%</dt><dd className="tabular-nums">{brl(c.total / meta)}</dd></div>
@@ -288,28 +286,20 @@ function EditorFicha({ ficha }: { ficha: Ficha }) {
             );
           })}
         </div>
-        <p className="mt-2 text-xs text-stone-400">CMV = custo dos ingredientes e embalagens ÷ preço de venda. Meta: até {dados.config.cmvMeta}% (verde). Lucro bruto ainda não desconta custos fixos.</p>
+        <p className="mt-2 text-xs text-stone-400 adm-compactavel-esconder">CMV = custo dos ingredientes e embalagens ÷ preço de venda. Meta: até {dados.config.cmvMeta}% (verde). Lucro bruto ainda não desconta custos fixos.</p>
       </Card>
 
       <Card titulo={ficha.tipo === 'copo' ? 'Complementos (quantidades por copo)' : 'Composição'}>
         <ReceitaEditor itens={ficha.recheio} onChange={(recheio) => mudar({ recheio })} porTamanho={ficha.tipo === 'copo'} />
       </Card>
 
-      {(pend.length > 0 || ficha.obs) && (
+      {pend.length > 0 && (
         <Card titulo="O que falta conferir">
-          {pend.length > 0 && (
-            <ul className="mb-2 flex flex-wrap gap-1.5">
-              {pend.map((p) => <li key={p}><Selo tom="alerta">{p}</Selo></li>)}
-            </ul>
-          )}
-          {ficha.obs === undefined ? (
-            <Btn variante="link" onClick={() => mudar({ obs: '' })}>+ adicionar observação</Btn>
-          ) : (
-            ficha.obs && <p className="text-sm text-amber-700">{ficha.obs}</p>
-          )}
+          <ul className="flex flex-wrap gap-1.5">
+            {pend.map((p) => <li key={p}><Selo tom="alerta">{p}</Selo></li>)}
+          </ul>
         </Card>
       )}
-      {!pend.length && !ficha.obs && <Btn variante="link" onClick={() => mudar({ obs: '' })}>+ adicionar observação</Btn>}
       {produto && ehCopo(produto) && ficha.tipo !== 'copo' && <p className="text-xs text-amber-700">Este produto tem preços por tamanho no cardápio, mas a ficha está como tamanho único.</p>}
     </div>
   );

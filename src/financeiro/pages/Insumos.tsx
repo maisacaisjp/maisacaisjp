@@ -7,6 +7,7 @@ import { faltandoMultipedidos, importarMultipedidos } from '../insumosMultipedid
 import { useDados } from '../store';
 import type { Insumo, Unidade } from '../types';
 import { Btn, Card, Num, Sel, Selo, Txt, Vazio } from '../ui';
+import { Paginacao, useListaQueCabe } from '../../components/admin/ui';
 
 const UNIDADES: Array<{ value: Unidade; label: string }> = [
   { value: 'g', label: 'g' },
@@ -29,6 +30,8 @@ export default function Insumos() {
     .sort((a, b) => a.nome.localeCompare(b.nome));
   const pendentes = dados.insumos.filter(semPreco).length;
   const faltando = faltandoMultipedidos(dados).length;
+  // Só as linhas que cabem na tela; o resto vai para as próximas páginas
+  const pag = useListaQueCabe(lista, 50, { reserva: 120, resetar: [busca, soPendentes] });
 
   return (
     <Card
@@ -65,14 +68,15 @@ export default function Insumos() {
         </>
       }
     >
-      <p className="mb-3 text-xs text-stone-500">
+      <p className="mb-3 text-xs text-stone-500 adm-compactavel-esconder">
         Coloque o preço da embalagem como vem na nota (ex.: polpa de açaí 10 kg = 10000 g por R$ 180,00). A perda é o que se perde no preparo: casca da fruta, sobra no balde.
         O custo de cada ficha é recalculado na hora.
       </p>
       {dados.insumos.length === 0 ? (
         <Vazio>Nenhum insumo ainda. Clique em "Novo insumo" ou importe as suas fichas.</Vazio>
       ) : (
-        <div className="overflow-x-auto">
+        <>
+        <div ref={pag.ref} className="overflow-x-auto">
           <table className="fin-tabela">
             <thead>
               <tr>
@@ -88,7 +92,7 @@ export default function Insumos() {
               </tr>
             </thead>
             <tbody>
-              {lista.map((i) => (
+              {pag.itens.map((i) => (
                 <tr key={i.id} className={semPreco(i) ? 'bg-amber-50/50' : ''}>
                   <td className="min-w-40 fin-cheio" data-label="Insumo"><Txt value={i.nome} onChange={(v) => mudar(i.id, { nome: v })} /></td>
                   <td className="w-40" data-label="Categoria"><Sel value={i.categoria} onChange={(v) => mudar(i.id, { categoria: v })} opcoes={[...new Set([...CATEGORIAS_INSUMO, i.categoria])].map((c) => ({ value: c, label: c }))} /></td>
@@ -120,6 +124,8 @@ export default function Insumos() {
             </tbody>
           </table>
         </div>
+        <Paginacao {...pag.paginacao} rotulo="insumos" className="mt-1" />
+        </>
       )}
     </Card>
   );

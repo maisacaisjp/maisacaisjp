@@ -1012,7 +1012,7 @@ export default function PDVModal({
                                 </span>
                               )}
                               <span className="font-black text-sm text-[#4d0471] font-mono leading-none">
-                                R$ {displayPrice.toFixed(2)}
+                                {brl(Number(displayPrice))}
                               </span>
                             </div>
                             <div className="w-7 h-7 rounded-full bg-[#4d0471] text-white flex items-center justify-center shadow-xs group-hover:bg-[#6a2092] transition-colors shrink-0">
@@ -1109,7 +1109,7 @@ export default function PDVModal({
                           onClick={() => setIsZoneDropdownOpen(!isZoneDropdownOpen)}
                           className="w-full h-8 px-2.5 bg-white border border-stone-300 rounded-lg text-xs font-medium text-stone-800 flex items-center justify-between cursor-pointer"
                         >
-                          <span>{deliveryZone ? `Taxa: ${deliveryZone} (R$ ${deliveryFee.toFixed(2)})` : 'Selecione a Taxa de Entrega'}</span>
+                          <span>{deliveryZone ? `Taxa: ${deliveryZone} (${brl(deliveryFee)})` : 'Selecione a Taxa de Entrega'}</span>
                           <ChevronDown size={14} className="text-stone-400" />
                         </button>
                         {isZoneDropdownOpen && (
@@ -1126,7 +1126,7 @@ export default function PDVModal({
                               >
                                 <span>{z.name}</span>
                                 <span className="font-mono font-bold text-[#4d0471]">
-                                  {z.fee === 0 ? 'Grátis' : `R$ ${z.fee.toFixed(2)}`}
+                                  {z.fee === 0 ? 'Grátis' : brl(z.fee)}
                                 </span>
                               </button>
                             ))}
@@ -1203,7 +1203,7 @@ export default function PDVModal({
                             {item.selectedExtras && item.selectedExtras.length > 0 && (
                               <div className="text-[10px] text-stone-500 mt-1 pl-1 border-l-2 border-purple-300">
                                 {agruparExtras(item.selectedExtras).map(g => (
-                                  <div key={g.extra.id}>+ {nomeExtraAgrupado(g)} (R$ {(g.extra.price * g.qtd).toFixed(2)})</div>
+                                  <div key={g.extra.id}>+ {nomeExtraAgrupado(g)} ({brl(Number((g.extra.price * g.qtd)))})</div>
                                 ))}
                               </div>
                             )}
@@ -1225,7 +1225,7 @@ export default function PDVModal({
 
                           <div className="flex flex-col items-end gap-1 shrink-0">
                             <span className="font-mono font-black text-xs text-stone-900">
-                              R$ {item.totalPrice.toFixed(2)}
+                              {brl(Number(item.totalPrice))}
                             </span>
                             <div className="flex items-center gap-1">
                               <button
@@ -1337,11 +1337,11 @@ export default function PDVModal({
                         <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-amber-50 border border-amber-200">
                           <div className="min-w-0">
                             <span className="text-[11px] font-bold text-stone-900 block">
-                              Cashback: R$ {cashbackInfo.saldo.toFixed(2)}
+                              Cashback: {brl(Number(cashbackInfo.saldo))}
                             </span>
                             {cashbackInfo.proximoVencimento && (
                               <span className="text-[10px] text-amber-800 block">
-                                R$ {cashbackInfo.valorProximoVencimento.toFixed(2)} vence em {dataCurta(cashbackInfo.proximoVencimento)}
+                                {brl(Number(cashbackInfo.valorProximoVencimento))} vence em {dataCurta(cashbackInfo.proximoVencimento)}
                               </span>
                             )}
                           </div>
@@ -1362,7 +1362,7 @@ export default function PDVModal({
                       )}
                       {cashbackEarned > 0 && (
                         <p className="text-[11px] text-amber-700 font-bold">
-                          + R$ {cashbackEarned.toFixed(2)} de cashback nesta venda ({cashbackConfig.percent}%)
+                          + {brl(Number(cashbackEarned))} de cashback nesta venda ({cashbackConfig.percent}%)
                         </p>
                       )}
                     </div>
@@ -1491,7 +1491,7 @@ export default function PDVModal({
                   <div>
                     <label className="text-[10px] text-stone-500 font-bold block mb-0.5">Troco Calculado</label>
                     <div className="h-7 px-2 bg-emerald-50 border border-emerald-200 rounded text-xs font-mono font-bold text-emerald-800 flex items-center">
-                      R$ {calculatedChange.toFixed(2)}
+                      {brl(Number(calculatedChange))}
                     </div>
                   </div>
                 </div>
@@ -1501,12 +1501,12 @@ export default function PDVModal({
               <div className="pt-2 border-t border-stone-200 space-y-1 text-xs">
                 <div className="flex justify-between text-stone-500">
                   <span>Subtotal</span>
-                  <span className="font-mono">R$ {subtotal.toFixed(2)}</span>
+                  <span className="font-mono">{brl(Number(subtotal))}</span>
                 </div>
                 {deliveryFee > 0 && (
                   <div className="flex justify-between text-stone-500">
                     <span>Taxa de Entrega</span>
-                    <span className="font-mono">+ R$ {deliveryFee.toFixed(2)}</span>
+                    <span className="font-mono">+ {brl(Number(deliveryFee))}</span>
                   </div>
                 )}
                 {adjustmentAmount !== 0 && (
@@ -1515,18 +1515,18 @@ export default function PDVModal({
                       {adjustmentAmount < 0 ? 'Desconto' : 'Acréscimo'}
                       {adjustmentMode === 'percent' ? ` (${parseValor(adjustmentValue)}%)` : ''}
                     </span>
-                    <span className="font-mono">{adjustmentAmount < 0 ? '-' : '+'} R$ {Math.abs(adjustmentAmount).toFixed(2)}</span>
+                    <span className="font-mono">{adjustmentAmount < 0 ? '-' : '+'} {brl(Number(Math.abs(adjustmentAmount)))}</span>
                   </div>
                 )}
                 {cashbackUsed > 0 && (
                   <div className="flex justify-between text-emerald-700">
                     <span>Cashback usado</span>
-                    <span className="font-mono">- R$ {cashbackUsed.toFixed(2)}</span>
+                    <span className="font-mono">- {brl(Number(cashbackUsed))}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-base font-black text-stone-900 pt-1 border-t border-stone-200">
                   <span>Total</span>
-                  <span className="text-[#4d0471] font-mono">R$ {totalAmount.toFixed(2)}</span>
+                  <span className="text-[#4d0471] font-mono">{brl(Number(totalAmount))}</span>
                 </div>
               </div>
 
@@ -1549,7 +1549,7 @@ export default function PDVModal({
                 ) : (
                   <>
                     <Check size={16} className="stroke-[3]" />
-                    <span>Concluir Venda • R$ {totalAmount.toFixed(2)}</span>
+                    <span>Concluir Venda • {brl(Number(totalAmount))}</span>
                   </>
                 )}
               </button>
@@ -1602,7 +1602,7 @@ export default function PDVModal({
                             >
                               <span className="text-sm font-black font-mono">{opt.label}</span>
                               <span className="text-xs font-bold text-[#4d0471]">
-                                R$ {opt.price.toFixed(2)}
+                                {brl(Number(opt.price))}
                               </span>
                             </button>
                           );
@@ -1648,7 +1648,7 @@ export default function PDVModal({
                   <div>
                     <span className="text-[10px] text-stone-400 font-bold uppercase block">Total do Item</span>
                     <span className="text-base font-black text-[#4d0471] font-mono">
-                      R$ {currentPreviewPrice.toFixed(2)}
+                      {brl(Number(currentPreviewPrice))}
                     </span>
                   </div>
 

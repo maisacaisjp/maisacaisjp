@@ -1,3 +1,4 @@
+import { contabilInicial, migrarContabil } from './contabil/plano';
 import type { Config, Dados } from './types';
 
 export const CATEGORIAS_INSUMO = ['Açaí e polpas', 'Frutas', 'Cremes e mousses', 'Complementos', 'Caldas e coberturas', 'Laticínios', 'Bebidas', 'Embalagens', 'Outros'];
@@ -11,7 +12,9 @@ export const CATEGORIAS_LANC: Array<{ nome: string; noResultado: boolean; dica: 
   { nome: 'Embalagens', noResultado: false, dica: 'Já está no CMV pelas fichas (copos, tampas, colheres, potes).' },
   { nome: 'Pagamento de custo fixo', noResultado: false, dica: 'Já conta pelo cadastro de custos fixos. Lance para controlar o que foi pago.' },
   { nome: 'Manutenção', noResultado: true, dica: 'Entra no resultado do mês.' },
-  { nome: 'Impostos e taxas', noResultado: true, dica: 'Entra no resultado do mês (DAS, alvarás, taxas).' },
+  { nome: 'Impostos e taxas', noResultado: true, dica: 'Entra no resultado do mês (alvarás, licenças, taxas). O DAS vai em "Pagamento do DAS".' },
+  { nome: 'Pagamento do DAS', noResultado: false, dica: 'O imposto do mês já é calculado no DRE (aba Contábil → Impostos). Lance aqui só o pagamento, para controle.' },
+  { nome: 'Juros e tarifas bancárias', noResultado: true, dica: 'Entra no resultado como despesa financeira (tarifas, juros, IOF).' },
   { nome: 'Marketing extra', noResultado: true, dica: 'Entra no resultado do mês (impulsionamento, panfletos).' },
   { nome: 'Outras despesas', noResultado: true, dica: 'Entra no resultado do mês.' },
   { nome: 'Equipamentos / investimento', noResultado: false, dica: 'Investimento: não entra no resultado do mês.' },
@@ -50,6 +53,7 @@ export function dadosIniciais(): Dados {
     lancamentos: [],
     historico: [],
     config: { ...CONFIG_PADRAO },
+    contabil: contabilInicial(),
   };
 }
 
@@ -67,5 +71,6 @@ export function migrar(bruto: unknown): Dados {
     lancamentos: Array.isArray(d.lancamentos) ? d.lancamentos : ini.lancamentos,
     historico: Array.isArray(d.historico) ? d.historico : ini.historico,
     config: { ...CONFIG_PADRAO, ...(d.config ?? {}) },
+    contabil: migrarContabil(d.contabil),
   };
 }

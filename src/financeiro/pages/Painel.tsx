@@ -1,15 +1,19 @@
 import { AlertTriangle } from 'lucide-react';
 import { useMemo, useState, type ReactNode } from 'react';
 import { custoFicha, pendenciasFicha, tamanhoRef } from '../calc';
+import { useFatMes, usePeriodoContabil } from '../contabil/carregar';
+import { somarMeses } from '../contabil/datas';
+import { calcularDreContabil } from '../contabil/dreContabil';
+import { ocorrencias } from '../contabil/obrigacoes';
 import { calcularDre } from '../dre';
 import { brl, mesAtual, nomeMes, pct } from '../format';
-import { useDados, usePedidos, type Aba } from '../store';
+import { useDados, type Aba } from '../store';
 import { analisarVendas } from '../vendas';
 import { Card, Indicador, SeletorMes, Selo, tomCmv } from '../ui';
 
 function Linha({ rotulo, valor, sinal, forte, sub }: { rotulo: ReactNode; valor: number; sinal?: '-' | '='; forte?: boolean; sub?: ReactNode }) {
   return (
-    <div className={`flex items-baseline justify-between gap-3 py-1.5 ${forte ? 'border-t border-stone-200 font-semibold' : ''}`}>
+    <div className={`flex items-baseline justify-between gap-3 py-1.5 [@media(max-height:780px)]:py-1 ${forte ? 'border-t border-stone-200 font-semibold' : ''}`}>
       <span className={sinal === '-' ? 'pl-3 text-stone-600' : ''}>
         {sinal === '-' ? '(−) ' : sinal === '=' ? '= ' : ''}
         {rotulo}
@@ -21,11 +25,18 @@ function Linha({ rotulo, valor, sinal, forte, sub }: { rotulo: ReactNode; valor:
 }
 
 export default function Painel() {
-  const { dados, cardapio, adicionais, irPara } = useDados();
+  const { dados, cardapio, adicionais, irPara, abrirContabil } = useDados();
   const [mes, setMes] = useState(mesAtual());
-  const { pedidos, carregando, erro } = usePedidos(mes);
+  const { pedidos, despesas, fatSistema, carregando, erro, erroDespesas } = usePeriodoContabil(`${mes}-01`, `${somarMeses(mes, 1)}-01`);
+  const fat = useFatMes(dados.historico, fatSistema);
   const r = useMemo(() => analisarVendas(pedidos, cardapio, adicionais, dados), [pedidos, cardapio, adicionais, dados]);
-  const dre = calcularDre(mes, r, dados);
+  const dre = useMemo(
+    () => calcularDre(calcularDreContabil({ de: `${mes}-01`, ate: `${somarMeses(mes, 1)}-01`, resumo: r, despesas, dados, fat })),
+    [mes, r, despesas, dados, fat],
+  );
+  const agenda = ocorrencias(dados.contabil);
+  const atrasadas = agenda.filter((o) => o.status === 'atrasada').length;
+  const vencendo = agenda.filter((o) => o.status === 'hoje' || o.status === 'proxima').length;
   const meta = dados.config.cmvMeta;
 
   const insumosSemPreco = dados.insumos.filter((i) => !i.semCusto && (!i.precoEmbalagem || !i.qtdEmbalagem)).length;
@@ -42,7 +53,9 @@ export default function Painel() {
     .slice(0, 5);
   const dias = Object.entries(r.porDia).sort();
   const maxDia = Math.max(1, ...dias.map(([, v]) => v));
-  const pendencias: Array<{ n: number; txt: string; aba: Aba }> = [
+  const pendencias: Array<{ n: number; txt: string; aba: Aba; ruim?: boolean }> = [
+    { n: atrasadas, txt: 'obrigações contábeis atrasadas', aba: 'contabil', ruim: true },
+    { n: vencendo, txt: 'obrigações vencendo em breve', aba: 'contabil' },
     { n: insumosSemPreco, txt: 'insumos sem preço', aba: 'insumos' },
     { n: fichasPendentes, txt: 'fichas com pendência', aba: 'fichas' },
     { n: fixosConfirmar, txt: 'custos fixos a confirmar', aba: 'fixos' },
@@ -53,11 +66,12 @@ export default function Painel() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="text-base font-bold text-stone-900 first-letter:uppercase">Resultado de {nomeMes(mes)}</h1>
-          <p className="text-xs text-stone-500">Vendas do gestor + fichas técnicas + custos fixos + lançamentos.</p>
+          <p className="text-xs text-stone-500 adm-compactavel-esconder">Vendas do gestor + fichas técnicas + custos fixos + lançamentos.</p>
         </div>
         <SeletorMes value={mes} onChange={setMes} />
       </div>
       {erro && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">Não consegui ler as vendas do gestor: {erro}</p>}
+      {erroDespesas && <p className="rounded-xl bg-amber-50 p-3 text-xs text-amber-800">As despesas da aba Despesas não puderam ser lidas ({erroDespesas}).</p>}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Indicador rotulo="Faturamento" valor={carregando ? '…' : brl(dre.faturamento)} sub={`${r.pedidos} pedidos · ticket ${brl(r.pedidos ? r.faturamento / r.pedidos : 0)}`} />
@@ -66,16 +80,18 @@ export default function Painel() {
         <Indicador rotulo="Ponto de equilíbrio" valor={carregando ? '…' : brl(dre.pontoEquilibrio)} sub={Number.isFinite(dre.pontoEquilibrio) ? `faturamento mínimo no mês · ${dre.faturamento >= dre.pontoEquilibrio ? 'atingido ✓' : `faltam ${brl(dre.pontoEquilibrio - dre.faturamento)}`}` : 'precisa de vendas com ficha'} />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
-        <Card titulo="Demonstrativo do mês (DRE)">
+      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_minmax(0,0.75fr)]">
+        <Card titulo="Demonstrativo do mês (DRE)" acoes={<button type="button" className="cursor-pointer text-xs font-semibold text-[#6a2092] hover:underline" onClick={() => abrirContabil('dre')}>DRE contábil semanal →</button>}>
           <div className="text-sm">
             <Linha rotulo="Faturamento" valor={dre.faturamento} sub={`itens ${brl(r.receitaItens)} + entregas/ajustes ${brl(r.faturamento - r.receitaItens)}`} />
+            <Linha sinal="-" rotulo="Impostos sobre vendas" valor={dre.impostos} sub={dre.faturamento ? pct(dre.impostos / dre.faturamento) : undefined} />
             <Linha sinal="-" rotulo="CMV (ingredientes e embalagens)" valor={dre.cmvEstimado} sub={dre.cobertura < 1 ? `${pct(dre.cmvPct)} medido em ${pct(dre.cobertura)} das vendas, aplicado ao total` : undefined} />
             <Linha sinal="-" rotulo="Taxas de pagamento" valor={dre.taxas} sub={`${dados.config.taxaPagamento}%`} />
             <Linha sinal="-" rotulo="Custo variável de entrega" valor={dre.entregas} sub={`${r.entregas} × ${brl(dados.config.custoPorEntrega)}`} />
             <Linha sinal="=" forte rotulo="Margem de contribuição" valor={dre.margemContribuicao} sub={pct(dre.faturamento ? dre.margemContribuicao / dre.faturamento : NaN)} />
             <Linha sinal="-" rotulo="Custos fixos" valor={dre.fixos} />
-            <Linha sinal="-" rotulo="Outras despesas lançadas" valor={dre.outrasDespesas} />
+            <Linha sinal="-" rotulo="Outras despesas (lançamentos e caixa)" valor={dre.outrasDespesas} />
+            {dre.depreciacao > 0 && <Linha sinal="-" rotulo="Depreciação" valor={dre.depreciacao} />}
             <Linha sinal="=" forte rotulo="Resultado" valor={dre.resultado} sub={pct(dre.faturamento ? dre.resultado / dre.faturamento : NaN)} />
           </div>
           {dre.cobertura < 0.6 && !carregando && r.receitaItens > 0 && (
@@ -92,14 +108,14 @@ export default function Painel() {
           )}
         </Card>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           <Card titulo="Pendências">
-            <ul className="space-y-1.5 text-sm">
+            <ul className="space-y-0.5 text-sm">
               {pendencias.map((p) => (
                 <li key={p.txt}>
-                  <button type="button" className="flex w-full cursor-pointer items-center justify-between rounded-lg px-2 py-1 hover:bg-stone-50" onClick={() => irPara(p.aba)}>
+                  <button type="button" className="flex w-full cursor-pointer items-center justify-between rounded-lg px-2 py-1 [@media(max-height:780px)]:py-0.5 hover:bg-stone-50" onClick={() => (p.aba === 'contabil' ? abrirContabil('obrigacoes') : irPara(p.aba))}>
                     <span>{p.txt}</span>
-                    <Selo tom={p.n ? 'alerta' : 'ok'}>{p.n || 'ok'}</Selo>
+                    <Selo tom={p.n ? (p.ruim ? 'ruim' : 'alerta') : 'ok'}>{p.n || 'ok'}</Selo>
                   </button>
                 </li>
               ))}
@@ -112,7 +128,7 @@ export default function Painel() {
               <ul className="space-y-1 text-sm">
                 {piores.map(({ f, cmv }) => (
                   <li key={f.id}>
-                    <button type="button" className="flex w-full cursor-pointer items-center justify-between rounded-lg px-2 py-1 hover:bg-stone-50" onClick={() => irPara('fichas', f.id)}>
+                    <button type="button" className="flex w-full cursor-pointer items-center justify-between rounded-lg px-2 py-1 [@media(max-height:780px)]:py-0.5 hover:bg-stone-50" onClick={() => irPara('fichas', f.id)}>
                       <span className="truncate">{f.nome}</span>
                       <Selo tom={tomCmv(cmv, meta)}>{pct(cmv)}</Selo>
                     </button>
@@ -122,22 +138,23 @@ export default function Painel() {
             )}
           </Card>
         </div>
+        <Card titulo="Faturamento por dia" className="flex flex-col lg:col-span-2 xl:col-span-1">
+          {dias.length === 0 ? (
+            <p className="text-sm text-stone-400">{carregando ? 'Carregando…' : 'Sem vendas no mês.'}</p>
+          ) : (
+            <div className="flex flex-1 min-h-28 [@media(max-height:780px)]:min-h-16 items-end gap-1">
+              {dias.map(([dia, v]) => (
+                <div key={dia} className="group flex h-full flex-1 flex-col items-center" title={`${dia.split('-').reverse().join('/')}: ${brl(v)}`}>
+                  <div className="flex w-full flex-1 items-end"><div className="w-full rounded-t bg-[#6a2092] transition group-hover:bg-[#4d0471]" style={{ height: `${(v / maxDia) * 100}%` }} /></div>
+                  <span className="mt-1 text-[10px] text-stone-400">{Number(dia.slice(8))}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
       </div>
 
-      <Card titulo="Faturamento por dia">
-        {dias.length === 0 ? (
-          <p className="text-sm text-stone-400">{carregando ? 'Carregando…' : 'Sem vendas no mês.'}</p>
-        ) : (
-          <div className="flex h-40 items-end gap-1">
-            {dias.map(([dia, v]) => (
-              <div key={dia} className="group flex h-full flex-1 flex-col items-center" title={`${dia.split('-').reverse().join('/')}: ${brl(v)}`}>
-                <div className="flex w-full flex-1 items-end"><div className="w-full rounded-t bg-[#6a2092] transition group-hover:bg-[#4d0471]" style={{ height: `${(v / maxDia) * 100}%` }} /></div>
-                <span className="mt-1 text-[10px] text-stone-400">{Number(dia.slice(8))}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
+
     </div>
   );
 }

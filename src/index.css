@@ -315,3 +315,109 @@ body {
     justify-self: end;
   }
 }
+
+/* ==============================================================================
+   GESTOR (admin) — base visual
+   Vale só quando o gestor está aberto (classe "admin-ui" no <html>).
+   - Texto em Inter com números alinhados (a fonte de "máquina de escrever" saiu)
+   - Nada abaixo de 12px (rótulos em maiúsculas ficam com 11px e espaçamento leve)
+   ============================================================================== */
+@media screen {
+  html.admin-ui body {
+    font-family: var(--font-sans);
+    background: #f6f5f8;
+  }
+  html.admin-ui .font-mono {
+    font-family: var(--font-sans);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+  }
+  html.admin-ui :is(.text-\[8px\], .text-\[8\.5px\], .text-\[9px\], .text-\[9\.5px\], .text-\[10px\], .text-\[10\.5px\], .text-\[11px\], .text-\[11\.5px\]) {
+    font-size: 12px;
+  }
+  html.admin-ui :is(.text-\[8px\], .text-\[8\.5px\], .text-\[9px\], .text-\[9\.5px\], .text-\[10px\], .text-\[10\.5px\], .text-\[11px\], .text-\[11\.5px\], .text-xs).uppercase {
+    font-size: 11px;
+    letter-spacing: 0.04em;
+  }
+  html.admin-ui .tabular-nums,
+  html.admin-ui td,
+  html.admin-ui th {
+    font-variant-numeric: tabular-nums;
+  }
+  /* Números de destaque (KPIs) na fonte de títulos do cardápio */
+  html.admin-ui :is(.text-2xl, .text-3xl, .text-4xl).font-mono,
+  html.admin-ui :is(.text-2xl, .text-3xl, .text-4xl):is(.font-black, .font-extrabold) {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+  /* Foco visível em tudo que é clicável (teclado), exceto a barra da paleta */
+  html.admin-ui :is(button, a, input, select, textarea):focus-visible {
+    outline: 2px solid #6a2092;
+    outline-offset: 2px;
+  }
+  html.admin-ui input[data-palette-input]:focus-visible {
+    outline: none !important;
+  }
+  /* Menu lateral: rola só se a tela for muito baixa, e sem barra aparente */
+  html.admin-ui .adm-nav {
+    scrollbar-width: none;
+  }
+  html.admin-ui .adm-nav::-webkit-scrollbar {
+    display: none;
+  }
+  /* Valores em R$ nunca quebram em duas linhas */
+  html.admin-ui td :is(.font-mono, .tabular-nums),
+  html.admin-ui .adm-valor {
+    white-space: nowrap;
+  }
+  /* Telas baixas (notebook, ~700px úteis): modo compacto. Menos respiro, mesmo conteúdo, nada de rolar a página. */
+  @media (max-height: 780px) {
+    html.admin-ui main :is(.p-6, .sm\:p-6, .p-5, .sm\:p-5) {
+      padding: 0.875rem;
+    }
+    html.admin-ui main .p-4 {
+      padding: 0.75rem;
+    }
+    html.admin-ui main :is(.pt-4, .pb-4) {
+      padding-block: 0.625rem;
+    }
+    html.admin-ui main :is(.gap-6, .gap-5, .gap-4) {
+      gap: 0.625rem;
+    }
+    html.admin-ui main :is(.space-y-6, .space-y-5, .space-y-4) > :not(:last-child) {
+      margin-block-end: 0.625rem;
+      margin-block-start: 0;
+    }
+    html.admin-ui main :is(.space-y-6, .space-y-5, .space-y-4) > :not(:first-child) {
+      margin-block-start: 0;
+    }
+    html.admin-ui main .space-y-3 > :not(:last-child) {
+      margin-block-end: 0.5rem;
+    }
+    html.admin-ui main :is(.mb-4, .mb-5, .mb-6) {
+      margin-bottom: 0.625rem;
+    }
+    html.admin-ui main :is(.mt-4, .mt-5, .mt-6) {
+      margin-top: 0.625rem;
+    }
+    html.admin-ui main :is(input, select, button).h-10 {
+      height: 2.25rem;
+    }
+    html.admin-ui main .adm-compactavel-esconder {
+      display: none !important;
+    }
+  }
+  /* Áreas com rolagem interna (listas longas dentro de um card): barra fina e discreta */
+  html.admin-ui .adm-rolagem {
+    scrollbar-width: thin;
+    scrollbar-color: #dccfe6 transparent;
+  }
+  html.admin-ui .adm-rolagem::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  html.admin-ui .adm-rolagem::-webkit-scrollbar-thumb {
+    background: #dccfe6;
+    border-radius: 999px;
+  }
+}

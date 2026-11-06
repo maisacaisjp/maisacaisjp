@@ -6,6 +6,7 @@ import {
   Bike,
   Store,
   Users,
+  User,
   IceCream,
   CreditCard,
   ArrowUpRight,
@@ -42,7 +43,9 @@ import {
   Phone,
   Flame,
   LayoutGrid,
-  List
+  Columns3,
+  List,
+  CheckCircle2
 } from "lucide-react";
 import {
   AreaChart,
@@ -69,6 +72,7 @@ import MenuManager from '../components/MenuManager';
 import CategoryManager from '../components/CategoryManager';
 import RecipeManager from '../components/RecipeManager';
 import FinanceiroManager from '../components/FinanceiroManager';
+import { BannerContabil, useAlertasContabeis } from '../components/AlertasContabeis';
 import { SalesFunnelManager } from '../components/SalesFunnelManager';
 import CashSessionDetailsModal from '../components/reports/CashSessionDetailsModal';
 import PeriodFilterCompact from '../components/PeriodFilterCompact';
@@ -83,6 +87,9 @@ import AgentManager from '../components/AgentManager';
 import HistoricalSalesModal from '../components/HistoricalSalesModal';
 
 import { startOfDay, endOfDay } from 'date-fns';
+import { brl, nomeBonito } from '../utils/formatacao';
+import PaletaComandos, { ComandoPaleta } from '../components/PaletaComandos';
+import { Paginacao, useLinhasQueCabem } from '../components/admin/ui';
 
 
 
@@ -115,7 +122,7 @@ const safeParseItems = (items: any): any[] => {
   return [];
 };
 
-const CHART_COLORS = ["#18181b", "#6a2092", "#3b82f6", "#10b981", "#f97316", "#06b6d4"];
+const CHART_COLORS = ["#6a2092", "#9333ea", "#3b82f6", "#10b981", "#f59e0b", "#06b6d4"];
 
 
 const playNotificationSound = () => {
@@ -228,7 +235,7 @@ export default function AdminDashboard() {
   const [passwordChangeMessage, setPasswordChangeMessage] = useState("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<any | null>(null);
-  const [ordersViewMode, setOrdersViewMode] = useState<'cards' | 'table'>('table');
+  const [ordersViewMode, setOrdersViewMode] = useState<'cards' | 'table' | 'kanban'>('table');
   const [ordersStatusFilter, setOrdersStatusFilter] = useState<'todos' | 'Pendente' | 'Em Preparo' | 'Saiu para Entrega' | 'Finalizado' | 'Cancelado'>('todos');
   const [ordersSearchTerm, setOrdersSearchTerm] = useState('');
 
@@ -826,6 +833,22 @@ export default function AdminDashboard() {
   }, [showPrintPreview, reportModal.isOpen, isPasswordModalOpen, selectedSessionForDetails, isMobileMenuOpen]);
 
   const [activeTab, setActiveTab] = useState("visao-geral");
+  // Lista de pedidos: quantas linhas cabem na tela (o resto vai para as próximas páginas)
+  const pedidosListaRef = useRef<HTMLDivElement>(null);
+  const pedidosPorPagina = useLinhasQueCabem(pedidosListaRef, 57, { reserva: 128, min: 3, deps: [activeTab, ordersViewMode, ordersStatusFilter] });
+  const [pedidosPagina, setPedidosPagina] = useState(1);
+  // Comandas (cards grandes): fileiras que cabem na tela × colunas da grade
+  const comandasRef = useRef<HTMLDivElement>(null);
+  const fileirasComandas = useLinhasQueCabem(comandasRef, 432, { reserva: 64, min: 1, max: 6, deps: [activeTab, ordersViewMode, ordersStatusFilter] });
+  useEffect(() => setPedidosPagina(1), [ordersStatusFilter, ordersSearchTerm, ordersViewMode]);
+  // Alertas da agenda contábil (Financeiro → Contábil), só para o dono
+  const alertasContabeis = useAlertasContabeis(isAuthenticated && (!userRole || isOwner), activeTab);
+  const [entradaFinanceiro, setEntradaFinanceiro] = useState<{ chave: number; contabil: boolean }>({ chave: 0, contabil: false });
+  const abrirAgendaContabil = () => {
+    setEntradaFinanceiro({ chave: Date.now(), contabil: true });
+    setActiveTab('financeiro');
+    setIsMobileMenuOpen(false);
+  };
   const [showPDVModal, setShowPDVModal] = useState(false);
   const [showHistoricalSalesModal, setShowHistoricalSalesModal] = useState(false);
   const [expenses, setExpenses] = useState<any[]>([]);
@@ -1176,6 +1199,110 @@ export default function AdminDashboard() {
     document.body.removeChild(link);
   };
 
+  // ── Menu lateral (mesmas permissões de antes, agrupado por tarefa) ──────────
+  const pedidosNovos = (dashboardData?.recentOrders || []).filter((o: any) => o.status === 'Pendente').length;
+  const verCardapio = hasPermission('gerenciar_produtos') || hasPermission('gerenciar_categorias');
+  const gruposMenu: { titulo: string; itens: { id: string; rotulo: string; Icone: any; mostrar: boolean; badge?: number; palavras?: string }[] }[] = [
+    {
+      titulo: 'Operação',
+      itens: [
+        { id: 'visao-geral', rotulo: 'Visão geral', Icone: LayoutDashboard, mostrar: hasPermission('ver_relatorios'), palavras: 'inicio dashboard resumo' },
+        { id: 'pedidos', rotulo: 'Pedidos', Icone: ShoppingBag, mostrar: hasPermission('ver_pedidos'), badge: pedidosNovos, palavras: 'comandas delivery' },
+        { id: 'caixa', rotulo: 'Caixa', Icone: CreditCard, mostrar: hasPermission('gerenciar_caixa'), palavras: 'abrir fechar turno sangria' },
+        { id: 'despesas', rotulo: 'Despesas', Icone: TrendingDown, mostrar: hasPermission('gerenciar_caixa'), palavras: 'gastos contas' },
+      ],
+    },
+    {
+      titulo: 'Clientes e vendas',
+      itens: [
+        { id: 'clientes', rotulo: 'Clientes', Icone: Users, mostrar: hasPermission('ver_clientes'), palavras: 'cashback fidelidade' },
+        { id: 'relatorios', rotulo: 'Relatórios', Icone: BarChart3, mostrar: hasPermission('ver_relatorios'), palavras: 'vendas faturamento' },
+        { id: 'funil', rotulo: 'Funil de vendas', Icone: Filter, mostrar: hasPermission('ver_relatorios'), palavras: 'acessos conversao' },
+      ],
+    },
+    {
+      titulo: 'Cardápio',
+      itens: [
+        { id: 'gestao-cardapio', rotulo: 'Produtos', Icone: Package, mostrar: hasPermission('gerenciar_produtos'), palavras: 'pausar preco sabores cremes' },
+        { id: 'categorias', rotulo: 'Categorias', Icone: FolderTree, mostrar: hasPermission('gerenciar_categorias') },
+        { id: 'fichas-tecnicas', rotulo: 'Ficha técnica e CMV', Icone: Layers, mostrar: hasPermission('gerenciar_produtos'), palavras: 'insumos custo' },
+        { id: 'banner-promocional', rotulo: 'Banner promocional', Icone: Megaphone, mostrar: verCardapio, palavras: 'promocao popup' },
+      ],
+    },
+    {
+      titulo: 'Gestão',
+      itens: [
+        { id: 'financeiro', rotulo: 'Financeiro', Icone: Wallet, mostrar: !userRole || isOwner, badge: alertasContabeis.length, palavras: 'dre contabil custos' },
+        { id: 'configuracoes', rotulo: 'Configurações', Icone: Settings, mostrar: hasPermission('gerenciar_configuracoes'), palavras: 'horario impressora entrega' },
+        { id: 'agente-ia', rotulo: 'Agente IA', Icone: BotMessageSquare, mostrar: hasPermission('gerenciar_configuracoes'), palavras: 'whatsapp robo atendimento' },
+        { id: 'usuarios', rotulo: 'Usuários e acesso', Icone: Shield, mostrar: hasPermission('gerenciar_usuarios'), palavras: 'funcionarios senha permissoes' },
+      ],
+    },
+  ];
+  const itensMenu = gruposMenu.flatMap(g => g.itens.filter(i => i.mostrar).map(i => ({ ...i, grupo: g.titulo })));
+  const atalhoDoItem = (id: string) => {
+    const n = itensMenu.findIndex(i => i.id === id);
+    return n >= 0 && n < 9 ? `Alt ${n + 1}` : undefined;
+  };
+
+  const [paletaAberta, setPaletaAberta] = useState(false);
+  const podePDV = hasPermission('ver_pedidos');
+  const comandosPaleta: ComandoPaleta[] = [
+    ...(podePDV ? [{ id: 'acao-pdv', rotulo: 'Nova venda no balcão (PDV)', grupo: 'Ações', Icone: Plus, atalho: 'F2', palavras: 'pedido venda balcao', acao: () => setShowPDVModal(true) }] : []),
+    ...itensMenu.map(i => ({ id: `ir-${i.id}`, rotulo: i.rotulo, grupo: i.grupo, Icone: i.Icone, atalho: atalhoDoItem(i.id), palavras: i.palavras, acao: () => setActiveTab(i.id) })),
+    { id: 'acao-sair', rotulo: 'Sair do sistema', grupo: 'Conta', Icone: LogOut, palavras: 'logout', acao: () => handleLogout() },
+  ];
+
+  // Estado mais recente para os atalhos de teclado (sem recriar o listener)
+  const atalhosRef = useRef({ itensMenu, podePDV });
+  atalhosRef.current = { itensMenu, podePDV };
+
+  // Visual do gestor (classe usada no index.css) só enquanto o gestor está aberto
+  useEffect(() => {
+    document.documentElement.classList.add('admin-ui');
+    return () => document.documentElement.classList.remove('admin-ui');
+  }, []);
+
+  // Atalhos: Ctrl+K paleta · F2 nova venda · / buscar na tela · Alt+1…9 telas
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const digitando = (el: EventTarget | null) => {
+      const t = el as HTMLElement | null;
+      return !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
+    };
+    const aoTeclar = (e: KeyboardEvent) => {
+      const { itensMenu: itens, podePDV: pdv } = atalhosRef.current;
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletaAberta(v => !v);
+        return;
+      }
+      if (e.key === 'F2' && pdv) {
+        e.preventDefault();
+        setShowPDVModal(true);
+        return;
+      }
+      if (e.altKey && !e.ctrlKey && /^[1-9]$/.test(e.key)) {
+        const item = itens[Number(e.key) - 1];
+        if (item) {
+          e.preventDefault();
+          setActiveTab(item.id);
+        }
+        return;
+      }
+      if (e.key === '/' && !digitando(e.target) && !e.ctrlKey && !e.metaKey) {
+        const campo = document.querySelector<HTMLInputElement>('main input[type="search"], main input[placeholder*="Buscar"], main input[placeholder*="buscar"]');
+        if (campo) {
+          e.preventDefault();
+          campo.focus();
+          campo.select();
+        }
+      }
+    };
+    window.addEventListener('keydown', aoTeclar);
+    return () => window.removeEventListener('keydown', aoTeclar);
+  }, [isAuthenticated]);
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setDashboardData(null);
@@ -1343,158 +1470,18 @@ export default function AdminDashboard() {
               {activeTab === 'visao-geral' && 'Visão Geral'}
               {activeTab === 'pedidos' && 'Pedidos'}
               {activeTab === 'caixa' && 'Caixa'}
-              {activeTab === "relatorios" && (
-          <div className="mt-1 space-y-2.5 pb-12">
-            {/* Filtro de Tempo Compacto Padronizado */}
-            <motion.div 
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, ease: [0.2, 0, 0, 1] }}
-              className="bg-white rounded-xl border border-stone-200/90 shadow-2xs px-3 py-1.5"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-rose-600 shrink-0" />
-                  <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-stone-800">
-                    Período dos Relatórios
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <PeriodFilterCompact
-                    value={dateFilter as any}
-                    startDate={customStartDate}
-                    endDate={customEndDate}
-                    onChange={(res) => {
-                      setDateFilter(res.period);
-                      dateFilterRef.current = res.period;
-                      if (res.startDate) {
-                        setCustomStartDate(res.startDate);
-                        customStartDateRef.current = res.startDate;
-                      }
-                      if (res.endDate) {
-                        setCustomEndDate(res.endDate);
-                        customEndDateRef.current = res.endDate;
-                      }
-                      fetchDashboardData(false, res.period);
-                    }}
-                    align="right"
-                  />
-
-                  <button
-                    onClick={() => fetchDashboardData()}
-                    className="h-7 px-2 rounded-lg border border-stone-200 bg-white text-stone-600 hover:text-stone-950 hover:bg-stone-50 transition-colors cursor-pointer shadow-2xs flex items-center gap-1 text-[11px] font-mono font-medium"
-                    title="Recarregar dados"
-                  >
-                    <RefreshCw size={11} className={isLoading ? 'animate-spin text-rose-600' : 'text-stone-400'} />
-                    <span className="hidden sm:inline">Atualizar</span>
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Relatórios Financeiros & Faturamento */}
-            <div>
-              <motion.h2 
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.3, ease: [0.2, 0, 0, 1] }}
-                className="text-[10.5px] font-mono font-bold uppercase tracking-wider text-stone-600 flex items-center gap-1.5 mb-1.5"
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Relatórios Financeiros & Faturamento
-              </motion.h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-2.5">
-                <ReportCard
-                  customDelay={0.05}
-                  title="Fluxo de Caixa"
-                  value={`R$ ${(dashboardData?.lucroLiquido ?? (filteredOrders.reduce((acc, o) => acc + o.totalAmount, 0) - (expenses.reduce((s, e) => s + Number(e.amount || 0), 0)))).toFixed(2)}`}
-                  icon={<TrendingUp size={14} strokeWidth={1.5} className="text-emerald-950" />}
-                  onClick={() => setReportModal({isOpen: true, type: 'fluxo_caixa', title: 'Relatório de Fluxo de Caixa (Entradas vs Saídas)'})}
-                  subtitle="Entradas, Saídas e Lucro"
-                />
-                <ReportCard
-                  customDelay={0.10}
-                  title="Faturamento Geral"
-                  value={`R$ ${filteredOrders.reduce((acc, o) => acc + o.totalAmount, 0).toFixed(2)}`}
-                  icon={<DollarSign size={14} strokeWidth={1.5} className="text-emerald-950" />}
-                  onClick={() => setReportModal({isOpen: true, type: 'faturamento', title: 'Faturamento Geral por Dia'})}
-                  subtitle="Vendas por dia e pedidos"
-                />
-                <ReportCard
-                  customDelay={0.15}
-                  title="Pedidos no período"
-                  value={`${filteredOrders.length} pedidos`}
-                  icon={<Calendar size={14} strokeWidth={1.5} className="text-emerald-950" />}
-                  onClick={() => setReportModal({isOpen: true, type: 'vendas_mes', title: 'Detalhamento de Pedidos'})}
-                  subtitle="Lista completa de vendas"
-                />
-                <ReportCard
-                  customDelay={0.20}
-                  title="Ticket Médio"
-                  value={`R$ ${filteredOrders.length > 0 ? (filteredOrders.reduce((acc, o) => acc + o.totalAmount, 0) / filteredOrders.length).toFixed(2) : '0.00'}`}
-                  icon={<CreditCard size={14} strokeWidth={1.5} className="text-emerald-950" />}
-                  onClick={() => {
-                    setTicketMedioTab('todos');
-                    setReportModal({isOpen: true, type: 'ticket_medio', title: 'Ticket Médio por Operação (Mesa, Retirada e Entrega)'});
-                  }}
-                  subtitle="Média por pedido e canais"
-                />
-              </div>
-            </div>
-
-            {/* Vendas por Canal, Produtos & Operação */}
-            <div>
-              <motion.h2 
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.3, delay: 0.1, ease: [0.2, 0, 0, 1] }}
-                className="text-[10.5px] font-mono font-bold uppercase tracking-wider text-stone-600 flex items-center gap-1.5 mb-1.5"
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" /> Vendas por Canal, Produtos & Operação
-              </motion.h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-2.5">
-                <ReportCard
-                  customDelay={0.15}
-                  title="Vendas de produtos"
-                  value=""
-                  icon={<Package size={14} strokeWidth={1.5} className="text-amber-950" />}
-                  onClick={() => setReportModal({isOpen: true, type: 'produtos', title: 'Vendas de Produtos'})}
-                  subtitle="Detalhamento por item"
-                />
-                <ReportCard
-                  customDelay={0.20}
-                  title="Vendas de complementos"
-                  value=""
-                  icon={<UtensilsCrossed size={14} strokeWidth={1.5} className="text-amber-950" />}
-                  onClick={() => setReportModal({isOpen: true, type: 'complementos', title: 'Vendas de Complementos (Bordas e Extras)'})}
-                  subtitle="Adicionais e extras"
-                />
-                <ReportCard
-                  customDelay={0.25}
-                  title="Formas de Pagamento"
-                  value=""
-                  icon={<CreditCard size={14} strokeWidth={1.5} className="text-amber-950" />}
-                  onClick={() => setReportModal({isOpen: true, type: 'pagamentos', title: 'Formas de Pagamento'})}
-                  subtitle="PIX, Cartão e Dinheiro"
-                />
-                <ReportCard
-                  customDelay={0.30}
-                  title="Cancelamentos"
-                  value=""
-                  icon={<AlertCircle size={14} strokeWidth={1.5} className="text-amber-950" />}
-                  onClick={() => setReportModal({isOpen: true, type: 'cancelamentos', title: 'Pedidos Cancelados'})}
-                  subtitle="Análise de perdas"
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
+              {activeTab === 'despesas' && 'Despesas'}
+              {activeTab === 'relatorios' && 'Relatórios'}
+              {activeTab === 'funil' && 'Funil de vendas'}
+              {activeTab === 'clientes' && 'Clientes'}
               {activeTab === 'gestao-cardapio' && 'Produtos'}
               {activeTab === 'categorias' && 'Categorias'}
               {activeTab === 'fichas-tecnicas' && 'Ficha Técnica & CMV'}
               {activeTab === 'financeiro' && 'Financeiro'}
+              {activeTab === 'banner-promocional' && 'Banner promocional'}
               {activeTab === 'configuracoes' && 'Configurações'}
+              {activeTab === 'usuarios' && 'Usuários'}
+              {activeTab === 'agente-ia' && 'Agente IA'}
             </span>
           </div>
         </div>
@@ -1595,6 +1582,7 @@ export default function AdminDashboard() {
                     className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'financeiro' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
                   >
                     Financeiro
+                    {alertasContabeis.length > 0 && <span className="ml-auto rounded-full bg-amber-400 px-1.5 text-[10px] font-bold leading-4 text-[#3d0a5c]" title="Obrigações contábeis pendentes">{alertasContabeis.length}</span>}
                   </button>
                 )}
                 {isOwner && (
@@ -1684,229 +1672,123 @@ export default function AdminDashboard() {
 
       <div className="min-h-screen bg-stone-50 flex flex-col md:flex-row font-sans no-print">
       {/* Sidebar */}
-      <aside className="w-60 bg-[#2d0a42] text-white/75 border-r border-white/10 flex-col hidden md:flex sticky top-0 h-screen overflow-hidden shrink-0 select-none">
-        {/* Terminal Header */}
-        <div className="py-3 px-3.5 border-b border-white/10 bg-[#2d0a42] shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl overflow-hidden bg-white border border-white/10 shrink-0 flex items-center justify-center shadow-sm">
-              <img src={adminLogoUrl || "/logo.png"} alt="Mais Açaí" className="w-full h-full object-cover rounded-lg" onError={(e) => { (e.target as HTMLImageElement).src = "/logo.png"; }} />
-            </div>
-            <div className="flex flex-col min-w-0">
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm font-extrabold text-white tracking-tight leading-tight truncate">Mais Açaí</h2>
-                <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 leading-none">Online</span>
-              </div>
-              <span className="text-[10px] font-mono text-purple-300 uppercase tracking-wider block mt-1 leading-none">Açaí & Delícias</span>
-            </div>
+      <aside className="w-64 bg-[#2a0a3f] text-white/80 flex-col hidden md:flex sticky top-0 h-screen overflow-hidden shrink-0 select-none">
+        {/* Marca */}
+        <div className="px-4 pt-4 pb-3 [@media(max-height:820px)]:pt-3 [@media(max-height:820px)]:pb-2 flex items-center gap-3 shrink-0">
+          <div className="w-10 h-10 [@media(max-height:820px)]:w-9 [@media(max-height:820px)]:h-9 rounded-xl overflow-hidden bg-white shrink-0 flex items-center justify-center shadow-sm">
+            <img src={adminLogoUrl || "/logo.png"} alt="Mais Açaí" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = "/logo.png"; }} />
+          </div>
+          <div className="min-w-0">
+            <p className="font-display text-[16px] font-extrabold text-white leading-tight truncate">Mais Açaí</p>
+            <p className="text-[12px] text-white/50 leading-tight mt-0.5">Gestor da loja</p>
           </div>
         </div>
 
-        {/* Status Loja */}
-        <div className="p-1 border-b border-white/10 relative shrink-0">
+        {/* Status da loja */}
+        <div className="px-3 pb-2 relative shrink-0">
           <button
             onClick={() => setShowStoreMenu(!showStoreMenu)}
-            className={`w-full flex items-center justify-center gap-1 px-2 py-0.5 rounded font-mono text-[10px] font-bold transition-colors cursor-pointer border ${
-              storeStatus === 'closed' || manualClosed ? 'bg-rose-950/40 text-rose-300 border-rose-900/60 hover:bg-rose-900/40' : 
-              storeStatus === 'paused' ? 'bg-amber-950/40 text-amber-300 border-amber-900/60 hover:bg-amber-900/40' :
-              'bg-emerald-950/40 text-emerald-300 border-emerald-900/60 hover:bg-emerald-900/40'
+            className={`w-full h-9 px-3 rounded-xl flex items-center gap-2.5 text-[13px] font-semibold transition-colors cursor-pointer border ${
+              storeStatus === 'closed' || manualClosed ? 'bg-rose-500/10 text-rose-200 border-rose-400/30 hover:bg-rose-500/20' :
+              storeStatus === 'paused' ? 'bg-amber-500/10 text-amber-200 border-amber-400/30 hover:bg-amber-500/20' :
+              'bg-emerald-500/10 text-emerald-200 border-emerald-400/30 hover:bg-emerald-500/20'
             }`}
           >
-            <span className={`w-1.5 h-1.5 rounded-full ${
-              storeStatus === 'closed' || manualClosed ? 'bg-rose-500' : 
-              storeStatus === 'paused' ? 'bg-amber-500' : 
+            <span className={`w-2 h-2 rounded-full shrink-0 ${
+              storeStatus === 'closed' || manualClosed ? 'bg-rose-400' :
+              storeStatus === 'paused' ? 'bg-amber-400' :
               'bg-emerald-400'
             } animate-pulse`} />
-            {storeStatus === 'closed' || manualClosed ? 'LOJA FECHADA' : 
-             storeStatus === 'paused' ? 'LOJA PAUSADA' : 'LOJA ABERTA'}
+            {storeStatus === 'closed' || manualClosed ? 'Loja fechada' :
+             storeStatus === 'paused' ? 'Loja pausada' : 'Loja aberta'}
+            <ChevronDown size={16} className="ml-auto opacity-60" />
           </button>
 
           {showStoreMenu && (
-            <div className="absolute top-full left-1 right-1 mt-1 bg-white/10 border border-stone-700 rounded-lg shadow-xl z-50 overflow-hidden divide-y divide-stone-800 font-sans">
+            <div className="absolute top-full left-3 right-3 mt-1 bg-white rounded-xl shadow-2xl ring-1 ring-black/5 z-50 overflow-hidden py-1.5 text-stone-700">
               {(storeStatus === 'closed' || manualClosed || storeStatus === 'paused') ? (
                 <button
                   onClick={() => handleStoreAction('open')}
-                  className="w-full text-left px-3 py-1.5 text-xs font-semibold text-emerald-400 hover:bg-white/10 transition-colors cursor-pointer"
+                  className="w-full text-left h-10 px-3.5 text-[14px] font-semibold text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
                 >
-                  Abrir Loja Agora
+                  Abrir loja agora
                 </button>
               ) : (
                 <>
-                  <div className="p-1">
-                    <p className="px-1 text-[8.5px] font-mono font-bold text-white/50 uppercase tracking-wider">Pausa Temporária</p>
-                    <button onClick={() => handleStoreAction('pause_30m')} className="w-full text-left px-2 py-0.5 text-xs text-white/75 hover:bg-white/10 hover:text-white rounded transition-colors cursor-pointer">Pausar por 30 min</button>
-                    <button onClick={() => handleStoreAction('pause_1h')} className="w-full text-left px-2 py-0.5 text-xs text-white/75 hover:bg-white/10 hover:text-white rounded transition-colors cursor-pointer">Pausar por 1 hora</button>
-                    <button onClick={() => handleStoreAction('pause_2h')} className="w-full text-left px-2 py-0.5 text-xs text-white/75 hover:bg-white/10 hover:text-white rounded transition-colors cursor-pointer">Pausar por 2 horas</button>
-                  </div>
-                  <div className="p-1 bg-black/10">
-                    <button 
-                      onClick={() => handleStoreAction('close')}
-                      className="w-full text-left px-2 py-1 text-xs font-bold text-rose-500 hover:bg-rose-950/50 hover:text-rose-400 rounded transition-colors cursor-pointer"
-                    >
-                      Encerrar o Dia (Caixa)
-                    </button>
-                  </div>
+                  <p className="px-3.5 pt-1 pb-1 text-[11px] font-semibold uppercase tracking-wider text-stone-400">Pausa temporária</p>
+                  <button onClick={() => handleStoreAction('pause_30m')} className="w-full text-left h-9 px-3.5 text-[14px] hover:bg-stone-50 transition-colors cursor-pointer">Pausar por 30 min</button>
+                  <button onClick={() => handleStoreAction('pause_1h')} className="w-full text-left h-9 px-3.5 text-[14px] hover:bg-stone-50 transition-colors cursor-pointer">Pausar por 1 hora</button>
+                  <button onClick={() => handleStoreAction('pause_2h')} className="w-full text-left h-9 px-3.5 text-[14px] hover:bg-stone-50 transition-colors cursor-pointer">Pausar por 2 horas</button>
+                  <div className="my-1.5 border-t border-stone-100" />
+                  <button
+                    onClick={() => handleStoreAction('close')}
+                    className="w-full text-left h-10 px-3.5 text-[14px] font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                  >
+                    Encerrar o dia (caixa)
+                  </button>
                 </>
               )}
             </div>
           )}
         </div>
 
-        {/* Menu Items */}
-        <div className="p-1 flex-1 space-y-[2px] font-sans text-[11px] overflow-hidden">
-          {hasPermission('ver_relatorios') && (
-            <button 
-              onClick={() => setActiveTab("visao-geral")} 
-              className={`w-full flex items-center gap-1.5 px-2 py-[3.5px] rounded font-medium transition-colors cursor-pointer ${activeTab === 'visao-geral' ? 'bg-white text-[#4d0471] font-bold shadow-xs border border-white' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
-            >
-              <LayoutDashboard size={12} className={activeTab === 'visao-geral' ? 'text-[#6a2092]' : 'text-white/55'} />
-              Visão Geral
-            </button>
-          )}
-          {hasPermission('ver_pedidos') && (
-            <button 
-              onClick={() => setActiveTab("pedidos")} 
-              className={`w-full flex items-center gap-1.5 px-2 py-[3.5px] rounded font-medium transition-colors cursor-pointer ${activeTab === 'pedidos' ? 'bg-white text-[#4d0471] font-bold shadow-xs border border-white' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
-            >
-              <ShoppingBag size={12} className={activeTab === 'pedidos' ? 'text-[#6a2092]' : 'text-white/55'} />
-              Pedidos
-            </button>
-          )}
-          {hasPermission('gerenciar_caixa') && (
-            <button 
-              onClick={() => setActiveTab("caixa")} 
-              className={`w-full flex items-center gap-1.5 px-2 py-[3.5px] rounded font-medium transition-colors cursor-pointer ${activeTab === 'caixa' ? 'bg-white text-[#4d0471] font-bold shadow-xs border border-white' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
-            >
-              <CreditCard size={12} className={activeTab === 'caixa' ? 'text-[#6a2092]' : 'text-white/55'} />
-              Caixa
-            </button>
-          )}
-          {hasPermission('gerenciar_caixa') && (
-            <button 
-              onClick={() => setActiveTab("despesas")} 
-              className={`w-full flex items-center gap-1.5 px-2 py-[3.5px] rounded font-medium transition-colors cursor-pointer ${activeTab === 'despesas' ? 'bg-white text-[#4d0471] font-bold shadow-xs border border-white' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
-            >
-              <TrendingDown size={12} className={activeTab === 'despesas' ? 'text-[#6a2092]' : 'text-white/55'} />
-              Despesas
-            </button>
-          )}
-          {hasPermission('ver_relatorios') && (
-            <button 
-              onClick={() => setActiveTab("relatorios")} 
-              className={`w-full flex items-center gap-1.5 px-2 py-[3.5px] rounded font-medium transition-colors cursor-pointer ${activeTab === 'relatorios' ? 'bg-white text-[#4d0471] font-bold shadow-xs border border-white' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
-            >
-              <BarChart3 size={12} className={activeTab === 'relatorios' ? 'text-[#6a2092]' : 'text-white/55'} />
-              Relatórios
-            </button>
-          )}
-          {hasPermission('ver_relatorios') && (
-            <button 
-              onClick={() => setActiveTab("funil")} 
-              className={`w-full flex items-center gap-1.5 px-2 py-[3.5px] rounded font-medium transition-colors cursor-pointer ${activeTab === 'funil' ? 'bg-white text-[#4d0471] font-bold shadow-xs border border-white' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
-            >
-              <Filter size={12} className={activeTab === 'funil' ? 'text-[#6a2092]' : 'text-white/55'} />
-              Funil de Vendas
-            </button>
-          )}
-          {hasPermission('ver_clientes') && (
-            <button 
-              onClick={() => setActiveTab("clientes")} 
-              className={`w-full flex items-center gap-1.5 px-2 py-[3.5px] rounded font-medium transition-colors cursor-pointer ${activeTab === 'clientes' ? 'bg-white text-[#4d0471] font-bold shadow-xs border border-white' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
-            >
-              <Users size={12} className={activeTab === 'clientes' ? 'text-[#6a2092]' : 'text-white/55'} />
-              Clientes
-            </button>
-          )}
-          {(!userRole || isOwner) && (
-            <button
-              onClick={() => setActiveTab("financeiro")}
-              className={`w-full flex items-center gap-1.5 px-2 py-[3.5px] rounded font-medium transition-colors cursor-pointer ${activeTab === 'financeiro' ? 'bg-white text-[#4d0471] font-bold shadow-xs border border-white' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
-            >
-              <Wallet size={12} className={activeTab === 'financeiro' ? 'text-[#6a2092]' : 'text-white/55'} />
-              Financeiro
-            </button>
-          )}
-          
-          {(hasPermission('gerenciar_produtos') || hasPermission('gerenciar_categorias')) && (
-            <div className="pt-1 mt-1 border-t border-white/10 space-y-[2px]">
-              <p className="px-2 text-[8px] font-mono font-bold text-white/50 uppercase tracking-wider mb-0.5 leading-none">Cardápio</p>
-              {hasPermission('gerenciar_produtos') && (
-                <button 
-                  onClick={() => setActiveTab("gestao-cardapio")} 
-                  className={`w-full flex items-center gap-1.5 px-2 py-[3.5px] rounded font-medium transition-colors cursor-pointer ${activeTab === 'gestao-cardapio' ? 'bg-white text-[#4d0471] font-bold shadow-xs border border-white' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
-                >
-                  <Package size={12} className={activeTab === 'gestao-cardapio' ? 'text-[#6a2092]' : 'text-white/55'} />
-                  Produtos
-                </button>
-              )}
-              {hasPermission('gerenciar_categorias') && (
-                <button 
-                  onClick={() => setActiveTab("categorias")} 
-                  className={`w-full flex items-center gap-1.5 px-2 py-[3.5px] rounded font-medium transition-colors cursor-pointer ${activeTab === 'categorias' ? 'bg-white text-[#4d0471] font-bold shadow-xs border border-white' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
-                >
-                  <FolderTree size={12} className={activeTab === 'categorias' ? 'text-[#6a2092]' : 'text-white/55'} />
-                  Categorias
-                </button>
-              )}
-              {hasPermission('gerenciar_produtos') && (
-                <button
-                  onClick={() => setActiveTab("fichas-tecnicas")}
-                  className={`w-full flex items-center gap-1.5 px-2 py-[3.5px] rounded font-medium transition-colors cursor-pointer ${activeTab === 'fichas-tecnicas' ? 'bg-white text-[#4d0471] font-bold shadow-xs border border-white' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
-                >
-                  <Layers size={12} className={activeTab === 'fichas-tecnicas' ? 'text-[#6a2092]' : 'text-white/55'} />
-                  Ficha Técnica & CMV
-                </button>
-              )}
-              <button 
-                onClick={() => setActiveTab("banner-promocional")} 
-                className={`w-full flex items-center gap-1.5 px-2 py-[3.5px] rounded font-medium transition-colors cursor-pointer ${activeTab === 'banner-promocional' ? 'bg-white text-[#4d0471] font-bold shadow-xs border border-white' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
-              >
-                <Megaphone size={12} className={activeTab === 'banner-promocional' ? 'text-[#6a2092]' : 'text-white/55'} />
-                Banner Promocional
-              </button>
-            </div>
-          )}
-
-          {(hasPermission('gerenciar_configuracoes') || hasPermission('gerenciar_usuarios')) && (
-            <div className="pt-1 mt-1 border-t border-white/10 space-y-[2px]">
-              <p className="px-2 text-[8px] font-mono font-bold text-white/50 uppercase tracking-wider mb-0.5 leading-none">Sistema</p>
-              {hasPermission('gerenciar_configuracoes') && (
-                <button 
-                  onClick={() => setActiveTab("configuracoes")} 
-                  className={`w-full flex items-center gap-1.5 px-2 py-[3.5px] rounded font-medium transition-colors cursor-pointer ${activeTab === 'configuracoes' ? 'bg-white text-[#4d0471] font-bold shadow-xs border border-white' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
-                >
-                  <Settings size={12} className={activeTab === 'configuracoes' ? 'text-[#6a2092]' : 'text-white/55'} />
-                  Configurações
-                </button>
-              )}
-              {hasPermission('gerenciar_configuracoes') && (
-                <button 
-                  onClick={() => setActiveTab("agente-ia")} 
-                  className={`w-full flex items-center gap-1.5 px-2 py-[3.5px] rounded font-medium transition-colors cursor-pointer ${activeTab === 'agente-ia' ? 'bg-white text-[#4d0471] font-bold shadow-xs border border-white' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
-                >
-                  <BotMessageSquare size={12} className={activeTab === 'agente-ia' ? 'text-[#6a2092]' : 'text-white/55'} />
-                  Agente IA
-                </button>
-              )}
-              {hasPermission('gerenciar_usuarios') && (
-                <button 
-                  onClick={() => setActiveTab("usuarios")} 
-                  className={`w-full flex items-center gap-1.5 px-2 py-[3.5px] rounded font-medium transition-colors cursor-pointer ${activeTab === 'usuarios' ? 'bg-white text-[#4d0471] font-bold shadow-xs border border-white' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
-                >
-                  <Shield size={12} className={activeTab === 'usuarios' ? 'text-[#6a2092]' : 'text-white/55'} />
-                  Usuários & Acesso
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-        
-        <div className="p-2 mt-auto border-t border-white/10">
-          <button 
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-1.5 px-2 py-2 rounded font-bold text-rose-500 hover:text-rose-400 hover:bg-rose-950/40 transition-colors text-[11px] cursor-pointer"
+        {/* Buscar ou ir para (Ctrl+K) */}
+        <div className="px-3 pb-3 [@media(max-height:820px)]:pb-2 shrink-0">
+          <button
+            onClick={() => setPaletaAberta(true)}
+            className="w-full h-9 px-3 rounded-xl bg-white/[0.07] hover:bg-white/[0.12] text-white/60 hover:text-white/80 text-[13px] flex items-center gap-2.5 transition-colors cursor-pointer"
           >
-            <LogOut size={12} />
-            Sair do Sistema
+            <Search size={16} />
+            Buscar ou ir para…
+            <kbd className="ml-auto text-[11px] font-semibold px-1.5 py-0.5 rounded-md bg-white/10 text-white/60">Ctrl K</kbd>
+          </button>
+        </div>
+
+        {/* Menu */}
+        <nav className="adm-nav flex-1 overflow-y-auto px-3 pb-2 space-y-3 [@media(max-height:820px)]:space-y-2" aria-label="Menu do gestor">
+          {gruposMenu.map(g => {
+            const visiveis = g.itens.filter(i => i.mostrar);
+            if (visiveis.length === 0) return null;
+            return (
+              <div key={g.titulo}>
+                <p className="px-3 mb-0.5 text-[11px] font-semibold uppercase tracking-wider text-white/40 [@media(max-height:720px)]:hidden">{g.titulo}</p>
+                <div className="space-y-px">
+                  {visiveis.map(i => {
+                    const ativo = activeTab === i.id;
+                    const atalho = atalhoDoItem(i.id);
+                    return (
+                      <button
+                        key={i.id}
+                        onClick={() => setActiveTab(i.id)}
+                        title={atalho ? `${i.rotulo} (${atalho.replace(' ', '+')})` : i.rotulo}
+                        aria-current={ativo ? 'page' : undefined}
+                        className={`group w-full h-9 [@media(max-height:820px)]:h-8 px-3 rounded-lg flex items-center gap-3 text-[14px] [@media(max-height:820px)]:text-[13px] transition-colors cursor-pointer ${
+                          ativo ? 'bg-white text-[#3b0257] font-semibold shadow-sm' : 'text-white/75 font-medium hover:text-white hover:bg-white/[0.08]'
+                        }`}
+                      >
+                        <i.Icone size={18} className={ativo ? 'text-[#6a2092]' : 'text-white/50 group-hover:text-white/80'} />
+                        <span className="truncate">{i.rotulo}</span>
+                        {i.badge ? (
+                          <span className={`ml-auto min-w-5 h-5 px-1.5 rounded-full text-[11px] font-bold flex items-center justify-center tabular-nums ${i.id === 'pedidos' ? 'bg-[#fdde58] text-[#2a0a3f]' : 'bg-amber-400 text-[#2a0a3f]'}`}>
+                            {i.badge}
+                          </span>
+                        ) : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </nav>
+
+        <div className="px-3 py-2 border-t border-white/10 shrink-0">
+          <button
+            onClick={handleLogout}
+            className="w-full h-9 [@media(max-height:820px)]:h-8 px-3 rounded-lg flex items-center gap-3 text-[14px] font-medium text-white/60 hover:text-rose-200 hover:bg-rose-500/10 transition-colors cursor-pointer"
+          >
+            <LogOut size={18} />
+            Sair do sistema
           </button>
         </div>
       </aside>
@@ -1919,7 +1801,11 @@ export default function AdminDashboard() {
             ? 'pt-2 md:pt-3 pb-4'
             : 'pt-2 md:pt-4 pb-8'
       }`}>
-        
+        {activeTab !== 'financeiro' && alertasContabeis.length > 0 && (
+          <div className="max-w-7xl mx-auto w-full mb-3">
+            <BannerContabil lista={alertasContabeis} onAbrir={abrirAgendaContabil} />
+          </div>
+        )}
 
         <div className={`max-w-7xl mx-auto w-full ${
           ['despesas', 'relatorios', 'caixa', 'funil', 'visao-geral', 'pedidos'].includes(activeTab) 
@@ -1931,33 +1817,14 @@ export default function AdminDashboard() {
 
 
           {/* Header Section (Only for Non-Cockpit Views) */}
-          {!['despesas', 'relatorios', 'caixa', 'funil', 'visao-geral', 'pedidos', 'agente-ia'].includes(activeTab) && (
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 pb-2.5 border-b border-stone-200/80 mb-4">
-              <div>
-                <h1 className="text-xl font-bold tracking-tight text-stone-900">
-                  {PAGE_TITLES[activeTab]?.title || 'Painel'}
-                </h1>
-                <p className="text-xs text-stone-500 font-mono mt-0.5">
-                  {PAGE_TITLES[activeTab]?.subtitle || ''}
-                </p>
-              </div>
-              
-              <div className="flex items-center gap-2 self-end md:self-auto">
-                {adminLogoUrl && (
-                  <>
-                    <img src={adminLogoUrl} alt="Logo do restaurante" className="h-7 object-contain" />
-                    <div className="w-px h-5 bg-stone-200" />
-                  </>
-                )}
-                <button 
-                  onClick={handleLogout} 
-                  className="h-8 px-2.5 rounded-lg border border-stone-200 bg-white text-stone-600 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-200 transition-colors cursor-pointer text-xs font-semibold flex items-center gap-1.5 shadow-2xs"
-                  title="Sair do Sistema"
-                >
-                  <LogOut size={13} />
-                  <span className="hidden sm:inline text-[11px]">Sair</span>
-                </button>
-              </div>
+          {!['despesas', 'relatorios', 'funil', 'visao-geral', 'pedidos', 'agente-ia'].includes(activeTab) && (
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 pt-1">
+              <h1 className="font-display text-[24px] font-extrabold tracking-tight text-stone-900 leading-tight">
+                {PAGE_TITLES[activeTab]?.title || 'Painel'}
+              </h1>
+              <p className="text-[14px] text-stone-500">
+                {PAGE_TITLES[activeTab]?.subtitle || ''}
+              </p>
             </div>
           )}
 
@@ -1992,7 +1859,11 @@ export default function AdminDashboard() {
 
         {activeTab === "financeiro" && (!userRole || isOwner) && (
           <div className="mt-1">
-            <FinanceiroManager />
+            <FinanceiroManager
+              key={entradaFinanceiro.chave}
+              abaInicial={entradaFinanceiro.contabil ? 'contabil' : undefined}
+              secaoInicial={entradaFinanceiro.contabil ? 'obrigacoes' : undefined}
+            />
           </div>
         )}
 
@@ -2062,7 +1933,7 @@ export default function AdminDashboard() {
 
         {/* Visão Geral Tab */}
         {activeTab === "visao-geral" && (
-          <div className="space-y-3 mt-1 sm:mt-2">
+          <div className="flex-1 flex flex-col gap-3 min-h-0">
 
             {/* Filtro de Período - Visão Geral */}
             <div className="flex items-center justify-between bg-white rounded-xl border border-stone-200 px-3 py-2 shadow-2xs gap-2 flex-wrap">
@@ -2142,7 +2013,7 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
               <KpiCard
                 title="Faturamento Bruto"
-                value={`R$ ${faturamentoBruto.toFixed(2)}`}
+                value={brl(faturamentoBruto)}
                 icon={<DollarSign size={13} strokeWidth={1.5} className="text-emerald-600" />}
                 trend={(dashboardData?.revenueChangePercent ?? 0) >= 0 ? `+${(dashboardData?.revenueChangePercent ?? 0).toFixed(1)}%` : `${(dashboardData?.revenueChangePercent ?? 0).toFixed(1)}%`}
                 trendUp={(dashboardData?.revenueChangePercent ?? 0) >= 0}
@@ -2152,7 +2023,7 @@ export default function AdminDashboard() {
               />
               <KpiCard
                 title="Ticket Médio"
-                value={`R$ ${ticketMedio.toFixed(2)}`}
+                value={brl(ticketMedio)}
                 icon={<CreditCard size={13} strokeWidth={1.5} className="text-stone-700" />}
                 trend="+0%"
                 trendUp={true}
@@ -2184,9 +2055,9 @@ export default function AdminDashboard() {
 
             {/* MODO COCKPIT (PRIMEIRO PLANO - SEM SCROLL) */}
             {overviewViewMode === 'cockpit' ? (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 items-stretch">
-                {/* Coluna Principal: Gráfico Interativo com Dropdown de Métricas */}
-                <div className="lg:col-span-2 bg-white p-3.5 sm:p-4 rounded-xl border border-stone-200 shadow-2xs flex flex-col justify-between">
+              <div className="flex-1 min-h-[340px] grid grid-cols-1 lg:grid-cols-3 gap-3 items-stretch">
+                {/* Coluna Principal: Gráfico Interativo com Dropdown de Métricas (cresce até o fim da tela) */}
+                <div className="lg:col-span-2 bg-white p-4 rounded-2xl border border-stone-200/80 shadow-[0_1px_2px_rgba(28,25,23,0.04),0_4px_16px_-8px_rgba(59,2,87,0.08)] flex flex-col min-h-0">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2 pb-2 border-b border-stone-100">
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 rounded-md bg-[#6a2092]/10 border border-[#6a2092] flex items-center justify-center text-stone-900 shrink-0">
@@ -2288,7 +2159,7 @@ export default function AdminDashboard() {
                   </div>
 
                   {/* Área do Gráfico Calibrada para Primeiro Plano (sem scroll) */}
-                  <div className="h-[210px] sm:h-[230px] w-full pt-1">
+                  <div className="flex-1 min-h-[220px] w-full pt-1">
                     {overviewChartTab === 'faturamento' && (
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart
@@ -2300,31 +2171,31 @@ export default function AdminDashboard() {
                             dataKey="name" 
                             axisLine={false} 
                             tickLine={false} 
-                            tick={{ fill: '#71717a', fontSize: 10, fontWeight: 600, fontFamily: 'ui-monospace, monospace' }} 
+                            tick={{ fill: '#71717a', fontSize: 10, fontWeight: 600, fontFamily: 'Inter, system-ui, sans-serif' }} 
                             dy={5}
                           />
                           <YAxis 
                             axisLine={false} 
                             tickLine={false} 
-                            tick={{ fill: '#71717a', fontSize: 10, fontWeight: 600, fontFamily: 'ui-monospace, monospace' }}
-                            tickFormatter={(value) => `R$ ${value}`}
+                            tick={{ fill: '#71717a', fontSize: 10, fontWeight: 600, fontFamily: 'Inter, system-ui, sans-serif' }}
+                            tickFormatter={(value) => brl(value).replace(",00", "")}
                           />
                           <Tooltip
-                            contentStyle={{ backgroundColor: '#18181b', color: '#ffffff', borderRadius: '8px', border: '1px solid #27272a', boxShadow: '0 4px 12px rgb(0 0 0 / 0.15)', fontFamily: 'ui-monospace, monospace', fontSize: '11px' }}
+                            contentStyle={{ backgroundColor: '#18181b', color: '#ffffff', borderRadius: '8px', border: '1px solid #27272a', boxShadow: '0 4px 12px rgb(0 0 0 / 0.15)', fontFamily: 'Inter, system-ui, sans-serif', fontSize: '11px' }}
                             itemStyle={{ color: '#ffffff', fontWeight: 700 }}
                             labelStyle={{ color: '#a1a1aa', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' }}
                             labelFormatter={(_label, payload) => payload?.[0]?.payload?.fullName || _label}
                             formatter={(value: any, _name: any, item: any) => [
-                              `R$ ${Number(value).toFixed(2)}${item?.payload?.orders !== undefined ? ` (${item.payload.orders} pedidos)` : ''}`,
+                              `${brl(Number(value))}${item?.payload?.orders !== undefined ? ` (${item.payload.orders} pedidos)` : ''}`,
                               'Vendas do Dia'
                             ]}
                             cursor={{fill: 'rgba(24, 24, 27, 0.04)'}}
                           />
                           <Bar
                             dataKey="revenue"
-                            fill="#18181b"
-                            radius={[4, 4, 0, 0]}
-                            barSize={26}
+                            fill="#6a2092"
+                            radius={[6, 6, 0, 0]}
+                            maxBarSize={44}
                           />
                         </BarChart>
                       </ResponsiveContainer>
@@ -2363,7 +2234,7 @@ export default function AdminDashboard() {
                                     {cat.qty !== undefined && cat.qty > 0 && (
                                       <span className="font-bold text-stone-900 tabular-nums">{cat.qty} un.</span>
                                     )}
-                                    <span className="text-stone-500 font-bold tabular-nums">R$ {(cat.value || 0).toFixed(2)}</span>
+                                    <span className="text-stone-500 font-bold tabular-nums">{brl(Number((cat.value || 0)))}</span>
                                   </div>
                                 </div>
                                 <div className="w-full bg-stone-100 rounded-full h-2 overflow-hidden">
@@ -2410,7 +2281,7 @@ export default function AdminDashboard() {
                                   </div>
                                   <div className="flex items-center gap-2 shrink-0 font-mono text-[10px] sm:text-[11px]">
                                     <span className="font-bold text-stone-900 tabular-nums">{item.qty} un.</span>
-                                    <span className="text-stone-400 font-medium tabular-nums">R$ {(item.revenue || 0).toFixed(2)}</span>
+                                    <span className="text-stone-400 font-medium tabular-nums">{brl(Number((item.revenue || 0)))}</span>
                                   </div>
                                 </div>
                                 <div className="w-full bg-stone-100 rounded-full h-2 overflow-hidden">
@@ -2431,12 +2302,12 @@ export default function AdminDashboard() {
                         <BarChart data={paymentMethodsData} margin={{ top: 12, right: 20, left: -5, bottom: 4 }} layout="vertical">
                           <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f1f4" />
                           <XAxis type="number" hide />
-                          <YAxis dataKey="name" type="category" width={85} tick={{ fontSize: 11, fontWeight: 700, fill: '#3f3f46', fontFamily: 'ui-monospace, monospace' }} axisLine={false} tickLine={false} />
+                          <YAxis dataKey="name" type="category" width={85} tick={{ fontSize: 11, fontWeight: 700, fill: '#3f3f46', fontFamily: 'Inter, system-ui, sans-serif' }} axisLine={false} tickLine={false} />
                           <Tooltip
-                            contentStyle={{ backgroundColor: '#18181b', color: '#ffffff', borderRadius: '8px', border: '1px solid #27272a', fontFamily: 'ui-monospace, monospace', fontSize: '11px' }}
+                            contentStyle={{ backgroundColor: '#18181b', color: '#ffffff', borderRadius: '8px', border: '1px solid #27272a', fontFamily: 'Inter, system-ui, sans-serif', fontSize: '11px' }}
                             itemStyle={{ color: '#ffffff', fontWeight: 700 }}
                             formatter={(value: any, _name: any, item: any) => [
-                              `R$ ${(Number(value) || 0).toFixed(2)}${item?.payload?.count !== undefined ? ` (${item.payload.count} pedidos)` : ''}`,
+                              `${brl(Number(value) || 0)}${item?.payload?.count !== undefined ? ` (${item.payload.count} pedidos)` : ''}`,
                               'Total'
                             ]}
                             cursor={{fill: 'rgba(24, 24, 27, 0.04)'}}
@@ -2453,62 +2324,66 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Coluna Lateral: Resumo Compacto de Categorias e Favoritos dos Clientes */}
-                <div className="space-y-3 flex flex-col justify-between">
+                <div className="flex flex-col gap-3 min-h-0">
                   {/* Top Categorias */}
-                  <div className="bg-white p-3 rounded-xl border border-stone-200 shadow-2xs flex-1 flex flex-col justify-between">
-                    <div className="flex justify-between items-center mb-1.5 pb-1 border-b border-stone-100">
+                  <div className="bg-white p-4 rounded-2xl border border-stone-200/80 shadow-[0_1px_2px_rgba(28,25,23,0.04),0_4px_16px_-8px_rgba(59,2,87,0.08)] flex-1 flex flex-col">
+                    <div className="flex justify-between items-center mb-3 pb-2 border-b border-stone-100">
                       <div>
-                        <h2 className="text-xs font-bold text-stone-900 leading-tight">Categorias em Destaque</h2>
-                        <p className="text-[10px] text-stone-500 font-mono">Mais vendidas</p>
+                        <h2 className="text-[14px] font-semibold text-stone-900 leading-tight">Categorias em destaque</h2>
+                        <p className="text-[12px] text-stone-500">Mais vendidas no período</p>
                       </div>
                       <div className="w-5 h-5 rounded-md bg-stone-50 border border-stone-200 flex items-center justify-center text-stone-600">
                         <TrendingUp size={12} />
                       </div>
                     </div>
-                    <div className="space-y-1.5">
+                    <div className="flex flex-col gap-4">
                       {(!(dashboardData?.chartData?.salesByCategory || [])?.length) ? (
-                        <div className="text-center text-stone-400 font-mono text-[11px] py-2">Sem dados.</div>
-                      ) : (
-                        [...(dashboardData?.chartData?.salesByCategory || [])]
-                          .sort((a, b) => (Number(b.value) || 0) - (Number(a.value) || 0))
-                          .slice(0, 3)
-                          .map((cat: any, idx: number) => (
-                            <div key={idx} className="flex justify-between items-center gap-2 text-xs">
-                              <span className="font-mono text-stone-600 capitalize leading-snug">{String(cat.name || '').replace('-', ' ')}</span>
-                              <span className="font-mono font-bold tabular-nums text-stone-900 shrink-0">R$ {(Number(cat.value) || 0).toFixed(2)}</span>
+                        <div className="text-center text-stone-400 text-[13px] py-2">Sem vendas no período.</div>
+                      ) : (() => {
+                        const cats = [...(dashboardData?.chartData?.salesByCategory || [])].sort((a, b) => (Number(b.value) || 0) - (Number(a.value) || 0)).slice(0, 4);
+                        const maior = Math.max(...cats.map((c: any) => Number(c.value) || 0), 1);
+                        return cats.map((cat: any, idx: number) => (
+                          <div key={idx} className="space-y-1">
+                            <div className="flex justify-between items-center gap-2 text-[13px]">
+                              <span className="text-stone-700 capitalize truncate">{String(cat.name || '').replace(/-/g, ' ')}</span>
+                              <span className="font-semibold tabular-nums text-stone-900 shrink-0">{brl(Number((Number(cat.value) || 0)))}</span>
                             </div>
-                          ))
-                      )}
+                            <div className="h-1.5 rounded-full bg-stone-100 overflow-hidden">
+                              <div className="h-full rounded-full bg-brand-500" style={{ width: `${Math.max(6, ((Number(cat.value) || 0) / maior) * 100)}%` }} />
+                            </div>
+                          </div>
+                        ));
+                      })()}
                     </div>
                   </div>
 
                   {/* Favoritos dos Clientes */}
-                  <div className="bg-white p-3 rounded-xl border border-stone-200 shadow-2xs flex-1 flex flex-col justify-between">
-                    <div className="flex justify-between items-center mb-1.5 pb-1 border-b border-stone-100">
+                  <div className="bg-white p-4 rounded-2xl border border-stone-200/80 shadow-[0_1px_2px_rgba(28,25,23,0.04),0_4px_16px_-8px_rgba(59,2,87,0.08)] flex-1 flex flex-col">
+                    <div className="flex justify-between items-center mb-3 pb-2 border-b border-stone-100">
                       <div>
-                        <h2 className="text-xs font-bold text-stone-900 leading-tight">Favoritos dos Clientes</h2>
-                        <p className="text-[10px] text-stone-500 font-mono">Mais pedidos</p>
+                        <h2 className="text-[14px] font-semibold text-stone-900 leading-tight">Favoritos dos clientes</h2>
+                        <p className="text-[12px] text-stone-500">Mais pedidos no período</p>
                       </div>
                       <div className="w-5 h-5 rounded-md bg-purple-50 border border-purple-200 flex items-center justify-center text-purple-700">
                         <IceCream size={12} />
                       </div>
                     </div>
-                    <div className="space-y-1.5">
+                    <div className="flex-1 flex flex-col justify-around gap-1.5">
                       {(!(dashboardData?.popularItems || [])?.length) ? (
-                        <div className="text-center text-stone-400 font-mono text-[11px] py-2">Nenhum item ainda.</div>
+                        <div className="text-center text-stone-400 text-[13px] py-2">Nenhum item ainda.</div>
                       ) : (
-                        (dashboardData?.popularItems || []).slice(0, 3).map((product: any, index: number) => (
-                          <div key={index} className="flex items-center justify-between gap-2 text-xs">
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <span className="w-4 h-4 rounded bg-stone-100 flex items-center justify-center text-[9px] font-mono font-bold text-stone-600 shrink-0">
+                        (dashboardData?.popularItems || []).slice(0, 5).map((product: any, index: number) => (
+                          <div key={index} className="flex items-center justify-between gap-2 text-[13px]">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className={`w-5 h-5 rounded-md flex items-center justify-center text-[11px] font-bold tabular-nums shrink-0 ${index === 0 ? 'bg-brand-700 text-white' : 'bg-stone-100 text-stone-600'}`}>
                                 {index + 1}
                               </span>
-                              <span className="font-semibold text-stone-900 leading-snug" title={product.name}>
+                              <span className="font-medium text-stone-900 truncate" title={product.name}>
                                 {formatItemNameForPrint({ name: product.name })}
                               </span>
                             </div>
-                            <span className="font-mono font-bold tabular-nums text-stone-900 shrink-0">
-                              R$ {(Number(product.revenue) || 0).toFixed(2)}
+                            <span className="font-semibold tabular-nums text-stone-900 shrink-0">
+                              {brl(Number((Number(product.revenue) || 0)))}
                             </span>
                           </div>
                         ))
@@ -2535,20 +2410,20 @@ export default function AdminDashboard() {
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={salesData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
-                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#71717a', fontSize: 11, fontWeight: 600, fontFamily: 'ui-monospace, monospace' }} dy={10} />
-                          <YAxis axisLine={false} tickLine={false} tick={{ fill: '#71717a', fontSize: 11, fontWeight: 600, fontFamily: 'ui-monospace, monospace' }} tickFormatter={(value) => `R$ ${value}`} />
+                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#71717a', fontSize: 11, fontWeight: 600, fontFamily: 'Inter, system-ui, sans-serif' }} dy={10} />
+                          <YAxis axisLine={false} tickLine={false} tick={{ fill: '#71717a', fontSize: 11, fontWeight: 600, fontFamily: 'Inter, system-ui, sans-serif' }} tickFormatter={(value) => brl(value).replace(",00", "")} />
                           <Tooltip
-                            contentStyle={{ backgroundColor: '#18181b', color: '#ffffff', borderRadius: '8px', border: '1px solid #27272a', fontFamily: 'ui-monospace, monospace', fontSize: '11px' }}
+                            contentStyle={{ backgroundColor: '#18181b', color: '#ffffff', borderRadius: '8px', border: '1px solid #27272a', fontFamily: 'Inter, system-ui, sans-serif', fontSize: '11px' }}
                             itemStyle={{ color: '#ffffff', fontWeight: 700 }}
                             labelStyle={{ color: '#a1a1aa', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' }}
                             labelFormatter={(_label, payload) => payload?.[0]?.payload?.fullName || _label}
                             formatter={(value: any, _name: any, item: any) => [
-                              `R$ ${Number(value).toFixed(2)}${item?.payload?.orders !== undefined ? ` (${item.payload.orders} pedidos)` : ''}`,
+                              `${brl(Number(value))}${item?.payload?.orders !== undefined ? ` (${item.payload.orders} pedidos)` : ''}`,
                               'Vendas do Dia'
                             ]}
                             cursor={{fill: 'rgba(24, 24, 27, 0.04)'}}
                           />
-                          <Bar dataKey="revenue" fill="#18181b" radius={[4, 4, 0, 0]} barSize={28} />
+                          <Bar dataKey="revenue" fill="#6a2092" radius={[4, 4, 0, 0]} barSize={28} />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
@@ -2572,7 +2447,7 @@ export default function AdminDashboard() {
                           [...(dashboardData?.chartData?.salesByCategory || [])].sort((a, b) => (Number(b.value) || 0) - (Number(a.value) || 0)).slice(0, 3).map((cat: any, idx: number) => (
                             <div key={idx} className="flex justify-between items-center gap-2">
                               <span className="text-xs font-mono text-stone-600 capitalize leading-snug">{String(cat.name || '').replace('-', ' ')}</span>
-                              <span className="text-xs font-mono font-bold tabular-nums text-stone-900 shrink-0">R$ {(Number(cat.value) || 0).toFixed(2)}</span>
+                              <span className="text-xs font-mono font-bold tabular-nums text-stone-900 shrink-0">{brl(Number((Number(cat.value) || 0)))}</span>
                             </div>
                           ))
                         )}
@@ -2599,7 +2474,7 @@ export default function AdminDashboard() {
                                 <span className="w-5 h-5 rounded bg-stone-100 flex items-center justify-center text-[10px] font-mono font-bold text-stone-600 border border-stone-200 shrink-0">{index + 1}</span>
                                 <span className="text-xs font-semibold text-stone-900 leading-snug" title={product.name}>{formatItemNameForPrint({ name: product.name })}</span>
                               </div>
-                              <span className="text-xs font-mono font-bold tabular-nums text-stone-900 shrink-0">R$ {(Number(product.revenue) || 0).toFixed(2)}</span>
+                              <span className="text-xs font-mono font-bold tabular-nums text-stone-900 shrink-0">{brl(Number((Number(product.revenue) || 0)))}</span>
                             </div>
                           ))
                         )}
@@ -2650,7 +2525,7 @@ export default function AdminDashboard() {
                                       {cat.qty !== undefined && cat.qty > 0 && (
                                         <span className="font-bold text-stone-900 tabular-nums">{cat.qty} un.</span>
                                       )}
-                                      <span className="text-stone-500 font-bold tabular-nums">R$ {(cat.value || 0).toFixed(2)}</span>
+                                      <span className="text-stone-500 font-bold tabular-nums">{brl(Number((cat.value || 0)))}</span>
                                     </div>
                                   </div>
                                   <div className="w-full bg-stone-100 rounded-full h-2 overflow-hidden">
@@ -2707,7 +2582,7 @@ export default function AdminDashboard() {
                                     </div>
                                     <div className="flex items-center gap-2 shrink-0 font-mono text-[10px] sm:text-[11px]">
                                       <span className="font-bold text-stone-900 tabular-nums">{item.qty} un.</span>
-                                      <span className="text-stone-400 font-medium tabular-nums">R$ {(item.revenue || 0).toFixed(2)}</span>
+                                      <span className="text-stone-400 font-medium tabular-nums">{brl(Number((item.revenue || 0)))}</span>
                                     </div>
                                   </div>
                                   <div className="w-full bg-stone-100 rounded-full h-2 overflow-hidden">
@@ -2737,12 +2612,12 @@ export default function AdminDashboard() {
                         <BarChart data={paymentMethodsData} margin={{ top: 12, right: 20, left: -5, bottom: 4 }} layout="vertical">
                           <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e4e4e7" />
                           <XAxis type="number" hide />
-                          <YAxis dataKey="name" type="category" width={85} tick={{ fontSize: 11, fontWeight: 700, fill: '#3f3f46', fontFamily: 'ui-monospace, monospace' }} axisLine={false} tickLine={false} />
+                          <YAxis dataKey="name" type="category" width={85} tick={{ fontSize: 11, fontWeight: 700, fill: '#3f3f46', fontFamily: 'Inter, system-ui, sans-serif' }} axisLine={false} tickLine={false} />
                           <Tooltip
-                            contentStyle={{ backgroundColor: '#18181b', color: '#ffffff', borderRadius: '8px', border: '1px solid #27272a', fontFamily: 'ui-monospace, monospace', fontSize: '11px' }}
+                            contentStyle={{ backgroundColor: '#18181b', color: '#ffffff', borderRadius: '8px', border: '1px solid #27272a', fontFamily: 'Inter, system-ui, sans-serif', fontSize: '11px' }}
                             itemStyle={{ color: '#ffffff', fontWeight: 700 }}
                             formatter={(value: any, _name: any, item: any) => [
-                              `R$ ${(Number(value) || 0).toFixed(2)}${item?.payload?.count !== undefined ? ` (${item.payload.count} pedidos)` : ''}`,
+                              `${brl(Number(value) || 0)}${item?.payload?.count !== undefined ? ` (${item.payload.count} pedidos)` : ''}`,
                               'Total'
                             ]}
                             cursor={{fill: 'rgba(24, 24, 27, 0.04)'}}
@@ -2793,174 +2668,150 @@ export default function AdminDashboard() {
               const countCancelado = allRecent.filter((o: any) => o.status === 'Cancelado').length;
               const countAtivos = countPendente + countPreparo + countEntrega;
 
+              const filtrosStatus = [
+                { id: 'todos', rotulo: 'Todos', n: countAll, cor: '' },
+                { id: 'Pendente', rotulo: 'Pendentes', n: countPendente, cor: 'bg-amber-400' },
+                { id: 'Em Preparo', rotulo: 'Em preparo', n: countPreparo, cor: 'bg-violet-500' },
+                { id: 'Saiu para Entrega', rotulo: 'Em rota', n: countEntrega, cor: 'bg-sky-500' },
+                { id: 'Finalizado', rotulo: 'Concluídos', n: countFinalizado, cor: 'bg-emerald-500' },
+                { id: 'Cancelado', rotulo: 'Cancelados', n: countCancelado, cor: 'bg-rose-500' },
+              ] as const;
+              const COR_STATUS: Record<string, string> = {
+                Pendente: 'bg-amber-50 text-amber-800 border-amber-200',
+                'Em Preparo': 'bg-violet-50 text-violet-800 border-violet-200',
+                'Saiu para Entrega': 'bg-sky-50 text-sky-800 border-sky-200',
+                Finalizado: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+                Cancelado: 'bg-rose-50 text-rose-700 border-rose-200',
+              };
+              const totalPagPedidos = Math.max(1, Math.ceil(filteredList.length / pedidosPorPagina));
+              const pagPedidos = Math.min(pedidosPagina, totalPagPedidos);
+              const inicioPedidos = (pagPedidos - 1) * pedidosPorPagina;
+              const pedidosDaPagina = filteredList.slice(inicioPedidos, inicioPedidos + pedidosPorPagina);
+              const colunasComandas = typeof window !== 'undefined' ? (window.innerWidth >= 1280 ? 3 : window.innerWidth >= 768 ? 2 : 1) : 3;
+              const porPaginaComandas = Math.max(1, fileirasComandas * colunasComandas);
+              const totalPagComandas = Math.max(1, Math.ceil(filteredList.length / porPaginaComandas));
+              const pagComandas = Math.min(pedidosPagina, totalPagComandas);
+              const inicioComandas = (pagComandas - 1) * porPaginaComandas;
+              const comandasDaPagina = filteredList.slice(inicioComandas, inicioComandas + porPaginaComandas);
+              const modos = [
+                { id: 'table', rotulo: 'Lista', Icone: List },
+                { id: 'cards', rotulo: 'Comandas', Icone: LayoutGrid },
+                { id: 'kanban', rotulo: 'Quadro', Icone: Columns3 },
+              ] as const;
+
               return (
-                <div className="bg-white p-4 sm:p-5 rounded-xl border border-stone-200 shadow-2xs space-y-4">
-                  {/* Topo do Gestor: Título, Modo de Visão e Botão PDV */}
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3 border-b border-stone-100">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h2 className="text-base font-black text-stone-900 tracking-tight">Gestor de Pedidos</h2>
-                        {countAtivos > 0 ? (
-                          <span className="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-amber-100 text-amber-900 border border-amber-300 animate-pulse">
-                            {countAtivos} em andamento
-                          </span>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded-full text-[11px] font-mono font-medium bg-stone-100 text-stone-600 border border-stone-200">
-                            Cozinha em dia
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-stone-500 font-mono mt-0.5">
-                        Total de <span className="font-bold text-stone-800 tabular-nums">{countAll}</span> pedidos no período selecionado
-                      </p>
-                    </div>
+                <div className="bg-white p-4 rounded-2xl border border-stone-200/80 shadow-[0_1px_2px_rgba(28,25,23,0.04),0_4px_16px_-8px_rgba(59,2,87,0.08)] space-y-3">
+                  {/* Topo: título, situação da cozinha, modo de visão e PDV */}
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                    <h2 className="font-display text-[22px] font-extrabold tracking-tight text-stone-900 leading-none">Pedidos</h2>
+                    {countAtivos > 0 ? (
+                      <span className="h-7 px-2.5 rounded-full bg-amber-100 text-amber-900 text-[13px] font-semibold inline-flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                        {countAtivos} em andamento
+                      </span>
+                    ) : (
+                      <span className="h-7 px-2.5 rounded-full bg-emerald-50 text-emerald-700 text-[13px] font-semibold inline-flex items-center gap-1.5">
+                        <CheckCircle2 size={14} /> Cozinha em dia
+                      </span>
+                    )}
+                    <span className="text-[13px] text-stone-500">
+                      <span className="font-semibold text-stone-800 tabular-nums">{countAll}</span> no período
+                    </span>
 
-                    <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
-                      {/* Alternador de Modo: Tabela vs Cards */}
-                      <div className="flex items-center bg-stone-100 rounded-lg p-0.5 border border-stone-200">
-                        <button
-                          type="button"
-                          onClick={() => setOrdersViewMode('table')}
-                          title="Visualização em Tabela (Principal)"
-                          className={`h-7 px-2.5 rounded-md text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                            ordersViewMode === 'table'
-                              ? 'bg-[#6a2092] text-white shadow-xs border border-[#521872]'
-                              : 'text-stone-500 hover:text-stone-800'
-                          }`}
-                        >
-                          <List size={13} />
-                          <span>Tabela</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setOrdersViewMode('cards')}
-                          title="Visualização em Comandas (Cards)"
-                          className={`h-7 px-2.5 rounded-md text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                            ordersViewMode === 'cards'
-                              ? 'bg-[#6a2092] text-white shadow-xs border border-[#521872]'
-                              : 'text-stone-500 hover:text-stone-800'
-                          }`}
-                        >
-                          <LayoutGrid size={13} />
-                          <span>Cards</span>
-                        </button>
+                    <div className="ml-auto flex items-center gap-2">
+                      <div className="flex items-center bg-stone-100 rounded-xl p-1" role="tablist" aria-label="Modo de visualização">
+                        {modos.map(m => (
+                          <button
+                            key={m.id}
+                            type="button"
+                            role="tab"
+                            aria-selected={ordersViewMode === m.id}
+                            onClick={() => setOrdersViewMode(m.id)}
+                            className={`h-8 px-3 rounded-lg text-[13px] font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                              ordersViewMode === m.id ? 'bg-white text-brand-800 shadow-sm' : 'text-stone-500 hover:text-stone-800'
+                            }`}
+                          >
+                            <m.Icone size={15} />
+                            <span>{m.rotulo}</span>
+                          </button>
+                        ))}
                       </div>
-
-                      {/* Botão Novo Pedido PDV */}
                       <button
                         onClick={() => setShowPDVModal(true)}
-                        className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#6a2092] hover:bg-[#521872] active:bg-[#4d0471] text-white rounded-lg text-xs font-black font-mono tracking-wide shadow-xs transition-all cursor-pointer border border-[#521872]"
+                        className="h-10 pl-3.5 pr-2.5 flex items-center gap-2 bg-brand-700 hover:bg-brand-800 text-white rounded-xl text-[14px] font-semibold shadow-sm transition-colors cursor-pointer"
+                        title="Nova venda no balcão (F2)"
                       >
-                        <Plus size={15} className="stroke-[2.5]" />
-                        <span>NOVO PEDIDO (PDV)</span>
+                        <Plus size={16} className="stroke-[2.5]" />
+                        <span>Nova venda</span>
+                        <kbd className="text-[11px] font-semibold px-1.5 py-0.5 rounded-md bg-white/15 text-white/80">F2</kbd>
                       </button>
                     </div>
                   </div>
 
-                  {/* Barra de Filtros por Status e Campo de Busca (Minimalista Padrão da Empresa) */}
-                  <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5">
-                    {/* Filtros em Pílulas Clean */}
-                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0 scrollbar-none">
+                  {/* Pedidos novos: aviso numa linha só */}
+                  {countPendente > 0 && (
+                    <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 pl-3 pr-2 py-2">
+                      <span className="relative flex h-2.5 w-2.5 shrink-0">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+                      </span>
+                      <p className="text-[14px] text-amber-950">
+                        <span className="font-semibold">
+                          {countPendente === 1 ? '1 pedido novo aguardando confirmação' : `${countPendente} pedidos novos aguardando confirmação`}
+                        </span>
+                        <span className="text-amber-800 hidden md:inline"> · confirme para começar a montar os copos</span>
+                      </p>
                       <button
                         type="button"
-                        onClick={() => setOrdersStatusFilter('todos')}
-                        className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition-all shrink-0 cursor-pointer border flex items-center gap-1.5 ${
-                          ordersStatusFilter === 'todos'
-                            ? 'bg-[#6a2092] text-white border-[#6a2092] shadow-2xs font-black'
-                            : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50 hover:text-stone-900'
-                        }`}
+                        onClick={() => {
+                          setOrdersStatusFilter('Pendente');
+                          setOrdersViewMode('cards');
+                        }}
+                        className="ml-auto shrink-0 h-8 px-3 bg-amber-500 hover:bg-amber-600 text-white font-semibold text-[13px] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
                       >
-                        <span>Todos</span>
-                        <span className="opacity-70 tabular-nums font-normal">({countAll})</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setOrdersStatusFilter('Pendente')}
-                        className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition-all shrink-0 cursor-pointer border flex items-center gap-1.5 ${
-                          ordersStatusFilter === 'Pendente'
-                            ? 'bg-[#6a2092] text-white border-[#6a2092] shadow-2xs font-black'
-                            : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50 hover:text-stone-900'
-                        }`}
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
-                        <span>Pendentes</span>
-                        <span className="opacity-70 tabular-nums font-normal">({countPendente})</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setOrdersStatusFilter('Em Preparo')}
-                        className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition-all shrink-0 cursor-pointer border flex items-center gap-1.5 ${
-                          ordersStatusFilter === 'Em Preparo'
-                            ? 'bg-[#6a2092] text-white border-[#6a2092] shadow-2xs font-black'
-                            : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50 hover:text-stone-900'
-                        }`}
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full bg-stone-700 shrink-0" />
-                        <span>Em Preparo</span>
-                        <span className="opacity-70 tabular-nums font-normal">({countPreparo})</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setOrdersStatusFilter('Saiu para Entrega')}
-                        className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition-all shrink-0 cursor-pointer border flex items-center gap-1.5 ${
-                          ordersStatusFilter === 'Saiu para Entrega'
-                            ? 'bg-[#6a2092] text-white border-[#6a2092] shadow-2xs font-black'
-                            : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50 hover:text-stone-900'
-                        }`}
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full bg-stone-500 shrink-0" />
-                        <span>Em Rota</span>
-                        <span className="opacity-70 tabular-nums font-normal">({countEntrega})</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setOrdersStatusFilter('Finalizado')}
-                        className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition-all shrink-0 cursor-pointer border flex items-center gap-1.5 ${
-                          ordersStatusFilter === 'Finalizado'
-                            ? 'bg-[#6a2092] text-white border-[#6a2092] shadow-2xs font-black'
-                            : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50 hover:text-stone-900'
-                        }`}
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 shrink-0" />
-                        <span>Concluídos</span>
-                        <span className="opacity-70 tabular-nums font-normal">({countFinalizado})</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setOrdersStatusFilter('Cancelado')}
-                        className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition-all shrink-0 cursor-pointer border flex items-center gap-1.5 ${
-                          ordersStatusFilter === 'Cancelado'
-                            ? 'bg-[#6a2092] text-white border-[#6a2092] shadow-2xs font-black'
-                            : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50 hover:text-stone-900'
-                        }`}
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
-                        <span>Cancelados</span>
-                        <span className="opacity-70 tabular-nums font-normal">({countCancelado})</span>
+                        Atender agora <ArrowRight size={14} />
                       </button>
                     </div>
+                  )}
 
-                    {/* Busca Inteligente */}
-                    <div className="relative w-full lg:w-72 shrink-0">
-                      <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400" />
+                  {/* Filtros por status e busca */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {filtrosStatus.map(f => (
+                        <button
+                          key={f.id}
+                          type="button"
+                          onClick={() => setOrdersStatusFilter(f.id)}
+                          aria-pressed={ordersStatusFilter === f.id}
+                          className={`h-8 px-3 rounded-full text-[13px] font-semibold whitespace-nowrap inline-flex items-center gap-1.5 transition-colors cursor-pointer border ${
+                            ordersStatusFilter === f.id
+                              ? 'bg-brand-700 text-white border-brand-700 shadow-sm'
+                              : 'bg-white text-stone-600 border-stone-200 hover:border-brand-300 hover:text-brand-700'
+                          }`}
+                        >
+                          {f.cor && <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${f.cor}`} />}
+                          {f.rotulo}
+                          <span className={`text-[12px] tabular-nums ${ordersStatusFilter === f.id ? 'text-white/70' : 'text-stone-400'}`}>{f.n}</span>
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="relative w-full md:w-72 md:ml-auto">
+                      <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" />
                       <input
                         type="text"
                         value={ordersSearchTerm}
                         onChange={(e) => setOrdersSearchTerm(e.target.value)}
-                        placeholder="Buscar por Nº, cliente ou telefone..."
-                        className="w-full pl-8 pr-7 py-1.5 bg-stone-50 border border-stone-200 rounded-lg text-xs font-mono text-stone-900 placeholder:text-stone-400 focus:bg-white focus:outline-none focus:ring-1 focus:ring-stone-400 transition-all"
+                        placeholder="Buscar nº, cliente ou telefone"
+                        className="w-full h-9 pl-9 pr-8 bg-stone-50/70 border border-stone-200 rounded-xl text-[14px] text-stone-900 placeholder:text-stone-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-600/15 focus:border-brand-600 transition"
                       />
                       {ordersSearchTerm && (
                         <button
                           onClick={() => setOrdersSearchTerm('')}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700 p-0.5 cursor-pointer"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700 p-1 cursor-pointer"
+                          aria-label="Limpar busca"
                         >
-                          <X size={13} />
+                          <X size={14} />
                         </button>
                       )}
                     </div>
@@ -2989,9 +2840,11 @@ export default function AdminDashboard() {
 
                   {/* VISUALIZAÇÃO EM CARDS (COMANDA OPERACIONAL DE ALTA USABILIDADE) */}
                   {ordersViewMode === 'cards' && filteredList.length > 0 && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pt-1">
-                      {filteredList.map((order: any) => {
-                        const elapsed = getElapsedTime(order.createdAt);
+                    <div>
+                    <div ref={comandasRef} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pt-1 [@media(max-height:780px)]:max-h-[calc(100dvh-340px)] [@media(max-height:780px)]:overflow-y-auto [@media(max-height:780px)]:pr-1 adm-rolagem">
+                      {comandasDaPagina.map((order: any) => {
+                        const dataCriacao = order.createdAt || order.created_at;
+                        const elapsed = getElapsedTime(dataCriacao);
                         const isDelivery = order.orderType === 'entrega' || order.orderType === 'Delivery';
                         const items = safeParseItems(order.items);
                         const isPending = order.status === 'Pendente';
@@ -3047,7 +2900,7 @@ export default function AdminDashboard() {
                                 {/* Valor Total em Destaque */}
                                 <div className="text-right">
                                   <span className="font-mono font-black text-lg text-stone-900 tabular-nums">
-                                    R$ {Number(order.totalAmount || 0).toFixed(2)}
+                                    {brl(Number(Number(order.totalAmount || 0)))}
                                   </span>
                                 </div>
                               </div>
@@ -3057,7 +2910,7 @@ export default function AdminDashboard() {
                                 <div className="flex items-center gap-1.5 text-xs text-stone-500 font-mono">
                                   <Clock size={12} className="text-stone-400" />
                                   <span className="font-bold text-stone-700">
-                                    {new Date(order.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                    {new Date(dataCriacao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                                   </span>
                                   {order.status !== 'Finalizado' && order.status !== 'Cancelado' && elapsed.text && (
                                     <span className="text-[11px] font-bold px-1.5 py-0.2 rounded bg-stone-100 text-stone-700 border border-stone-200">
@@ -3143,7 +2996,7 @@ export default function AdminDashboard() {
 
                                 {order.changeFor && Number(order.changeFor) > 0 && (
                                   <span className="text-[11px] font-mono font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded border border-amber-300">
-                                    Troco p/ R$ {Number(order.changeFor).toFixed(2)}
+                                    Troco p/ {brl(Number(Number(order.changeFor)))}
                                   </span>
                                 )}
                               </div>
@@ -3202,7 +3055,7 @@ export default function AdminDashboard() {
                                         {/* Preço só é exibido se for maior que 0 (evita R$ 0.00 confuso de IA) */}
                                         {itemPrice > 0 && (
                                           <span className="font-mono text-stone-700 text-xs font-bold tabular-nums shrink-0">
-                                            R$ {itemPrice.toFixed(2)}
+                                            {brl(Number(itemPrice))}
                                           </span>
                                         )}
                                       </div>
@@ -3253,7 +3106,7 @@ export default function AdminDashboard() {
                                 <button
                                   type="button"
                                   onClick={() => updateOrderStatus(order.id, 'Finalizado')}
-                                  className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-stone-900 hover:bg-stone-950 active:bg-black text-white font-mono font-black text-xs shadow-2xs transition-all cursor-pointer border border-stone-800"
+                                  className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-[#6a2092] hover:bg-[#521872] active:bg-[#3b0257] text-white font-mono font-black text-xs shadow-2xs transition-all cursor-pointer border border-stone-800"
                                 >
                                   <Check size={14} className="text-white" />
                                   <span>CONCLUIR ENTREGA</span>
@@ -3332,178 +3185,380 @@ export default function AdminDashboard() {
                         );
                       })}
                     </div>
+                    <Paginacao
+                      className="mt-3 rounded-xl border border-stone-200/80"
+                      pagina={pagComandas}
+                      totalPaginas={totalPagComandas}
+                      inicio={inicioComandas}
+                      mostrando={comandasDaPagina.length}
+                      total={filteredList.length}
+                      onIr={(p) => setPedidosPagina(Math.max(1, Math.min(totalPagComandas, p)))}
+                      rotulo={filteredList.length === 1 ? 'pedido' : 'pedidos'}
+                    />
+                    </div>
                   )}
+
+                  {/* VISUALIZAÇÃO EM QUADRO (ESTEIRA KANBAN POR STATUS) */}
+                  {ordersViewMode === 'kanban' && filteredList.length > 0 && (() => {
+                    const colunas = [
+                      {
+                        id: 'Pendente',
+                        titulo: 'Pendentes',
+                        corBorda: 'border-t-amber-400',
+                        bgHeader: 'bg-amber-50/80',
+                        textCor: 'text-amber-950',
+                        badgeBg: 'bg-amber-200 text-amber-900',
+                        pedidos: filteredList.filter((o: any) => o.status === 'Pendente'),
+                      },
+                      {
+                        id: 'Em Preparo',
+                        titulo: 'Em Preparo',
+                        corBorda: 'border-t-[#6a2092]',
+                        bgHeader: 'bg-purple-50/80',
+                        textCor: 'text-purple-950',
+                        badgeBg: 'bg-purple-200 text-purple-900',
+                        pedidos: filteredList.filter((o: any) => o.status === 'Em Preparo'),
+                      },
+                      {
+                        id: 'Saiu para Entrega',
+                        titulo: 'Em Rota / Balcão',
+                        corBorda: 'border-t-sky-500',
+                        bgHeader: 'bg-sky-50/80',
+                        textCor: 'text-sky-950',
+                        badgeBg: 'bg-sky-200 text-sky-900',
+                        pedidos: filteredList.filter((o: any) => o.status === 'Saiu para Entrega'),
+                      },
+                      {
+                        id: 'Finalizado',
+                        titulo: 'Concluídos',
+                        corBorda: 'border-t-emerald-500',
+                        bgHeader: 'bg-emerald-50/80',
+                        textCor: 'text-emerald-950',
+                        badgeBg: 'bg-emerald-200 text-emerald-900',
+                        pedidos: filteredList.filter((o: any) => o.status === 'Finalizado'),
+                      },
+                    ];
+
+                    return (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3.5 pt-1">
+                        {colunas.map(col => (
+                          <div
+                            key={col.id}
+                            className="bg-stone-50/60 rounded-xl border border-stone-200 flex flex-col h-[calc(100dvh-330px)] min-h-[360px] overflow-hidden"
+                          >
+                            {/* Cabeçalho da Coluna */}
+                            <div className={`p-3 border-b border-stone-200 border-t-4 ${col.corBorda} ${col.bgHeader} flex items-center justify-between`}>
+                              <div className="flex items-center gap-2">
+                                <span className={`font-mono font-black text-xs uppercase tracking-wider ${col.textCor}`}>
+                                  {col.titulo}
+                                </span>
+                              </div>
+                              <span className={`text-xs font-mono font-black px-2 py-0.5 rounded-full ${col.badgeBg}`}>
+                                {col.pedidos.length}
+                              </span>
+                            </div>
+
+                            {/* Lista de Comandas na Coluna */}
+                            <div className="p-2.5 flex-1 min-h-0 overflow-y-auto space-y-2.5 adm-rolagem">
+                              {col.pedidos.length === 0 ? (
+                                <div className="py-12 text-center text-stone-400 text-xs font-mono">
+                                  Nenhum pedido nesta etapa
+                                </div>
+                              ) : (
+                                col.pedidos.map((order: any) => {
+                                  const dataCriacao = order.createdAt || order.created_at;
+                                  const elapsed = getElapsedTime(dataCriacao);
+                                  const isDelivery = order.orderType === 'entrega' || order.orderType === 'Delivery' || order.order_type === 'entrega' || order.order_type === 'Delivery';
+                                  const items = safeParseItems(order.items);
+                                  const isPending = order.status === 'Pendente';
+                                  const isInPrep = order.status === 'Em Preparo';
+                                  const isInRoute = order.status === 'Saiu para Entrega';
+                                  const isAtivo = order.status !== 'Finalizado' && order.status !== 'Cancelado';
+                                  const nomeCliente = order.customerName || order.customer_name || 'Cliente';
+                                  const valorTotal = order.totalAmount ?? order.total_amount ?? 0;
+
+                                  return (
+                                    <div
+                                      key={order.id}
+                                      className={`bg-white rounded-lg border border-stone-200 shadow-2xs hover:shadow-sm transition-all p-3 space-y-2 ${
+                                        elapsed.urgency === 'danger' && isAtivo ? 'ring-2 ring-rose-400/80 animate-pulse' : ''
+                                      }`}
+                                    >
+                                      {/* Topo: ID, Tipo e Valor */}
+                                      <div className="flex items-center justify-between gap-1">
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="font-mono font-black text-xs text-stone-900 bg-stone-100 px-1.5 py-0.5 rounded border border-stone-200">
+                                            #{order.id}
+                                          </span>
+                                          <span
+                                            className={`text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 ${
+                                              isDelivery
+                                                ? 'bg-sky-50 text-sky-800 border border-sky-200'
+                                                : 'bg-stone-100 text-stone-800 border border-stone-200'
+                                            }`}
+                                          >
+                                            {isDelivery ? <Bike size={10} className="text-sky-600" /> : <Store size={10} className="text-stone-600" />}
+                                            <span>{isDelivery ? 'Entrega' : 'Balcão'}</span>
+                                          </span>
+                                        </div>
+                                        <span className="font-mono font-black text-sm text-stone-900 tabular-nums">
+                                          {brl(Number(valorTotal))}
+                                        </span>
+                                      </div>
+
+                                      {/* Cliente e Horário */}
+                                      <div className="text-xs">
+                                        <p className="font-black text-stone-900 truncate">{nomeCliente}</p>
+                                        <div className="flex items-center justify-between gap-1 text-[11px] text-stone-500 font-mono mt-0.5">
+                                          <span>
+                                            {new Date(dataCriacao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                          </span>
+                                          {isAtivo && elapsed.text && (
+                                            <span
+                                              className={`font-bold px-1.5 py-0.2 rounded ${
+                                                elapsed.urgency === 'danger'
+                                                  ? 'bg-rose-100 text-rose-800 border border-rose-300 font-black'
+                                                  : elapsed.urgency === 'warning'
+                                                  ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                                                  : 'bg-emerald-50 text-emerald-800'
+                                              }`}
+                                            >
+                                              {elapsed.text}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      {/* Resumo dos Itens (até 3) */}
+                                      <div className="text-[11px] font-mono text-stone-700 bg-stone-50 p-2 rounded border border-stone-100 space-y-1">
+                                        {items.slice(0, 3).map((it: any, iIdx: number) => {
+                                          const qty = it.quantity || it.qty || 1;
+                                          return (
+                                            <div key={iIdx} className="truncate">
+                                              <span className="font-bold text-stone-900">{qty}x</span> {formatItemNameForPrint(it)}
+                                            </div>
+                                          );
+                                        })}
+                                        {items.length > 3 && (
+                                          <div className="text-[10px] text-stone-400 font-bold">
+                                            + {items.length - 3} outro(s) item(ns)
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {/* Ação Rápida de Avanço na Esteira */}
+                                      <div className="pt-1">
+                                        {isPending && (
+                                          <button
+                                            type="button"
+                                            onClick={() => updateOrderStatus(order.id, 'Em Preparo')}
+                                            className="w-full py-1.5 px-2 bg-[#6a2092] hover:bg-[#521872] active:bg-[#4d0471] text-white text-[11px] font-mono font-black rounded-md flex items-center justify-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+                                          >
+                                            <Flame size={12} />
+                                            <span>PREPARAR</span>
+                                            <ArrowRight size={12} />
+                                          </button>
+                                        )}
+                                        {isInPrep && (
+                                          <button
+                                            type="button"
+                                            onClick={() => updateOrderStatus(order.id, isDelivery ? 'Saiu para Entrega' : 'Finalizado')}
+                                            className="w-full py-1.5 px-2 bg-[#6a2092] hover:bg-[#521872] active:bg-[#4d0471] text-white text-[11px] font-mono font-black rounded-md flex items-center justify-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+                                          >
+                                            {isDelivery ? <Bike size={12} /> : <Check size={12} />}
+                                            <span>{isDelivery ? 'DESPACHAR' : 'CONCLUIR'}</span>
+                                            <ArrowRight size={12} />
+                                          </button>
+                                        )}
+                                        {isInRoute && (
+                                          <button
+                                            type="button"
+                                            onClick={() => updateOrderStatus(order.id, 'Finalizado')}
+                                            className="w-full py-1.5 px-2 bg-[#6a2092] hover:bg-[#521872] text-white text-[11px] font-mono font-black rounded-md flex items-center justify-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+                                          >
+                                            <Check size={12} />
+                                            <span>CONCLUIR</span>
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
 
                   {/* VISUALIZAÇÃO EM TABELA (LIMPA, SEM ENDEREÇOS POLUINDO A PÁGINA PRINCIPAL) */}
                   {ordersViewMode === 'table' && filteredList.length > 0 && (
-                    <div className="overflow-x-auto rounded-lg border border-stone-200">
-                      <table className="min-w-full text-left">
+                    <div className="rounded-xl border border-stone-200/80 overflow-hidden">
+                      <div ref={pedidosListaRef} className="overflow-x-auto">
+                      <table className="w-full table-fixed text-left">
+                        <colgroup>
+                          <col className="w-[124px]" />
+                          <col />
+                          <col className="w-[118px]" />
+                          <col className="w-[19%]" />
+                          <col className="w-[100px]" />
+                          <col className="w-[178px]" />
+                          <col className="w-[230px]" />
+                        </colgroup>
                         <thead>
-                          <tr className="border-b border-stone-200 text-[11px] font-mono font-bold text-stone-600 uppercase tracking-wider bg-stone-50">
-                            <th className="py-3 px-4">Nº / Hora</th>
-                            <th className="py-3 px-4">Cliente / Contato</th>
-                            <th className="py-3 px-4">Tipo</th>
-                            <th className="py-3 px-4">Pagamento</th>
-                            <th className="py-3 px-4">Valor</th>
-                            <th className="py-3 px-4 text-center">Status</th>
-                            <th className="py-3 px-4 text-right">Ações</th>
+                          <tr className="border-b border-stone-100 text-[11px] font-semibold text-stone-400 uppercase tracking-wider bg-stone-50/60">
+                            <th className="h-9 pl-4 pr-3 font-semibold">Pedido</th>
+                            <th className="h-9 px-3 font-semibold">Cliente</th>
+                            <th className="h-9 px-3 font-semibold">Tipo</th>
+                            <th className="h-9 px-3 font-semibold">Pagamento</th>
+                            <th className="h-9 px-3 font-semibold text-right">Valor</th>
+                            <th className="h-9 px-3 font-semibold">Status</th>
+                            <th className="h-9 pl-3 pr-4 font-semibold text-right">Ações</th>
                           </tr>
                         </thead>
-                        <tbody className="text-xs font-mono divide-y divide-stone-100">
-                          {filteredList.map((order: any) => {
-                            const elapsed = getElapsedTime(order.createdAt);
+                        <tbody className="text-[13px] divide-y divide-stone-100">
+                          {pedidosDaPagina.map((order: any) => {
+                            const dataCriacao = order.createdAt || order.created_at;
+                            const elapsed = getElapsedTime(dataCriacao);
                             const isDelivery = order.orderType === 'entrega' || order.orderType === 'Delivery';
+                            const isRetirada = order.orderType === 'retirada';
+                            const ativo = order.status !== 'Finalizado' && order.status !== 'Cancelado';
+                            const corEspera = elapsed.urgency === 'danger' ? 'text-rose-600 font-semibold' : elapsed.urgency === 'warning' ? 'text-amber-600 font-semibold' : 'text-stone-400';
 
                             return (
-                              <tr key={order.id} className="hover:bg-stone-50/80 transition-colors">
-                                <td className="py-3 px-4">
+                              <tr key={order.id} className={`h-14 transition-colors ${order.status === 'Pendente' ? 'bg-amber-50/40 hover:bg-amber-50/70' : 'hover:bg-brand-50/40'}`}>
+                                <td className="pl-4 pr-3 py-2 whitespace-nowrap">
                                   <div className="flex items-center gap-1.5">
-                                    <span className="font-black text-stone-900 tabular-nums">#{order.id}</span>
+                                    <span className="font-bold text-stone-900 tabular-nums text-[14px]">#{order.id}</span>
                                     {(order.isEdited || order.is_edited) && (
-                                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300">
-                                        EDITADO
-                                      </span>
+                                      <span className="text-[11px] font-semibold px-1.5 rounded bg-amber-100 text-amber-900">editado</span>
                                     )}
                                   </div>
-                                  <div className="text-[11px] text-stone-500 mt-0.5 flex items-center gap-1">
-                                    <span className="font-bold text-stone-700">
-                                      {new Date(order.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                                    </span>
-                                    {order.status !== 'Finalizado' && order.status !== 'Cancelado' && elapsed.text && (
-                                      <span className="text-[10px] text-stone-400">({elapsed.text})</span>
-                                    )}
+                                  <div className="text-[12px] text-stone-500 tabular-nums">
+                                    {new Date(order.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                    {ativo && elapsed.text && <span className={corEspera}> · {elapsed.text}</span>}
                                   </div>
                                 </td>
 
-                                {/* Cliente & Contato: Limpo e objetivo, sem endereço poluindo */}
-                                <td className="py-3 px-4">
-                                  <div className="font-black text-stone-900 text-xs sm:text-sm">{order.customerName}</div>
-                                  <div className="flex items-center gap-2 mt-0.5 text-[11px] text-stone-500">
+                                <td className="px-3 py-2">
+                                  <div className="font-semibold text-stone-900 text-[14px] truncate">{order.customerName}</div>
+                                  <div className="flex items-center gap-2 text-[12px] text-stone-500">
                                     {order.customerPhone && (
-                                      <a
-                                        href={`tel:${order.customerPhone}`}
-                                        className="hover:text-stone-900 font-bold transition-colors"
-                                      >
+                                      <a href={`tel:${order.customerPhone}`} className="hover:text-brand-700 tabular-nums transition-colors">
                                         {order.customerPhone}
                                       </a>
                                     )}
-                                    {order.nif && (
-                                      <span className="px-1 bg-stone-100 rounded text-[10px] font-bold border border-stone-200">
-                                        NIF: {order.nif}
-                                      </span>
-                                    )}
+                                    {order.nif && <span className="px-1 bg-stone-100 rounded text-[11px] font-semibold">CPF {order.nif}</span>}
                                   </div>
                                 </td>
 
-                                <td className="py-3 px-4">
+                                <td className="px-3 py-2 whitespace-nowrap">
                                   <span
                                     title={isDelivery && order.deliveryAddress ? `Endereço: ${order.deliveryAddress}` : undefined}
-                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-mono font-bold border ${
-                                      isDelivery
-                                        ? 'bg-sky-50 text-sky-800 border-sky-200'
-                                        : 'bg-stone-100 text-stone-700 border-stone-200'
+                                    className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[12px] font-semibold ${
+                                      isDelivery ? 'bg-sky-50 text-sky-800' : isRetirada ? 'bg-brand-50 text-brand-800' : 'bg-stone-100 text-stone-700'
                                     }`}
                                   >
-                                    {isDelivery ? <Bike size={12} className="text-sky-600" /> : <Store size={12} className="text-stone-500" />}
-                                    <span>{isDelivery ? 'Entrega' : 'Balcão'}</span>
+                                    {isDelivery ? <Bike size={13} /> : <Store size={13} />}
+                                    {isDelivery ? 'Entrega' : isRetirada ? 'Retirada' : 'Balcão'}
                                   </span>
                                 </td>
 
-                                <td className="py-3 px-4">
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold font-mono bg-stone-100 text-stone-800 border border-stone-200">
+                                <td className="px-3 py-2">
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <span className="truncate text-stone-700" title={order.paymentMethod || 'Dinheiro'}>
                                       {order.paymentMethod || 'Dinheiro'}
                                     </span>
                                     {order.changeFor && Number(order.changeFor) > 0 && (
-                                      <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
-                                        Troco R$ {Number(order.changeFor).toFixed(0)}
+                                      <span className="shrink-0 text-[11px] font-semibold text-amber-800 bg-amber-50 px-1.5 rounded border border-amber-200 whitespace-nowrap">
+                                        troco p/ {brl(Number(order.changeFor))}
                                       </span>
                                     )}
                                   </div>
                                 </td>
 
-                                <td className="py-3 px-4 font-black tabular-nums text-stone-900 text-sm">
-                                  R$ {Number(order.totalAmount || 0).toFixed(2)}
+                                <td className="px-3 py-2 text-right font-bold tabular-nums text-stone-900 text-[14px] whitespace-nowrap">
+                                  {brl(Number(Number(order.totalAmount || 0)))}
                                 </td>
 
-                                <td className="py-3 px-4 text-center">
+                                <td className="px-3 py-2">
                                   <select
                                     value={order.status}
                                     onChange={(e) => updateOrderStatus(order.id, e.target.value)}
-                                    className="px-2.5 py-1 rounded-md text-[11px] font-mono font-bold border border-stone-200 bg-white text-stone-800 cursor-pointer outline-none hover:bg-stone-50 transition-all"
-                                    style={{ textAlignLast: 'center' }}
+                                    className={`w-full h-8 pl-2.5 pr-7 rounded-lg text-[13px] font-semibold border cursor-pointer outline-none transition-colors ${COR_STATUS[order.status] || 'bg-white text-stone-800 border-stone-200'}`}
                                     title="Alterar status"
                                   >
                                     <option value="Pendente">Pendente</option>
-                                    <option value="Em Preparo">Em Preparo</option>
-                                    <option value="Saiu para Entrega">Saiu para Entrega</option>
+                                    <option value="Em Preparo">Em preparo</option>
+                                    <option value="Saiu para Entrega">Em rota</option>
                                     <option value="Finalizado">Finalizado</option>
                                     <option value="Cancelado">Cancelado</option>
                                   </select>
                                 </td>
 
-                                <td className="py-3 px-4 text-right">
-                                  <div className="flex items-center justify-end gap-1.5">
+                                <td className="pl-3 pr-4 py-2">
+                                  <div className="flex items-center justify-end gap-1">
                                     {order.status === 'Pendente' && (
                                       <button
                                         onClick={() => updateOrderStatus(order.id, 'Em Preparo')}
-                                        className="text-[11px] font-mono font-black px-2.5 py-1 rounded bg-[#6a2092] hover:bg-[#521872] text-white transition-colors cursor-pointer border border-[#521872] shadow-2xs"
-                                        title="Iniciar Preparo"
+                                        className="h-8 px-3 rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-[13px] font-semibold transition-colors cursor-pointer shadow-sm whitespace-nowrap"
+                                        title="Iniciar preparo"
                                       >
-                                        PREPARAR
+                                        Preparar
                                       </button>
                                     )}
                                     {order.status === 'Em Preparo' && (
                                       <button
                                         onClick={() => updateOrderStatus(order.id, isDelivery ? 'Saiu para Entrega' : 'Finalizado')}
-                                        className="text-[11px] font-mono font-black px-2.5 py-1 rounded bg-[#6a2092] hover:bg-[#521872] text-white transition-colors cursor-pointer border border-[#521872] shadow-2xs"
-                                        title={isDelivery ? 'Despachar Motoboy' : 'Finalizar Pedido'}
+                                        className="h-8 px-3 rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-[13px] font-semibold transition-colors cursor-pointer shadow-sm whitespace-nowrap"
+                                        title={isDelivery ? 'Despachar para o motoboy' : 'Finalizar pedido'}
                                       >
-                                        {isDelivery ? 'DESPACHAR' : 'FINALIZAR'}
+                                        {isDelivery ? 'Despachar' : 'Finalizar'}
                                       </button>
                                     )}
                                     {order.status === 'Saiu para Entrega' && (
                                       <button
                                         onClick={() => updateOrderStatus(order.id, 'Finalizado')}
-                                        className="text-[11px] font-mono font-bold px-2.5 py-1 rounded bg-stone-900 hover:bg-stone-950 text-white transition-colors cursor-pointer border border-stone-800 shadow-2xs"
-                                        title="Concluir Pedido"
+                                        className="h-8 px-3 rounded-lg bg-[#6a2092] hover:bg-[#521872] text-white text-[13px] font-semibold transition-colors cursor-pointer shadow-sm whitespace-nowrap"
+                                        title="Concluir pedido"
                                       >
-                                        CONCLUIR
+                                        Concluir
                                       </button>
                                     )}
                                     <button
                                       onClick={() => handlePrintOrder(order)}
-                                      className="p-1.5 text-stone-700 hover:text-stone-950 bg-white hover:bg-stone-100 border border-stone-200 rounded-md transition-colors cursor-pointer"
-                                      title="Imprimir Talão"
+                                      className="w-8 h-8 flex items-center justify-center text-stone-500 hover:text-stone-900 hover:bg-stone-100 rounded-lg transition-colors cursor-pointer"
+                                      title="Imprimir comanda"
                                     >
-                                      <Printer size={13} />
+                                      <Printer size={16} />
                                     </button>
                                     <button
                                       onClick={() => setEditingOrder(order)}
-                                      className="p-1.5 text-stone-700 hover:text-stone-950 bg-white hover:bg-stone-100 border border-stone-200 rounded-md transition-colors cursor-pointer"
-                                      title="Editar Pedido"
+                                      className="w-8 h-8 flex items-center justify-center text-stone-500 hover:text-brand-700 hover:bg-brand-50 rounded-lg transition-colors cursor-pointer"
+                                      title="Editar pedido"
                                     >
-                                      <Edit2 size={13} />
+                                      <Edit2 size={16} />
                                     </button>
-                                    {order.status !== 'Finalizado' && order.status !== 'Cancelado' && (
+                                    {ativo && (
                                       <button
                                         onClick={() => {
                                           if (window.confirm(`Deseja cancelar o Pedido #${order.id}?`)) {
                                             updateOrderStatus(order.id, 'Cancelado');
                                           }
                                         }}
-                                        className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 border border-stone-200 hover:border-rose-200 rounded-md transition-colors cursor-pointer"
-                                        title="Cancelar Pedido"
+                                        className="w-8 h-8 flex items-center justify-center text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                        title="Cancelar pedido"
                                       >
-                                        <X size={13} />
+                                        <X size={16} />
                                       </button>
                                     )}
                                     <button
                                       onClick={() => handleDeleteOrder(order.id)}
-                                      className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 rounded-md transition-colors cursor-pointer"
-                                      title="Excluir Pedido"
+                                      className="w-8 h-8 flex items-center justify-center text-stone-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                      title="Excluir pedido"
                                     >
-                                      <Trash2 size={13} />
+                                      <Trash2 size={16} />
                                     </button>
                                   </div>
                                 </td>
@@ -3512,6 +3567,16 @@ export default function AdminDashboard() {
                           })}
                         </tbody>
                       </table>
+                      </div>
+                      <Paginacao
+                        pagina={pagPedidos}
+                        totalPaginas={totalPagPedidos}
+                        inicio={inicioPedidos}
+                        mostrando={pedidosDaPagina.length}
+                        total={filteredList.length}
+                        onIr={(p) => setPedidosPagina(Math.max(1, Math.min(totalPagPedidos, p)))}
+                        rotulo={filteredList.length === 1 ? 'pedido' : 'pedidos'}
+                      />
                     </div>
                   )}
                 </div>
@@ -3520,138 +3585,169 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Relatórios Tab */}
-        {activeTab === "relatorios" && (
-          <motion.div 
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, ease: [0.2, 0, 0, 1] }}
-            className="mt-1 space-y-2.5 pb-12"
-          >
-            {/* Filtro de Tempo Compacto Padronizado */}
-            <motion.div 
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-              className="bg-white rounded-xl border border-stone-200/90 shadow-2xs px-3 py-1.5"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-rose-600 shrink-0" />
-                  <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-stone-800">
-                    Período dos Relatórios
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <PeriodFilterCompact
-                    value={dateFilter as any}
-                    startDate={customStartDate}
-                    endDate={customEndDate}
-                    onChange={(res) => {
-                      setDateFilter(res.period);
-                      dateFilterRef.current = res.period;
-                      if (res.startDate) {
-                        setCustomStartDate(res.startDate);
-                        customStartDateRef.current = res.startDate;
-                      }
-                      if (res.endDate) {
-                        setCustomEndDate(res.endDate);
-                        customEndDateRef.current = res.endDate;
-                      }
-                      fetchDashboardData(false, res.period);
-                    }}
-                    align="right"
-                  />
-
-                  <button
-                    onClick={() => fetchDashboardData()}
-                    className="h-7 px-2 rounded-lg border border-stone-200 bg-white text-stone-700 hover:text-stone-950 hover:bg-stone-50 transition-colors cursor-pointer shadow-2xs flex items-center gap-1.5 text-[10px] font-bold"
-                  >
-                    <RefreshCw size={11} className={isLoading ? 'animate-spin text-rose-600' : 'text-stone-400'} />
-                    <span className="hidden sm:inline uppercase tracking-wide">Atualizar</span>
-                  </button>
-                </div>
+        {/* Relatórios Tab: 6 painéis que ocupam a tela; o clique abre o relatório completo */}
+        {activeTab === "relatorios" && (() => {
+          const pedidosPeriodo: any[] = filteredOrders || [];
+          const validos = pedidosPeriodo.filter((o: any) => o.status !== 'Cancelado' && o.status !== 'cancelado');
+          const cancelados = pedidosPeriodo.filter((o: any) => o.status === 'Cancelado' || o.status === 'cancelado');
+          const valorCancelado = cancelados.reduce((s: number, o: any) => s + (Number(o.totalAmount) || 0), 0);
+          const extrasMap: Record<string, { qtd: number; valor: number }> = {};
+          validos.forEach((o: any) => (Array.isArray(o.items) ? o.items : []).forEach((it: any) => (it?.extras || []).forEach((e: any) => {
+            const nome = String(e?.name || 'Adicional');
+            const q = Number(it.quantity) || 1;
+            if (!extrasMap[nome]) extrasMap[nome] = { qtd: 0, valor: 0 };
+            extrasMap[nome].qtd += q;
+            extrasMap[nome].valor += (Number(e?.price) || 0) * q;
+          })));
+          const topExtras = Object.entries(extrasMap).sort((a, b) => b[1].qtd - a[1].qtd).slice(0, 8);
+          const topItens = (dashboardData?.popularItems || []).slice(0, 8);
+          const pagamentos = [...(paymentMethodsData || [])].sort((a: any, b: any) => (Number(b.value) || 0) - (Number(a.value) || 0)).slice(0, 4);
+          const totalPagamentos = pagamentos.reduce((s: number, p: any) => s + (Number(p.value) || 0), 0) || 1;
+          const serie = (chartData?.orderVolumeData || []).map((d: any) => Number(d.revenue) || 0);
+          const canal = (tipos: string[]) => {
+            const lista = validos.filter((o: any) => tipos.includes(String(o.orderType || '').toLowerCase()));
+            const total = lista.reduce((s: number, o: any) => s + (Number(o.totalAmount) || 0), 0);
+            return { n: lista.length, media: lista.length ? total / lista.length : 0 };
+          };
+          const canais = [
+            { rotulo: 'Entrega', ...canal(['entrega', 'delivery']) },
+            { rotulo: 'Retirada', ...canal(['retirada', 'takeaway']) },
+            { rotulo: 'Balcão', ...canal(['balcao', 'balcão', 'mesa']) },
+          ];
+          return (
+          <div className="flex-1 flex flex-col gap-3 min-h-0">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-baseline gap-x-3">
+                <h1 className="font-display text-[24px] font-extrabold tracking-tight text-stone-900 leading-tight">Relatórios</h1>
+                <p className="text-[14px] text-stone-500">Toque num card para abrir o relatório completo.</p>
               </div>
-            </motion.div>
-
-            {/* Relatórios Financeiros & Faturamento */}
-            <div>
-              <motion.h2 
-                initial={{ opacity: 0, x: -6 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.25, delay: 0.04, ease: [0.2, 0, 0, 1] }}
-                className="text-[10.5px] font-mono font-bold uppercase tracking-wider text-stone-600 flex items-center gap-1.5 mb-1.5"
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Relatórios Financeiros & Faturamento
-              </motion.h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-2.5">
-                <ReportCard
-                  customDelay={0.06}
-                  title="Faturamento Bruto"
-                  value={formatCurrency(dashboardData?.totalRevenue ?? dashboardData?.faturamento ?? dashboardData?.faturamentoBruto ?? 0)}
-                  icon={<DollarSign size={14} strokeWidth={1.5} className="text-emerald-950" />}
-                  onClick={() => setReportModal({isOpen: true, type: 'faturamento', title: 'Composição do Faturamento'})}
-                  subtitle="Total em vendas"
+              <div className="flex items-center gap-2">
+                <PeriodFilterCompact
+                  value={dateFilter as any}
+                  startDate={customStartDate}
+                  endDate={customEndDate}
+                  onChange={(res) => {
+                    setDateFilter(res.period);
+                    dateFilterRef.current = res.period;
+                    if (res.startDate) {
+                      setCustomStartDate(res.startDate);
+                      customStartDateRef.current = res.startDate;
+                    }
+                    if (res.endDate) {
+                      setCustomEndDate(res.endDate);
+                      customEndDateRef.current = res.endDate;
+                    }
+                    fetchDashboardData(false, res.period);
+                  }}
+                  align="right"
                 />
-                <ReportCard
-                  customDelay={0.10}
-                  title="Ticket Médio"
-                  value={formatCurrency(dashboardData?.ticketMedio ?? 0)}
-                  icon={<TrendingUp size={14} strokeWidth={1.5} className="text-emerald-950" />}
-                  onClick={() => setReportModal({isOpen: true, type: 'ticket_medio', title: 'Cálculo e Análise do Ticket Médio'})}
-                  subtitle="Média por pedido e canais"
-                />
+                <button
+                  onClick={() => fetchDashboardData()}
+                  className="h-9 px-3 rounded-xl border border-stone-200 bg-white text-stone-700 hover:text-stone-950 hover:bg-stone-50 transition-colors cursor-pointer flex items-center gap-1.5 text-[13px] font-semibold"
+                  title="Recarregar dados"
+                >
+                  <RefreshCw size={14} className={isLoading ? 'animate-spin text-brand-600' : 'text-stone-400'} />
+                  Atualizar
+                </button>
               </div>
             </div>
 
-            {/* Vendas por Canal, Produtos & Operação */}
-            <div>
-              <motion.h2 
-                initial={{ opacity: 0, x: -6 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.25, delay: 0.12, ease: [0.2, 0, 0, 1] }}
-                className="text-[10.5px] font-mono font-bold uppercase tracking-wider text-stone-600 flex items-center gap-1.5 mb-1.5"
+            <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 auto-rows-fr gap-3 min-h-0">
+              <PainelRelatorio
+                titulo="Faturamento"
+                Icone={DollarSign}
+                destaque={brl(faturamentoBruto)}
+                legenda={`${totalPedidos} ${totalPedidos === 1 ? 'pedido' : 'pedidos'} no período`}
+                onAbrir={() => setReportModal({isOpen: true, type: 'faturamento', title: 'Composição do Faturamento'})}
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" /> Vendas por Canal, Produtos & Operação
-              </motion.h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-2.5">
-                <ReportCard
-                  customDelay={0.14}
-                  title="Vendas de produtos"
-                  value=""
-                  icon={<Package size={14} strokeWidth={1.5} className="text-amber-950" />}
-                  onClick={() => setReportModal({isOpen: true, type: 'produtos', title: 'Vendas de Produtos'})}
-                  subtitle="Detalhamento por item"
+                <MiniBarras valores={serie} />
+              </PainelRelatorio>
+
+              <PainelRelatorio
+                titulo="Ticket médio"
+                Icone={TrendingUp}
+                destaque={brl(ticketMedio)}
+                legenda="média por pedido, por canal"
+                onAbrir={() => setReportModal({isOpen: true, type: 'ticket_medio', title: 'Cálculo e Análise do Ticket Médio'})}
+              >
+                <div className="grid grid-cols-3 gap-2">
+                  {canais.map(c => (
+                    <div key={c.rotulo} className="rounded-xl bg-stone-50 px-3 py-2">
+                      <p className="text-[12px] text-stone-500">{c.rotulo}</p>
+                      <p className="text-[15px] font-bold tabular-nums text-stone-900 whitespace-nowrap">{c.n ? brl(c.media) : '—'}</p>
+                      <p className="text-[11px] text-stone-400 tabular-nums">{c.n} {c.n === 1 ? 'pedido' : 'pedidos'}</p>
+                    </div>
+                  ))}
+                </div>
+              </PainelRelatorio>
+
+              <PainelRelatorio
+                titulo="Produtos mais vendidos"
+                Icone={Package}
+                onAbrir={() => setReportModal({isOpen: true, type: 'produtos', title: 'Vendas de Produtos'})}
+              >
+                <ListaRanking
+                  vazio="Sem vendas no período."
+                  itens={topItens.map((i: any) => ({ nome: formatItemNameForPrint({ name: i.name }), detalhe: `${i.qty} un.`, valor: brl(Number(i.revenue) || 0) }))}
                 />
-                <ReportCard
-                  customDelay={0.18}
-                  title="Vendas de complementos"
-                  value=""
-                  icon={<UtensilsCrossed size={14} strokeWidth={1.5} className="text-amber-950" />}
-                  onClick={() => setReportModal({isOpen: true, type: 'complementos', title: 'Vendas de Complementos (Bordas e Extras)'})}
-                  subtitle="Adicionais e extras"
+              </PainelRelatorio>
+
+              <PainelRelatorio
+                titulo="Adicionais"
+                Icone={UtensilsCrossed}
+                onAbrir={() => setReportModal({isOpen: true, type: 'complementos', title: 'Vendas de Adicionais'})}
+              >
+                <ListaRanking
+                  vazio="Nenhum adicional vendido no período."
+                  itens={topExtras.map(([nome, v]) => ({ nome: nomeBonito(nome), detalhe: `${v.qtd} un.`, valor: brl(v.valor) }))}
                 />
-                <ReportCard
-                  customDelay={0.22}
-                  title="Formas de Pagamento"
-                  value=""
-                  icon={<CreditCard size={14} strokeWidth={1.5} className="text-amber-950" />}
-                  onClick={() => setReportModal({isOpen: true, type: 'pagamentos', title: 'Formas de Pagamento'})}
-                  subtitle="Distribuição"
-                />
-                <ReportCard
-                  customDelay={0.26}
-                  title="Cancelamentos"
-                  value=""
-                  icon={<AlertCircle size={14} strokeWidth={1.5} className="text-amber-950" />}
-                  onClick={() => setReportModal({isOpen: true, type: 'cancelamentos', title: 'Pedidos Cancelados'})}
-                  subtitle="Análise de perdas"
-                />
-              </div>
+              </PainelRelatorio>
+
+              <PainelRelatorio
+                titulo="Formas de pagamento"
+                Icone={CreditCard}
+                onAbrir={() => setReportModal({isOpen: true, type: 'pagamentos', title: 'Formas de Pagamento'})}
+              >
+                {pagamentos.length === 0 ? (
+                  <p className="text-[13px] text-stone-400">Sem pagamentos no período.</p>
+                ) : (
+                  <div className="space-y-2.5">
+                    {pagamentos.map((p: any, i: number) => {
+                      const pct = Math.round(((Number(p.value) || 0) / totalPagamentos) * 100);
+                      return (
+                        <div key={p.name} className="space-y-1">
+                          <div className="flex items-center justify-between gap-2 text-[13px]">
+                            <span className="text-stone-700 truncate">{p.name}</span>
+                            <span className="tabular-nums whitespace-nowrap"><span className="font-semibold text-stone-900">{brl(Number(p.value) || 0)}</span> <span className="text-stone-400">· {pct}%</span></span>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-stone-100 overflow-hidden">
+                            <div className="h-full rounded-full" style={{ width: `${Math.max(4, pct)}%`, backgroundColor: ['#6a2092', '#8a3fb5', '#c49ce0', '#dec4ee'][i] || '#dec4ee' }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </PainelRelatorio>
+
+              <PainelRelatorio
+                titulo="Cancelamentos"
+                Icone={AlertCircle}
+                destaque={String(cancelados.length)}
+                legenda={cancelados.length ? `${brl(valorCancelado)} em pedidos cancelados` : 'nenhum pedido cancelado'}
+                tom={cancelados.length ? 'alerta' : 'neutro'}
+                onAbrir={() => setReportModal({isOpen: true, type: 'cancelamentos', title: 'Pedidos Cancelados'})}
+              >
+                {cancelados.length > 0 && (
+                  <p className="text-[13px] text-stone-500">
+                    {Math.round((cancelados.length / Math.max(1, pedidosPeriodo.length)) * 100)}% dos pedidos do período
+                  </p>
+                )}
+              </PainelRelatorio>
             </div>
-          </motion.div>
-        )}
+          </div>
+          );
+        })()}
 
       </div>
       </main>
@@ -3662,6 +3758,8 @@ export default function AdminDashboard() {
         isOpen={showHistoricalSalesModal}
         onClose={() => setShowHistoricalSalesModal(false)}
       />
+
+      <PaletaComandos aberto={paletaAberta} onFechar={() => setPaletaAberta(false)} comandos={comandosPaleta} />
 
       {/* PDV Modal */}
       <PDVModal
@@ -3782,7 +3880,7 @@ export default function AdminDashboard() {
                 }
                 
                 if (reportModal.type === 'faturamento') {
-                  const formatCurrency = (val: any) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'EUR' }).format(Number(val) || 0);
+                  const formatCurrency = (val: any) => brl(Number(val) || 0);
                   const formatDateTime = (val: any) => {
                     if (!val) return 'Ativo';
                     const d = new Date(val);
@@ -3824,7 +3922,7 @@ export default function AdminDashboard() {
                                 <td className="py-3 px-4 text-right">
                                   <button
                                     onClick={() => setSelectedSessionForDetails(sess)}
-                                    className="px-3 py-1.5 bg-stone-900 text-white hover:bg-stone-800 rounded-lg text-xs font-bold transition-colors cursor-pointer shadow-sm"
+                                    className="px-3 py-1.5 bg-[#6a2092] text-white hover:bg-[#521872] rounded-lg text-xs font-bold transition-colors cursor-pointer shadow-sm"
                                   >
                                     Ver Detalhes
                                   </button>
@@ -3869,7 +3967,7 @@ export default function AdminDashboard() {
                     <div className="space-y-4">
                       <div className="flex justify-between items-center bg-stone-50 p-4 rounded-xl border border-stone-200">
                         <span className="font-bold text-stone-700 text-sm">Faturamento Acumulado dos Itens:</span>
-                        <span className="font-black text-xl font-mono text-emerald-700">R$ {totalRev.toFixed(2)}</span>
+                        <span className="font-black text-xl font-mono text-emerald-700">{brl(Number(totalRev))}</span>
                       </div>
                       <div className="border border-stone-200 rounded-xl overflow-hidden shadow-xs">
                         <table className="w-full text-left border-collapse">
@@ -3885,7 +3983,7 @@ export default function AdminDashboard() {
                               <tr key={idx} className="hover:bg-stone-50/80 transition-colors">
                                 <td className="py-3 px-4 font-bold text-stone-900">{name}</td>
                                 <td className="py-3 px-4 text-center font-mono font-bold text-stone-600">{data.qty} uni</td>
-                                <td className="py-3 px-4 text-right font-mono font-bold text-emerald-700">R$ {data.rev.toFixed(2)}</td>
+                                <td className="py-3 px-4 text-right font-mono font-bold text-emerald-700">{brl(Number(data.rev))}</td>
                               </tr>
                             ))}
                             {sorted.length === 0 && (
@@ -3957,7 +4055,7 @@ export default function AdminDashboard() {
                               onClick={() => setTicketMedioTab(seg.id as any)}
                               className={`p-3 rounded-xl text-left transition-all cursor-pointer border ${
                                 isSelected
-                                  ? 'bg-stone-900 text-white border-stone-900 shadow-sm'
+                                  ? 'bg-[#6a2092] text-white border-[#6a2092] shadow-sm'
                                   : 'bg-white text-stone-900 border-stone-200 hover:border-stone-300 hover:bg-stone-50/50'
                               }`}
                             >
@@ -3979,12 +4077,12 @@ export default function AdminDashboard() {
                                 <div className={`text-xl font-black font-mono tracking-tight leading-none ${
                                   isSelected ? 'text-white' : 'text-stone-900'
                                 }`}>
-                                  R$ {seg.ticket.toFixed(2)}
+                                  {brl(Number(seg.ticket))}
                                 </div>
                                 <div className={`text-[10.5px] font-mono mt-1 ${
                                   isSelected ? 'text-stone-400' : 'text-stone-500'
                                 }`}>
-                                  Total: R$ {seg.rev.toFixed(2)}
+                                  Total: {brl(Number(seg.rev))}
                                 </div>
                               </div>
                             </button>
@@ -3998,7 +4096,7 @@ export default function AdminDashboard() {
                           Mostrando pedidos de: <strong className="text-stone-900 font-bold">{currentTabName}</strong> ({currentTabOrders.length})
                         </div>
                         <div className="text-stone-400 text-[10px]">
-                          Fórmula: Total (R$ {currentTabRev.toFixed(2)}) ÷ {currentTabOrders.length || 0} pedidos = <span className="text-stone-800 font-bold">R$ {currentTabTicket.toFixed(2)}</span>
+                          Fórmula: Total ({brl(Number(currentTabRev))}) ÷ {currentTabOrders.length || 0} pedidos = <span className="text-stone-800 font-bold">{brl(Number(currentTabTicket))}</span>
                         </div>
                       </div>
 
@@ -4032,7 +4130,7 @@ export default function AdminDashboard() {
                                     </span>
                                   </td>
                                   <td className="py-2 px-3.5 font-mono text-stone-600 text-[11px]">{o.paymentMethod}</td>
-                                  <td className="py-2 px-3.5 text-right font-mono font-bold text-stone-900">R$ {Number(o.totalAmount || 0).toFixed(2)}</td>
+                                  <td className="py-2 px-3.5 text-right font-mono font-bold text-stone-900">{brl(Number(Number(o.totalAmount || 0)))}</td>
                                   <td className="py-2 px-3.5 text-center">
                                     <button
                                       type="button"
@@ -4076,7 +4174,7 @@ export default function AdminDashboard() {
                     <div className="space-y-4">
                       <div className="flex justify-between items-center bg-stone-50 p-4 rounded-xl border border-stone-200">
                         <span className="font-bold text-stone-700 text-sm">Total Geral em Pagamentos:</span>
-                        <span className="font-black text-xl font-mono text-emerald-700">R$ {totalRev.toFixed(2)}</span>
+                        <span className="font-black text-xl font-mono text-emerald-700">{brl(Number(totalRev))}</span>
                       </div>
                       <div className="border border-stone-200 rounded-xl overflow-hidden shadow-xs">
                         <table className="w-full text-left border-collapse">
@@ -4092,7 +4190,7 @@ export default function AdminDashboard() {
                               <tr key={idx} className="hover:bg-stone-50/80 transition-colors">
                                 <td className="py-3 px-4 font-bold text-stone-900">{pm}</td>
                                 <td className="py-3 px-4 text-center font-mono font-bold text-stone-600">{data.count} pedidos</td>
-                                <td className="py-3 px-4 text-right font-mono font-bold text-emerald-700">R$ {data.rev.toFixed(2)}</td>
+                                <td className="py-3 px-4 text-right font-mono font-bold text-emerald-700">{brl(Number(data.rev))}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -4108,7 +4206,7 @@ export default function AdminDashboard() {
                   <div className="space-y-4">
                     <div className="flex justify-between items-center bg-stone-50 p-4 rounded-xl border border-stone-200">
                       <span className="font-bold text-stone-700 text-sm">Total de Pedidos no Período ({filteredReportOrders.length}):</span>
-                      <span className="font-black text-xl font-mono text-emerald-700">R$ {totalPeriodo.toFixed(2)}</span>
+                      <span className="font-black text-xl font-mono text-emerald-700">{brl(Number(totalPeriodo))}</span>
                     </div>
                     <div className="border border-stone-200 rounded-xl overflow-hidden shadow-xs">
                       <table className="w-full text-left border-collapse">
@@ -4139,7 +4237,7 @@ export default function AdminDashboard() {
                                   {o.status}
                                 </span>
                               </td>
-                              <td className="py-3 px-4 text-right font-mono font-bold text-emerald-700">R$ {Number(o.totalAmount || 0).toFixed(2)}</td>
+                              <td className="py-3 px-4 text-right font-mono font-bold text-emerald-700">{brl(Number(Number(o.totalAmount || 0)))}</td>
                               <td className="py-3 px-4 text-center">
                                 <div className="flex items-center justify-center gap-1.5">
                                   <button
@@ -4180,7 +4278,7 @@ export default function AdminDashboard() {
             <div className="p-4 border-t border-stone-200 bg-stone-50 flex justify-end">
               <button
                 onClick={() => setReportModal({isOpen: false, type: '', title: ''})}
-                className="px-5 py-2 bg-stone-900 hover:bg-stone-800 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                className="px-5 py-2 bg-[#6a2092] hover:bg-[#521872] text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
               >
                 Fechar Relatório
               </button>
@@ -4246,13 +4344,13 @@ export default function AdminDashboard() {
                           <span style={{ fontSize: '12px', fontWeight: 'normal' }}>{formatItemNameForPrint(item)}</span>
                         </div>
                         <span style={{ fontSize: '13px', fontWeight: '800', whiteSpace: 'nowrap' }}>
-                          R$ {(((item.basePrice !== undefined ? item.basePrice : item.priceCalculated) || 0) * (item.quantity || 1)).toFixed(2)}
+                          {brl(Number((((item.basePrice !== undefined ? item.basePrice : item.priceCalculated) || 0) * (item.quantity || 1))))}
                         </span>
                       </div>
                       {item.extras && item.extras.length > 0 && item.extras.map((extra: any, extraIdx: number) => (
                         <div key={`${idx}-extra-${extraIdx}`} style={{ display: 'flex', justifyContent: 'space-between', paddingLeft: '8px', marginTop: '1px' }}>
                           <span style={{ fontSize: '10px', fontWeight: 'normal' }}>{extra.quantity > 1 ? `${extra.quantity}x ` : ''}{extra.name}</span>
-                          <span style={{ fontSize: '10px', fontWeight: 'normal' }}>R$ {((extra.price || 0) * (item.quantity || 1)).toFixed(2)}</span>
+                          <span style={{ fontSize: '10px', fontWeight: 'normal' }}>{brl(Number(((extra.price || 0) * (item.quantity || 1))))}</span>
                         </div>
                       ))}
                       {item.notes && (
@@ -4281,19 +4379,19 @@ export default function AdminDashboard() {
                     <div style={{ marginBottom: '6px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: 'normal', marginBottom: '2px' }}>
                         <span>Subtotal</span>
-                        <span>R$ {itemsSubtotal.toFixed(2)}</span>
+                        <span>{brl(Number(itemsSubtotal))}</span>
                       </div>
                       {isDelivery && deliveryFee > 0 && (
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: 'normal', marginBottom: '2px' }}>
                           <span>Taxa de Entrega</span>
-                          <span>R$ {deliveryFee.toFixed(2)}</span>
+                          <span>{brl(Number(deliveryFee))}</span>
                         </div>
                       )}
                       {addAmount > 0 && (
                         <div style={{ marginBottom: '3px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: 'bold' }}>
                             <span>+ Taxa / Adicional</span>
-                            <span>+ R$ {addAmount.toFixed(2)}</span>
+                            <span>+ {brl(Number(addAmount))}</span>
                           </div>
                           {reasonNote && (
                             <div style={{ fontSize: '10px', fontStyle: 'italic', paddingLeft: '8px', color: '#333' }}>
@@ -4305,12 +4403,12 @@ export default function AdminDashboard() {
                       {discAmount > 0 && (
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: 'bold', marginBottom: '2px' }}>
                           <span>- Desconto</span>
-                          <span>- R$ {discAmount.toFixed(2)}</span>
+                          <span>- {brl(Number(discAmount))}</span>
                         </div>
                       )}
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '900', marginTop: '3px', borderTop: '1px dashed #000', paddingTop: '3px' }}>
                         <span>Montante pago</span>
-                        <span>R$ {(printOrder.totalAmount || 0).toFixed(2)}</span>
+                        <span>{brl(Number((printOrder.totalAmount || 0)))}</span>
                       </div>
                     </div>
                   );
@@ -4395,13 +4493,13 @@ export default function AdminDashboard() {
                       <span style={{ fontSize: '10pt', fontWeight: 'normal' }}>{formatItemNameForPrint(item)}</span>
                     </div>
                     <span style={{ fontSize: '12pt', fontWeight: '800', whiteSpace: 'nowrap' }}>
-                      R$ {(((item.basePrice !== undefined ? item.basePrice : item.priceCalculated) || 0) * (item.quantity || 1)).toFixed(2)}
+                      {brl(Number((((item.basePrice !== undefined ? item.basePrice : item.priceCalculated) || 0) * (item.quantity || 1))))}
                     </span>
                   </div>
                   {item.extras && item.extras.length > 0 && item.extras.map((extra: any, extraIdx: number) => (
                     <div key={`${idx}-extra-${extraIdx}`} style={{ display: 'flex', justifyContent: 'space-between', paddingLeft: '10px', marginTop: '2px' }}>
                       <span style={{ fontSize: '10pt', fontWeight: 'normal' }}>{extra.quantity > 1 ? `${extra.quantity}x ` : ''}{extra.name}</span>
-                      <span style={{ fontSize: '10pt', fontWeight: 'normal' }}>R$ {((extra.price || 0) * (item.quantity || 1)).toFixed(2)}</span>
+                      <span style={{ fontSize: '10pt', fontWeight: 'normal' }}>{brl(Number(((extra.price || 0) * (item.quantity || 1))))}</span>
                     </div>
                   ))}
                   {item.notes && (
@@ -4430,19 +4528,19 @@ export default function AdminDashboard() {
                 <div style={{ marginBottom: '8px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11pt', fontWeight: 'normal', marginBottom: '3px' }}>
                     <span>Subtotal</span>
-                    <span>R$ {itemsSubtotal.toFixed(2)}</span>
+                    <span>{brl(Number(itemsSubtotal))}</span>
                   </div>
                   {isDelivery && deliveryFee > 0 && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11pt', fontWeight: 'normal', marginBottom: '3px' }}>
                       <span>Taxa de Entrega</span>
-                      <span>R$ {deliveryFee.toFixed(2)}</span>
+                      <span>{brl(Number(deliveryFee))}</span>
                     </div>
                   )}
                   {addAmount > 0 && (
                     <div style={{ marginBottom: '3px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11pt', fontWeight: 'bold' }}>
                         <span>+ Taxa / Adicional</span>
-                        <span>+ R$ {addAmount.toFixed(2)}</span>
+                        <span>+ {brl(Number(addAmount))}</span>
                       </div>
                       {reasonNote && (
                         <div style={{ fontSize: '10pt', fontStyle: 'italic', paddingLeft: '8px', color: '#000' }}>
@@ -4454,12 +4552,12 @@ export default function AdminDashboard() {
                   {discAmount > 0 && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11pt', fontWeight: 'bold', marginBottom: '3px' }}>
                       <span>- Desconto</span>
-                      <span>- R$ {discAmount.toFixed(2)}</span>
+                      <span>- {brl(Number(discAmount))}</span>
                     </div>
                   )}
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11pt', fontWeight: '900', marginTop: '3px', borderTop: '1px dashed #000', paddingTop: '3px' }}>
                     <span>Montante pago</span>
-                    <span>R$ {(printOrder.totalAmount || 0).toFixed(2)}</span>
+                    <span>{brl(Number((printOrder.totalAmount || 0)))}</span>
                   </div>
                 </div>
               );
@@ -4911,734 +5009,810 @@ function EditOrderModal({ order, menuItems, onClose, onSave }: { order: any, men
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/70 backdrop-blur-xs"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-stone-900/60 backdrop-blur-xs"
       onClick={onClose}
     >
       <div 
-        className="bg-stone-100 rounded-xl w-full max-w-xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden border border-stone-800"
+        className="bg-stone-100 rounded-2xl w-full max-w-5xl max-h-[94vh] flex flex-col shadow-2xl overflow-hidden border border-stone-200"
         onClick={(e) => e.stopPropagation()}
       >
         
-        {/* Header Compacto */}
-        <div className="px-3.5 py-2 bg-stone-950 text-white flex justify-between items-center shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="p-1 bg-stone-800 text-rose-500 rounded border border-stone-700">
-              <Edit3 size={14} />
+        {/* Header Premium com Identidade Mais Açaí */}
+        <div className="px-5 py-3.5 bg-white border-b border-stone-200 flex justify-between items-center shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#6a2092] text-white flex items-center justify-center shadow-xs">
+              <ShoppingBag size={18} />
             </div>
             <div>
-              <h3 className="font-extrabold text-xs leading-tight text-white tracking-tight">Editar Pedido #{order.id}</h3>
-              <p className="text-[9px] text-stone-400 font-medium leading-none mt-0.5">Altere produtos, valores e forma de pagamento</p>
+              <div className="flex items-center gap-2">
+                <h3 className="font-extrabold text-sm sm:text-base leading-tight text-stone-900 tracking-tight font-sans">
+                  Editar Pedido #{order.id}
+                </h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-50 text-[#6a2092] border border-purple-200">
+                  {orderType === 'entrega' || orderType === 'Delivery' ? '🛵 Entrega' : orderType === 'retirada' ? '🛍️ Retirada' : '🍽️ Mesa'}
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-stone-100 text-stone-700 border border-stone-200">
+                  {paymentMethod}
+                </span>
+              </div>
+              <p className="text-[11px] text-stone-500 font-medium leading-none mt-1">
+                Altere produtos, complementos, valores e forma de pagamento
+              </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1 text-stone-400 hover:text-white bg-stone-900 hover:bg-rose-600 rounded transition-colors cursor-pointer border border-stone-800 hover:border-rose-500"
-          >
-            <X size={14} />
-          </button>
-        </div>
 
-        {/* Real-time total summary bar Compacto */}
-        <div className="bg-stone-900 px-3.5 py-1 border-b border-stone-800 flex items-center justify-between text-xs shrink-0">
-          <div className="flex items-center gap-2.5 font-mono text-[10px]">
-            <span className="text-stone-300">
-              Subtotal: <strong className="text-white font-bold">R$ {subtotal.toFixed(2)}</strong>
-            </span>
-            {Number(additionalAmount) > 0 && (
-              <span className="text-amber-400 font-semibold">
-                (+) Adic: R$ {Number(additionalAmount).toFixed(2)}
-              </span>
-            )}
-            {Number(discountAmount) > 0 && (
-              <span className="text-emerald-400 font-semibold">
-                (-) Desc: R$ {Number(discountAmount).toFixed(2)}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="text-[9px] font-mono text-stone-400 uppercase">Total:</span>
-            <span className="text-sm font-black text-rose-500 font-mono leading-none">R$ {finalTotal.toFixed(2)}</span>
-          </div>
-        </div>
-
-        {/* Form Body com Conteúdo Otimizado */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-3 py-2 space-y-2 flex flex-col justify-between">
-          <div className="space-y-2">
-            {/* Section 1: Customer Info Compacto */}
-            <div className="bg-white p-2 rounded-lg border border-stone-200/90 shadow-2xs space-y-1.5">
-              <h4 className="text-[9px] font-mono font-bold text-stone-400 uppercase tracking-wider">Cliente & Entrega</h4>
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
-                <div className="space-y-0.5">
-                  <label className="block text-[8px] font-mono font-bold text-stone-500 uppercase tracking-wider">Nome</label>
-                  <input
-                    type="text"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    className="w-full px-2 py-1 bg-stone-50 rounded border border-stone-200 text-[11px] font-bold text-stone-900 outline-none focus:border-stone-900 focus:bg-white transition-colors"
-                    required
-                  />
-                </div>
-                <div className="space-y-0.5">
-                  <label className="block text-[8px] font-mono font-bold text-stone-500 uppercase tracking-wider">Telefone</label>
-                  <input
-                    type="text"
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    className="w-full px-2 py-1 bg-stone-50 rounded border border-stone-200 text-[11px] font-bold text-stone-900 outline-none focus:border-stone-900 focus:bg-white transition-colors"
-                  />
-                </div>
-                <div className="space-y-0.5">
-                  <label className="block text-[8px] font-mono font-bold text-stone-500 uppercase tracking-wider">CPF (Opcional)</label>
-                  <input
-                    type="text"
-                    value={customerNif}
-                    onChange={(e) => setCustomerNif(e.target.value)}
-                    placeholder="Ex: 123.456.789-00"
-                    className="w-full px-2 py-1 bg-stone-50 rounded border border-stone-200 text-[11px] font-bold text-stone-900 outline-none focus:border-stone-900 focus:bg-white transition-colors font-mono"
-                  />
-                </div>
-                <div className="space-y-0.5">
-                  <label className="block text-[8px] font-mono font-bold text-stone-500 uppercase tracking-wider">Tipo</label>
-                  <select
-                    value={orderType}
-                    onChange={(e) => setOrderType(e.target.value)}
-                    className="w-full px-1.5 py-1 bg-stone-50 rounded border border-stone-200 text-[11px] font-bold text-stone-900 outline-none focus:border-stone-900 focus:bg-white transition-colors cursor-pointer"
-                  >
-                    <option value="entrega">Entrega (Delivery)</option>
-                    <option value="retirada">Retirada (Takeaway)</option>
-                    <option value="mesa">Consumo Local (Mesa)</option>
-                  </select>
-                </div>
-                <div className="space-y-0.5">
-                  <label className="block text-[8px] font-mono font-bold text-stone-500 uppercase tracking-wider">Pagamento</label>
-                  <select
-                    value={paymentMethod}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="w-full px-1.5 py-1 bg-stone-50 rounded border border-stone-200 text-[11px] font-bold text-stone-900 outline-none focus:border-stone-900 focus:bg-white transition-colors cursor-pointer"
-                  >
-                    <option value="PIX">PIX</option>
-                    <option value="Cartão de Crédito">Cartão de Crédito</option>
-                    <option value="Cartão de Débito">Cartão de Débito</option>
-                    <option value="Dinheiro">Dinheiro</option>
-                  </select>
-                </div>
-              </div>
-
-              {(orderType === 'entrega' || orderType === 'Delivery') && (
-                <div className="pt-1.5 border-t border-stone-100 grid grid-cols-1 sm:grid-cols-3 gap-1.5">
-                  <div className="sm:col-span-2 space-y-0.5">
-                    <label className="block text-[8px] font-mono font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1">
-                      <MapPin size={10} className="text-amber-600" /> Endereço de Entrega
-                    </label>
-                    <input
-                      type="text"
-                      value={deliveryAddress}
-                      onChange={(e) => setDeliveryAddress(e.target.value)}
-                      className="w-full px-2 py-1 bg-stone-50 rounded border border-stone-200 text-[11px] font-medium text-stone-900 outline-none focus:border-stone-900 focus:bg-white transition-colors"
-                      placeholder="Rua, número, andar, código postal..."
-                    />
-                  </div>
-                  <div className="space-y-0.5">
-                    <label className="block text-[8px] font-mono font-bold text-stone-500 uppercase tracking-wider">
-                      Zona de Entrega
-                    </label>
-                    <input
-                      type="text"
-                      value={deliveryZone}
-                      onChange={(e) => setDeliveryZone(e.target.value)}
-                      className="w-full px-2 py-1 bg-stone-50 rounded border border-stone-200 text-[11px] font-bold text-stone-900 outline-none focus:border-stone-900 focus:bg-white transition-colors"
-                      placeholder="Ex: Zona 1, Centro..."
-                    />
-                  </div>
-                </div>
-              )}
-
-              {paymentMethod === 'Dinheiro' && (
-                <div className="pt-1.5 border-t border-stone-100 grid grid-cols-2 gap-2">
-                  <div className="space-y-0.5">
-                    <label className="block text-[8px] font-mono font-bold text-stone-500 uppercase tracking-wider">Troco Para (R$)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={cashProvided || ''}
-                      onChange={(e) => setCashProvided(parseFloat(e.target.value) || 0)}
-                      className="w-full px-2 py-0.5 bg-stone-50 rounded border border-stone-200 text-xs font-bold text-stone-900 outline-none focus:border-stone-900 focus:bg-white transition-colors"
-                      placeholder="50.00"
-                    />
-                  </div>
-                  <div className="flex items-center justify-between bg-stone-50 px-2 py-0.5 rounded border border-stone-100">
-                    <span className="text-[8px] font-mono font-bold text-stone-500 uppercase tracking-wider">Troco:</span>
-                    <span className="text-xs font-black text-emerald-600">R$ {calculatedChange.toFixed(2)}</span>
-                  </div>
-                </div>
-              )}
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-2 bg-stone-50 px-3 py-1.5 rounded-xl border border-stone-200">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500">Total Atual:</span>
+              <span className="text-sm font-black text-[#6a2092] font-mono leading-none">{brl(Number(finalTotal))}</span>
             </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-8 h-8 rounded-xl text-stone-400 hover:text-stone-700 bg-stone-100 hover:bg-stone-200 flex items-center justify-center transition-colors cursor-pointer"
+              title="Fechar (Esc)"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
 
-            {/* Section 2: Items List & Add Items */}
-            <div className="space-y-1.5 bg-white p-2 rounded-lg border border-stone-200/90 shadow-2xs">
-              <div className="flex justify-between items-center">
-                <h4 className="text-[9px] font-mono font-bold text-stone-400 uppercase tracking-wider">Itens do Pedido ({items.length})</h4>
-              </div>
-
-              {/* Current Items Table Compacto */}
-              <div className="border border-stone-200/80 rounded overflow-hidden bg-stone-50/60 max-h-28 overflow-y-auto">
-                {items.length === 0 ? (
-                  <div className="p-2 text-center text-xs text-stone-400">Nenhum item no pedido.</div>
-                ) : (
-                  <div className="divide-y divide-stone-100">
-                    {items.map((item, idx) => {
-                      const price = Number(item.priceCalculated || item.price || 0);
-                      const qty = Number(item.quantity || 1);
-                      return (
-                        <div key={idx} className="px-2 py-1 flex items-center justify-between gap-2 bg-white hover:bg-stone-50 transition-colors">
-                          <div className="flex-1 min-w-0">
-                            <div className="font-bold text-xs text-stone-900 truncate">{formatItemNameForPrint(item)}</div>
-                            <div className="text-[9px] text-stone-400 font-medium">
-                              {item.size ? `${item.size} | ` : ''} R$ {price.toFixed(2)} un.
-                            </div>
-                          </div>
-
-                          {/* Qty Controls */}
-                          <div className="flex items-center gap-0.5 bg-stone-100 px-1 py-0.5 rounded border border-stone-200">
-                            <button
-                              type="button"
-                              onClick={() => handleUpdateQty(idx, -1)}
-                              className="w-4 h-4 rounded bg-white text-stone-800 font-bold text-[10px] flex items-center justify-center border border-stone-200 hover:bg-stone-50 transition-colors cursor-pointer"
-                            >
-                              -
-                            </button>
-                            <span className="w-5 text-center text-xs font-bold text-stone-900">{qty}</span>
-                            <button
-                              type="button"
-                              onClick={() => handleUpdateQty(idx, 1)}
-                              className="w-4 h-4 rounded bg-white text-stone-800 font-bold text-[10px] flex items-center justify-center border border-stone-200 hover:bg-stone-50 transition-colors cursor-pointer"
-                            >
-                              +
-                            </button>
-                          </div>
-
-                          <div className="font-bold text-xs text-stone-900 w-14 text-right font-mono">
-                            R$ {(price * qty).toFixed(2)}
-                          </div>
-
-                          <div className="flex items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() => handleStartEditItem(idx)}
-                              className={`p-1 rounded transition-colors cursor-pointer ${
-                                editingItemIndex === idx
-                                  ? 'bg-amber-100 text-amber-900 border border-amber-300'
-                                  : 'text-stone-400 hover:text-amber-600 hover:bg-amber-50'
-                              }`}
-                              title="Editar este item"
-                            >
-                              <Edit2 size={12} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (editingItemIndex === idx) handleCancelEdit();
-                                handleRemoveItem(idx);
-                              }}
-                              className="p-1 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
-                              title="Remover Item"
-                            >
-                              <Trash2 size={12} />
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* Add/Edit Product Block CRM Style */}
-              <div className="p-2 bg-stone-50 rounded-lg border border-stone-200/90 space-y-2">
-                {/* Active Edit Banner */}
-                {editingItemIndex !== null && (
-                  <div className="flex items-center justify-between px-2 py-1 bg-amber-100 border border-amber-300 rounded text-amber-900 text-[11px] font-bold">
-                    <span className="flex items-center gap-1.5">
-                      <Edit2 size={12} className="text-amber-700" />
-                      Editando Item #{editingItemIndex + 1}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleCancelEdit}
-                      className="text-[10px] text-amber-800 hover:text-amber-950 font-bold underline cursor-pointer"
-                    >
-                      Cancelar Edição
-                    </button>
-                  </div>
-                )}
-
-                {/* Category Filter Pills */}
-                <div className="flex items-center gap-1 overflow-x-auto pb-0.5">
-                  {[
-                    { id: 'all', label: 'Todos' },
-                    { id: 'acai', label: '🍧 Açaís' },
-                    { id: 'combos', label: '🍨 Combos' },
-                    { id: 'bebidas', label: '🥤 Bebidas' },
-                    { id: 'outros', label: '✨ Outros' }
-                  ].map(cat => (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      onClick={() => setCategoryFilter(cat.id as any)}
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all shrink-0 cursor-pointer border ${
-                        categoryFilter === cat.id
-                          ? 'bg-stone-900 text-white border-stone-900 shadow-xs'
-                          : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-100'
-                      }`}
-                    >
-                      {cat.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Smart Product Search Combobox */}
-                <div ref={productSearchContainerRef} className="relative">
-                  <div className="relative">
-                    <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400" />
-                    <input
-                      type="text"
-                      value={selectedProductSearch}
-                      onFocus={() => setIsProductSearchOpen(true)}
-                      onChange={(e) => {
-                        setSelectedProductSearch(e.target.value);
-                        setIsProductSearchOpen(true);
-                        if (!e.target.value) {
-                          setSelectedProductId('');
-                        }
-                      }}
-                      placeholder={categoryFilter === 'acai' ? "Buscar açaí por sabor ou tamanho..." : "Pesquisar produto no cardápio..."}
-                      className="w-full pl-7 pr-7 py-1.5 bg-white rounded-lg border border-stone-200 text-xs font-bold text-stone-900 outline-none focus:border-stone-900 focus:ring-1 focus:ring-stone-900 transition-all"
-                    />
-                    {selectedProductSearch && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedProductSearch('');
-                          setSelectedProductId('');
-                          setIsProductSearchOpen(false);
-                        }}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700 text-xs font-bold"
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Autocomplete dropdown */}
-                  {isProductSearchOpen && (
-                    <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-stone-300 rounded-lg shadow-xl z-40 max-h-48 overflow-y-auto divide-y divide-stone-100">
-                      {filteredMenuItems.length === 0 ? (
-                        <div className="p-2.5 text-center text-xs text-stone-400">
-                          Nenhum produto encontrado.
-                        </div>
-                      ) : (
-                        filteredMenuItems.map(m => {
-                          const isP = isPizzaItem(m);
-                          const displayPrice = isP
-                            ? (m.priceG || m.priceM || m.priceSingle || 0)
-                            : (m.priceSingle || m.price || 0);
-                          return (
-                            <div
-                              key={m.id}
-                              onClick={() => handleSelectProduct(m)}
-                              className={`p-2 text-xs cursor-pointer flex items-center justify-between hover:bg-stone-50 transition-colors ${
-                                selectedProductId === m.id ? 'bg-amber-50/60 font-bold' : ''
-                              }`}
-                            >
-                              <div className="flex-1 min-w-0 pr-2">
-                                <div className="font-bold text-stone-900 truncate flex items-center gap-1.5">
-                                  {isP && <span className="text-[10px]">🍕</span>}
-                                  <span>{m.name}</span>
-                                </div>
-                                {m.ingredients && (
-                                  <div className="text-[10px] text-stone-400 truncate">{m.ingredients}</div>
-                                )}
-                              </div>
-                              <span className="text-[11px] font-mono font-bold text-stone-600 shrink-0">
-                                {isP ? `a partir de R$ ${displayPrice.toFixed(2)}` : `R$ ${displayPrice.toFixed(2)}`}
-                              </span>
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Size Selection */}
-                {isCurrentSelectionPizza ? (
-                  <div className="space-y-1 pt-1 border-t border-stone-200/60">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[9px] font-mono font-bold text-stone-400 uppercase tracking-wider">
-                        Tamanho do Item
-                      </label>
-                      <span className="text-[9px] font-bold text-purple-700 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200">
-                        {selectedSize === 'priceSuperBig' ? '1 Litro' : selectedSize === 'priceBig' ? '770ml' : selectedSize === 'priceG' ? '550ml' : selectedSize === 'priceM' ? '440ml' : '330ml'}
+        {/* Form Body com Grid de 2 Colunas */}
+        <form onSubmit={handleSubmit} className="flex-1 overflow-hidden flex flex-col justify-between min-h-0">
+          <div className="flex-1 overflow-y-auto p-4 adm-rolagem space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+              
+              {/* ───────────────────────────────────────────────────
+                  COLUNA ESQUERDA (7 COLS): ITENS DO PEDIDO & BUSCA
+              ───────────────────────────────────────────────────── */}
+              <div className="lg:col-span-7 space-y-3.5">
+                
+                {/* 1. Lista de Itens Atuais */}
+                <div className="bg-white p-3.5 rounded-xl border border-stone-200 shadow-2xs space-y-2">
+                  <div className="flex items-center justify-between pb-1.5 border-b border-stone-100">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-xs font-bold text-stone-800 uppercase tracking-wider">
+                        Itens do Pedido
+                      </h4>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#6a2092] text-white">
+                        {items.length} {items.length === 1 ? 'item' : 'itens'}
                       </span>
                     </div>
+                    <span className="text-xs font-mono font-bold text-stone-600">
+                      Subtotal: <strong className="text-stone-900">{brl(Number(subtotal))}</strong>
+                    </span>
+                  </div>
 
-                    <div className="grid grid-cols-5 gap-1">
-                      {[
-                        { key: 'priceP', label: '330ml', sub: 'P' },
-                        { key: 'priceM', label: '440ml', sub: 'M' },
-                        { key: 'priceG', label: '550ml', sub: 'G' },
-                        { key: 'priceBig', label: '770ml', sub: 'Big' },
-                        { key: 'priceSuperBig', label: '1L', sub: 'Super' }
-                      ].map(sz => {
-                        const isSelected = selectedSize === sz.key;
-                        const szPrice = selectedBaseMenuItem ? getPizzaPriceForSize(selectedBaseMenuItem, sz.key) : 0;
+                  <div className="max-h-56 overflow-y-auto adm-rolagem pr-1 space-y-1.5">
+                    {items.length === 0 ? (
+                      <div className="py-6 text-center text-xs text-stone-400">
+                        Nenhum item no pedido. Adicione itens abaixo.
+                      </div>
+                    ) : (
+                      items.map((item, idx) => {
+                        const price = Number(item.priceCalculated || item.price || 0);
+                        const qty = Number(item.quantity || 1);
+                        const isBeingEdited = editingItemIndex === idx;
+
                         return (
-                          <button
-                            key={sz.key}
-                            type="button"
-                            onClick={() => handleSelectSize(sz.key)}
-                            className={`py-1.5 px-1 rounded-md flex flex-col items-center justify-center transition-all cursor-pointer border text-center ${
-                              isSelected
-                                ? 'bg-[#6a2092] text-white font-black border-[#521872] shadow-xs'
-                                : 'bg-white text-stone-700 font-bold border-stone-200 hover:bg-stone-50'
+                          <div
+                            key={idx}
+                            className={`p-2.5 rounded-xl border flex items-center justify-between gap-3 transition-all ${
+                              isBeingEdited
+                                ? 'border-amber-400 bg-amber-50/60 ring-1 ring-amber-300 shadow-2xs'
+                                : 'border-stone-200 bg-stone-50/70 hover:bg-stone-50'
                             }`}
                           >
-                            <span className="text-[10px] leading-tight">{sz.label}</span>
-                            <span className="text-[8px] opacity-75 leading-tight">{sz.sub}</span>
-                            {szPrice > 0 && (
-                              <span className="text-[8.5px] font-mono mt-0.5 leading-none">
-                                R$ {szPrice.toFixed(1)}
-                              </span>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : (
-                  selectedProductId && (
-                    <div className="flex items-center justify-between px-2 py-1 bg-stone-100 rounded text-xs font-bold text-stone-700 border border-stone-200">
-                      <span className="text-[10px] font-mono text-stone-500 uppercase">Item Individual</span>
-                      <span className="font-mono text-stone-900">
-                        R$ {(selectedBaseMenuItem?.priceSingle || selectedBaseMenuItem?.price || 0).toFixed(2)}
-                      </span>
-                    </div>
-                  )
-                )}
+                            <div className="flex-1 min-w-0">
+                              <div className="font-bold text-xs text-stone-900 truncate">
+                                {formatItemNameForPrint(item)}
+                              </div>
+                              <div className="flex items-center gap-2 mt-0.5 text-[11px] text-stone-500">
+                                {item.size && (
+                                  <span className="font-semibold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded text-[9px] border border-purple-200">
+                                    {item.size}
+                                  </span>
+                                )}
+                                <span>{brl(Number(price))} un.</span>
+                              </div>
+                            </div>
 
-                {/* Multi-Flavor Pizza Manager (G, Big, Super Big) */}
-                {isCurrentSelectionPizza && ['priceG', 'priceBig', 'priceSuperBig'].includes(selectedSize) && selectedProductId && (
-                  <div className="space-y-1.5 pt-1.5 border-t border-stone-200/60">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[9px] font-mono font-bold text-stone-400 uppercase tracking-wider">
-                        Sabores Selecionados ({totalFlavors} de {maxAdditionalFlavors + 1})
-                      </span>
-                      <span className="text-[9px] text-stone-500 font-medium">
-                        Cálculo pelo maior valor
-                      </span>
-                    </div>
-
-                    {/* 1º Sabor (Base) */}
-                    <div className="flex items-center justify-between p-1.5 bg-white rounded-md border border-stone-200 text-xs">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="font-mono text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-200 shrink-0">
-                          {getFractionText(0, totalFlavors)}
-                        </span>
-                        <span className="font-bold text-stone-900 truncate">
-                          {selectedBaseMenuItem?.name || selectedProductSearch}
-                        </span>
-                      </div>
-                      <span className="text-[10px] font-mono font-bold text-stone-500 shrink-0">
-                        R$ {getPizzaPriceForSize(selectedBaseMenuItem, selectedSize).toFixed(2)}
-                      </span>
-                    </div>
-
-                    {/* Sabores Adicionais já selecionados */}
-                    {customAdditionalFlavors.map((flavor, idx) => {
-                      const matchingItem = menuItems.find(m => m.id === flavor.id);
-                      const sPrice = matchingItem ? getPizzaPriceForSize(matchingItem, selectedSize) : 0;
-                      const isSearchingThis = searchingFlavorSlot === idx;
-
-                      if (isSearchingThis) {
-                        return (
-                          <div key={idx} className="p-2 bg-amber-50/70 border-2 border-amber-400 rounded-lg space-y-1.5 shadow-sm">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-black text-amber-900 flex items-center gap-1">
-                                <Search size={11} className="text-amber-700" />
-                                Trocar {idx + 2}º Sabor:
+                            {/* Qty Controls com Stepper Bonito */}
+                            <div className="flex items-center gap-1 bg-white px-1.5 py-0.5 rounded-lg border border-stone-200 shadow-2xs shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateQty(idx, -1)}
+                                className="w-5 h-5 rounded-md bg-stone-100 hover:bg-rose-50 hover:text-rose-700 text-stone-700 font-bold text-xs flex items-center justify-center transition-colors cursor-pointer"
+                                title="Diminuir"
+                              >
+                                -
+                              </button>
+                              <span className="w-6 text-center text-xs font-black text-stone-900 font-mono">
+                                {qty}
                               </span>
                               <button
                                 type="button"
-                                onClick={() => { setSearchingFlavorSlot(null); setFlavorSearchQuery(''); }}
-                                className="text-stone-400 hover:text-stone-700 text-[10px] font-bold"
+                                onClick={() => handleUpdateQty(idx, 1)}
+                                className="w-5 h-5 rounded-md bg-stone-100 hover:bg-emerald-50 hover:text-emerald-700 text-stone-700 font-bold text-xs flex items-center justify-center transition-colors cursor-pointer"
+                                title="Aumentar"
                               >
-                                Cancelar ✕
+                                +
                               </button>
                             </div>
-                            <input
-                              ref={flavorSearchInputRef}
-                              type="text"
-                              value={flavorSearchQuery}
-                              onChange={e => setFlavorSearchQuery(e.target.value)}
-                              onKeyDown={e => {
-                                if (e.key === 'Enter' && filteredSlotPizzas.length > 0) {
-                                  e.preventDefault();
-                                  const chosen = filteredSlotPizzas[0];
-                                  const next = [...customAdditionalFlavors];
-                                  next[idx] = { id: chosen.id, search: chosen.name };
-                                  setCustomAdditionalFlavors(next);
-                                  setSearchingFlavorSlot(null);
-                                  setFlavorSearchQuery('');
-                                } else if (e.key === 'Escape') {
-                                  setSearchingFlavorSlot(null);
-                                }
-                              }}
-                              placeholder="Nome do produto..."
-                              className="w-full px-2 py-1 bg-white border border-stone-300 rounded text-xs font-bold text-stone-900 outline-none focus:border-[#6a2092]"
-                            />
-                            <div className="max-h-32 overflow-y-auto divide-y divide-stone-100 bg-white rounded border border-stone-200">
-                              {filteredSlotPizzas.length === 0 ? (
-                                <div className="p-2 text-center text-[10px] text-stone-400">Nenhum produto encontrado.</div>
-                              ) : (
-                                filteredSlotPizzas.map(p => (
-                                  <div
-                                    key={p.id}
-                                    onClick={() => {
-                                      const next = [...customAdditionalFlavors];
-                                      next[idx] = { id: p.id, search: p.name };
-                                      setCustomAdditionalFlavors(next);
-                                      setSearchingFlavorSlot(null);
-                                      setFlavorSearchQuery('');
-                                    }}
-                                    className="p-1.5 text-xs font-bold text-stone-800 hover:bg-amber-50 cursor-pointer flex justify-between items-center"
-                                  >
-                                    <span className="truncate">{p.name}</span>
-                                    <span className="text-[10px] font-mono text-stone-500 shrink-0">
-                                      R$ {getPizzaPriceForSize(p, selectedSize).toFixed(2)}
-                                    </span>
-                                  </div>
-                                ))
-                              )}
+
+                            <div className="font-bold text-xs text-stone-900 w-16 text-right font-mono shrink-0">
+                              {brl(Number(price * qty))}
+                            </div>
+
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleStartEditItem(idx)}
+                                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                                  isBeingEdited
+                                    ? 'bg-amber-500 text-white shadow-2xs'
+                                    : 'text-stone-400 hover:text-amber-700 hover:bg-amber-50'
+                                }`}
+                                title="Editar item"
+                              >
+                                <Edit2 size={13} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (isBeingEdited) handleCancelEdit();
+                                  handleRemoveItem(idx);
+                                }}
+                                className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                title="Remover item"
+                              >
+                                <Trash2 size={13} />
+                              </button>
                             </div>
                           </div>
                         );
-                      }
+                      })
+                    )}
+                  </div>
+                </div>
 
-                      return (
-                        <div key={idx} className="flex items-center justify-between p-1.5 bg-white rounded-md border border-stone-200 text-xs">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <span className="font-mono text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-200 shrink-0">
-                              {getFractionText(idx + 1, totalFlavors)}
-                            </span>
-                            <span className="font-bold text-stone-900 truncate">
-                              {flavor.search || flavor.id}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            {sPrice > 0 && (
-                              <span className="text-[10px] font-mono font-bold text-stone-500 mr-0.5">
-                                R$ {sPrice.toFixed(2)}
-                              </span>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSearchingFlavorSlot(idx);
-                                setFlavorSearchQuery('');
-                              }}
-                              className="px-1.5 py-0.5 bg-stone-50 hover:bg-amber-50 text-amber-900 border border-stone-200 rounded text-[9.5px] font-bold flex items-center gap-1 cursor-pointer"
-                              title="Trocar este sabor"
-                            >
-                              <RotateCcw size={10} />
-                              <span>Trocar</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setCustomAdditionalFlavors(prev => prev.filter((_, i) => i !== idx));
-                              }}
-                              className="w-5 h-5 flex items-center justify-center text-stone-400 hover:text-rose-600 rounded hover:bg-rose-50 cursor-pointer transition-colors text-xs font-bold"
-                              title="Remover este sabor"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
+                {/* 2. Adicionar / Editar Item (CRM Style) */}
+                <div className="bg-white p-3.5 rounded-xl border border-stone-200 shadow-2xs space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-stone-800 uppercase tracking-wider flex items-center gap-1.5">
+                      <Plus size={14} className="text-[#6a2092]" />
+                      {editingItemIndex !== null ? `Alterar Item #${editingItemIndex + 1}` : 'Adicionar Produto ao Pedido'}
+                    </h4>
+                    {editingItemIndex !== null && (
+                      <button
+                        type="button"
+                        onClick={handleCancelEdit}
+                        className="text-[11px] text-amber-800 hover:text-amber-950 font-bold underline cursor-pointer"
+                      >
+                        Cancelar edição
+                      </button>
+                    )}
+                  </div>
 
-                    {/* Novo slot de busca ativo para adicionar sabor */}
-                    {searchingFlavorSlot === customAdditionalFlavors.length && (
-                      <div className="p-2 bg-amber-50/70 border-2 border-amber-400 rounded-lg space-y-1.5 shadow-sm">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-black text-amber-900 flex items-center gap-1">
-                            <Search size={11} className="text-amber-700" />
-                            Adicionar {customAdditionalFlavors.length + 2}º Sabor:
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => { setSearchingFlavorSlot(null); setFlavorSearchQuery(''); }}
-                            className="text-stone-400 hover:text-stone-700 text-[10px] font-bold"
-                          >
-                            Cancelar ✕
-                          </button>
-                        </div>
-                        <input
-                          ref={flavorSearchInputRef}
-                          type="text"
-                          value={flavorSearchQuery}
-                          onChange={e => setFlavorSearchQuery(e.target.value)}
-                          onKeyDown={e => {
-                            if (e.key === 'Enter' && filteredSlotPizzas.length > 0) {
-                              e.preventDefault();
-                              const chosen = filteredSlotPizzas[0];
-                              setCustomAdditionalFlavors(prev => [...prev, { id: chosen.id, search: chosen.name }]);
-                              setSearchingFlavorSlot(null);
-                              setFlavorSearchQuery('');
-                            } else if (e.key === 'Escape') {
-                              setSearchingFlavorSlot(null);
-                            }
+                  {/* Category Filter Pills */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
+                    {[
+                      { id: 'all', label: 'Todos' },
+                      { id: 'acai', label: '🍧 Açaís' },
+                      { id: 'combos', label: '🍨 Combos' },
+                      { id: 'bebidas', label: '🥤 Bebidas' },
+                      { id: 'outros', label: '✨ Outros' }
+                    ].map(cat => (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => setCategoryFilter(cat.id as any)}
+                        className={`h-7 px-3 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer border ${
+                          categoryFilter === cat.id
+                            ? 'bg-[#6a2092] text-white border-[#6a2092] shadow-xs'
+                            : 'bg-stone-50 text-stone-600 border-stone-200 hover:bg-stone-100 hover:text-stone-900'
+                        }`}
+                      >
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Smart Product Search Combobox */}
+                  <div ref={productSearchContainerRef} className="relative">
+                    <div className="relative">
+                      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+                      <input
+                        type="text"
+                        value={selectedProductSearch}
+                        onFocus={() => setIsProductSearchOpen(true)}
+                        onChange={(e) => {
+                          setSelectedProductSearch(e.target.value);
+                          setIsProductSearchOpen(true);
+                          if (!e.target.value) {
+                            setSelectedProductId('');
+                          }
+                        }}
+                        placeholder={categoryFilter === 'acai' ? "Buscar açaí por sabor ou tamanho..." : "Pesquisar produto no cardápio..."}
+                        className="w-full pl-8 pr-8 py-2 bg-stone-50 focus:bg-white rounded-xl border border-stone-200 focus:border-[#6a2092] text-xs font-bold text-stone-900 outline-none transition-all shadow-2xs"
+                      />
+                      {selectedProductSearch && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedProductSearch('');
+                            setSelectedProductId('');
+                            setIsProductSearchOpen(false);
                           }}
-                          placeholder="Digite o nome do produto..."
-                          className="w-full px-2 py-1 bg-white border border-stone-300 rounded text-xs font-bold text-stone-900 outline-none focus:border-[#6a2092]"
-                        />
-                        <div className="max-h-32 overflow-y-auto divide-y divide-stone-100 bg-white rounded border border-stone-200">
-                          {filteredSlotPizzas.length === 0 ? (
-                            <div className="p-2 text-center text-[10px] text-stone-400">Nenhum produto encontrado.</div>
-                          ) : (
-                            filteredSlotPizzas.map(p => (
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700 text-xs font-bold"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Autocomplete dropdown */}
+                    {isProductSearchOpen && (
+                      <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-stone-300 rounded-xl shadow-xl z-40 max-h-52 overflow-y-auto divide-y divide-stone-100 adm-rolagem">
+                        {filteredMenuItems.length === 0 ? (
+                          <div className="p-3 text-center text-xs text-stone-400">
+                            Nenhum produto encontrado.
+                          </div>
+                        ) : (
+                          filteredMenuItems.map(m => {
+                            const isP = isPizzaItem(m);
+                            const displayPrice = isP
+                              ? (m.priceG || m.priceM || m.priceSingle || 0)
+                              : (m.priceSingle || m.price || 0);
+                            return (
                               <div
-                                key={p.id}
-                                onClick={() => {
-                                  setCustomAdditionalFlavors(prev => [...prev, { id: p.id, search: p.name }]);
-                                  setSearchingFlavorSlot(null);
-                                  setFlavorSearchQuery('');
-                                }}
-                                className="p-1.5 text-xs font-bold text-stone-800 hover:bg-amber-50 cursor-pointer flex justify-between items-center"
+                                key={m.id}
+                                onClick={() => handleSelectProduct(m)}
+                                className={`p-2.5 text-xs cursor-pointer flex items-center justify-between hover:bg-purple-50/50 transition-colors ${
+                                  selectedProductId === m.id ? 'bg-purple-50 font-bold text-[#6a2092]' : 'text-stone-900'
+                                }`}
                               >
-                                <span className="truncate">{p.name}</span>
-                                <span className="text-[10px] font-mono text-stone-500 shrink-0">
-                                  R$ {getPizzaPriceForSize(p, selectedSize).toFixed(2)}
+                                <div className="flex-1 min-w-0 pr-2">
+                                  <div className="font-bold truncate flex items-center gap-1.5">
+                                    <span>{m.name}</span>
+                                  </div>
+                                  {m.ingredients && (
+                                    <div className="text-[10px] text-stone-400 truncate">{m.ingredients}</div>
+                                  )}
+                                </div>
+                                <span className="text-xs font-mono font-bold text-stone-700 shrink-0">
+                                  {isP ? `a partir de ${brl(displayPrice)}` : brl(displayPrice)}
                                 </span>
                               </div>
-                            ))
-                          )}
+                            );
+                          })
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Size Selection */}
+                  {isCurrentSelectionPizza ? (
+                    <div className="space-y-1.5 pt-1.5 border-t border-stone-100">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">
+                          Selecione o Tamanho
+                        </label>
+                        <span className="text-[10px] font-bold text-[#6a2092] bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
+                          {selectedSize === 'priceSuperBig' ? '1 Litro' : selectedSize === 'priceBig' ? '770ml' : selectedSize === 'priceG' ? '550ml' : selectedSize === 'priceM' ? '440ml' : '330ml'}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-5 gap-1.5">
+                        {[
+                          { key: 'priceP', label: '330ml', sub: 'P' },
+                          { key: 'priceM', label: '440ml', sub: 'M' },
+                          { key: 'priceG', label: '550ml', sub: 'G' },
+                          { key: 'priceBig', label: '770ml', sub: 'Big' },
+                          { key: 'priceSuperBig', label: '1 Litro', sub: 'Super' }
+                        ].map(sz => {
+                          const isSelected = selectedSize === sz.key;
+                          const szPrice = selectedBaseMenuItem ? getPizzaPriceForSize(selectedBaseMenuItem, sz.key) : 0;
+                          return (
+                            <button
+                              key={sz.key}
+                              type="button"
+                              onClick={() => handleSelectSize(sz.key)}
+                              className={`py-2 px-1 rounded-xl flex flex-col items-center justify-center transition-all cursor-pointer border text-center ${
+                                isSelected
+                                  ? 'bg-[#6a2092] text-white font-black border-[#521872] shadow-xs'
+                                  : 'bg-stone-50 hover:bg-stone-100 text-stone-700 font-bold border-stone-200'
+                              }`}
+                            >
+                              <span className="text-xs leading-tight">{sz.label}</span>
+                              <span className="text-[9px] opacity-75 leading-tight">{sz.sub}</span>
+                              {szPrice > 0 && (
+                                <span className={`text-[9px] font-mono mt-0.5 leading-none ${isSelected ? 'text-white' : 'text-stone-900 font-bold'}`}>
+                                  {brl(szPrice)}
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    selectedProductId && (
+                      <div className="flex items-center justify-between px-3 py-1.5 bg-stone-50 rounded-xl text-xs font-bold text-stone-700 border border-stone-200">
+                        <span className="text-[10px] font-bold text-stone-500 uppercase">Item Individual</span>
+                        <span className="font-mono text-stone-900">
+                          {brl(Number((selectedBaseMenuItem?.priceSingle || selectedBaseMenuItem?.price || 0)))}
+                        </span>
+                      </div>
+                    )
+                  )}
+
+                  {/* Multi-Flavor Selector */}
+                  {isCurrentSelectionPizza && ['priceG', 'priceBig', 'priceSuperBig'].includes(selectedSize) && selectedProductId && (
+                    <div className="space-y-1.5 pt-1.5 border-t border-stone-100">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">
+                          Sabores Escolhidos ({totalFlavors} de {maxAdditionalFlavors + 1})
+                        </span>
+                        <span className="text-[10px] text-stone-400 font-medium">
+                          Cálculo pelo maior valor
+                        </span>
+                      </div>
+
+                      {/* 1º Sabor (Base) */}
+                      <div className="flex items-center justify-between p-2 bg-stone-50 rounded-xl border border-stone-200 text-xs">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="font-mono text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-purple-100 text-[#6a2092] border border-purple-200 shrink-0">
+                            {getFractionText(0, totalFlavors)}
+                          </span>
+                          <span className="font-bold text-stone-900 truncate">
+                            {selectedBaseMenuItem?.name || selectedProductSearch}
+                          </span>
+                        </div>
+                        <span className="text-[11px] font-mono font-bold text-stone-600 shrink-0">
+                          {brl(Number(getPizzaPriceForSize(selectedBaseMenuItem, selectedSize)))}
+                        </span>
+                      </div>
+
+                      {/* Sabores Adicionais */}
+                      {customAdditionalFlavors.map((flavor, idx) => {
+                        const matchingItem = menuItems.find(m => m.id === flavor.id);
+                        const sPrice = matchingItem ? getPizzaPriceForSize(matchingItem, selectedSize) : 0;
+                        const isSearchingThis = searchingFlavorSlot === idx;
+
+                        if (isSearchingThis) {
+                          return (
+                            <div key={idx} className="p-2.5 bg-purple-50/70 border-2 border-[#6a2092] rounded-xl space-y-1.5 shadow-sm">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-black text-[#6a2092] flex items-center gap-1">
+                                  <Search size={12} />
+                                  Trocar {idx + 2}º Sabor:
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => { setSearchingFlavorSlot(null); setFlavorSearchQuery(''); }}
+                                  className="text-stone-400 hover:text-stone-700 text-xs font-bold"
+                                >
+                                  Cancelar ✕
+                                </button>
+                              </div>
+                              <input
+                                ref={flavorSearchInputRef}
+                                type="text"
+                                value={flavorSearchQuery}
+                                onChange={e => setFlavorSearchQuery(e.target.value)}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter' && filteredSlotPizzas.length > 0) {
+                                    e.preventDefault();
+                                    const chosen = filteredSlotPizzas[0];
+                                    const next = [...customAdditionalFlavors];
+                                    next[idx] = { id: chosen.id, search: chosen.name };
+                                    setCustomAdditionalFlavors(next);
+                                    setSearchingFlavorSlot(null);
+                                    setFlavorSearchQuery('');
+                                  } else if (e.key === 'Escape') {
+                                    setSearchingFlavorSlot(null);
+                                  }
+                                }}
+                                placeholder="Digite o nome do sabor..."
+                                className="w-full px-2.5 py-1.5 bg-white border border-stone-300 rounded-lg text-xs font-bold text-stone-900 outline-none focus:border-[#6a2092]"
+                              />
+                              <div className="max-h-32 overflow-y-auto divide-y divide-stone-100 bg-white rounded-lg border border-stone-200 adm-rolagem">
+                                {filteredSlotPizzas.length === 0 ? (
+                                  <div className="p-2 text-center text-xs text-stone-400">Nenhum produto encontrado.</div>
+                                ) : (
+                                  filteredSlotPizzas.map(p => (
+                                    <div
+                                      key={p.id}
+                                      onClick={() => {
+                                        const next = [...customAdditionalFlavors];
+                                        next[idx] = { id: p.id, search: p.name };
+                                        setCustomAdditionalFlavors(next);
+                                        setSearchingFlavorSlot(null);
+                                        setFlavorSearchQuery('');
+                                      }}
+                                      className="p-2 text-xs font-bold text-stone-800 hover:bg-purple-50 cursor-pointer flex justify-between items-center"
+                                    >
+                                      <span className="truncate">{p.name}</span>
+                                      <span className="text-[11px] font-mono text-stone-500 shrink-0">
+                                        {brl(Number(getPizzaPriceForSize(p, selectedSize)))}
+                                      </span>
+                                    </div>
+                                  ))
+                                )}
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div key={idx} className="flex items-center justify-between p-2 bg-stone-50 rounded-xl border border-stone-200 text-xs">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="font-mono text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-purple-100 text-[#6a2092] border border-purple-200 shrink-0">
+                                {getFractionText(idx + 1, totalFlavors)}
+                              </span>
+                              <span className="font-bold text-stone-900 truncate">
+                                {flavor.search || flavor.id}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {sPrice > 0 && (
+                                <span className="text-[11px] font-mono font-bold text-stone-600 mr-1">
+                                  {brl(Number(sPrice))}
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSearchingFlavorSlot(idx);
+                                  setFlavorSearchQuery('');
+                                }}
+                                className="px-2 py-1 bg-white hover:bg-stone-100 text-stone-700 border border-stone-200 rounded-lg text-[10px] font-bold flex items-center gap-1 cursor-pointer"
+                                title="Trocar este sabor"
+                              >
+                                <RotateCcw size={11} />
+                                <span>Trocar</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setCustomAdditionalFlavors(prev => prev.filter((_, i) => i !== idx));
+                                }}
+                                className="w-6 h-6 flex items-center justify-center text-stone-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 cursor-pointer transition-colors text-xs font-bold"
+                                title="Remover sabor"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {/* Slot para adicionar sabor */}
+                      {searchingFlavorSlot === customAdditionalFlavors.length && (
+                        <div className="p-2.5 bg-purple-50/70 border-2 border-[#6a2092] rounded-xl space-y-1.5 shadow-sm">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-black text-[#6a2092] flex items-center gap-1">
+                              <Search size={12} />
+                              Adicionar {customAdditionalFlavors.length + 2}º Sabor:
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => { setSearchingFlavorSlot(null); setFlavorSearchQuery(''); }}
+                              className="text-stone-400 hover:text-stone-700 text-xs font-bold"
+                            >
+                              Cancelar ✕
+                            </button>
+                          </div>
+                          <input
+                            ref={flavorSearchInputRef}
+                            type="text"
+                            value={flavorSearchQuery}
+                            onChange={e => setFlavorSearchQuery(e.target.value)}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter' && filteredSlotPizzas.length > 0) {
+                                e.preventDefault();
+                                const chosen = filteredSlotPizzas[0];
+                                setCustomAdditionalFlavors(prev => [...prev, { id: chosen.id, search: chosen.name }]);
+                                setSearchingFlavorSlot(null);
+                                setFlavorSearchQuery('');
+                              } else if (e.key === 'Escape') {
+                                setSearchingFlavorSlot(null);
+                              }
+                            }}
+                            placeholder="Digite o nome do sabor..."
+                            className="w-full px-2.5 py-1.5 bg-white border border-stone-300 rounded-lg text-xs font-bold text-stone-900 outline-none focus:border-[#6a2092]"
+                          />
+                          <div className="max-h-32 overflow-y-auto divide-y divide-stone-100 bg-white rounded-lg border border-stone-200 adm-rolagem">
+                            {filteredSlotPizzas.length === 0 ? (
+                              <div className="p-2 text-center text-xs text-stone-400">Nenhum produto encontrado.</div>
+                            ) : (
+                              filteredSlotPizzas.map(p => (
+                                <div
+                                  key={p.id}
+                                  onClick={() => {
+                                    setCustomAdditionalFlavors(prev => [...prev, { id: p.id, search: p.name }]);
+                                    setSearchingFlavorSlot(null);
+                                    setFlavorSearchQuery('');
+                                  }}
+                                  className="p-2 text-xs font-bold text-stone-800 hover:bg-purple-50 cursor-pointer flex justify-between items-center"
+                                >
+                                  <span className="truncate">{p.name}</span>
+                                  <span className="text-[11px] font-mono text-stone-500 shrink-0">
+                                    {brl(Number(getPizzaPriceForSize(p, selectedSize)))}
+                                  </span>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Botão para abrir o combobox de sabor adicional */}
+                      {searchingFlavorSlot === null && customAdditionalFlavors.length < maxAdditionalFlavors && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSearchingFlavorSlot(customAdditionalFlavors.length);
+                            setFlavorSearchQuery('');
+                          }}
+                          className="w-full py-2 px-3 border border-dashed border-[#6a2092]/40 hover:border-[#6a2092] bg-purple-50/50 hover:bg-purple-50 text-[#6a2092] rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <Plus size={14} className="stroke-[2.5]" />
+                          <span>
+                            + Adicionar {customAdditionalFlavors.length === 0 ? (selectedSize === 'priceG' ? '2º Sabor (Meio a Meio)' : '2º Sabor') : `${customAdditionalFlavors.length + 2}º Sabor`}
+                          </span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Botão de Incluir / Salvar Item */}
+                  <button
+                    type="button"
+                    onClick={handleAddItem}
+                    disabled={!selectedProductId && !selectedProductSearch.trim()}
+                    className={`w-full py-2.5 px-4 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer ${
+                      editingItemIndex !== null
+                        ? 'bg-amber-500 hover:bg-amber-600 text-stone-950'
+                        : 'bg-[#6a2092] hover:bg-[#521872] text-white'
+                    } disabled:opacity-40 disabled:cursor-not-allowed`}
+                  >
+                    <Check size={16} className="stroke-[2.5]" />
+                    <span>{editingItemIndex !== null ? 'Salvar Alteração no Item' : '+ Incluir no Pedido'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* ───────────────────────────────────────────────────
+                  COLUNA DIREITA (5 COLS): CLIENTE, ENTREGA & AJUSTES
+              ───────────────────────────────────────────────────── */}
+              <div className="lg:col-span-5 space-y-3.5">
+                
+                {/* 1. Dados do Cliente & Entrega */}
+                <div className="bg-white p-3.5 rounded-xl border border-stone-200 shadow-2xs space-y-2.5">
+                  <h4 className="text-xs font-bold text-stone-800 uppercase tracking-wider flex items-center gap-1.5 pb-1 border-b border-stone-100">
+                    <User size={14} className="text-[#6a2092]" />
+                    Cliente & Entrega
+                  </h4>
+
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <label className="block text-[10px] font-bold text-stone-500 uppercase">Nome do Cliente</label>
+                        <input
+                          type="text"
+                          value={customerName}
+                          onChange={(e) => setCustomerName(e.target.value)}
+                          className="w-full px-2.5 py-1.5 bg-stone-50 rounded-lg border border-stone-200 text-xs font-bold text-stone-900 outline-none focus:border-[#6a2092] focus:bg-white transition-colors"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="block text-[10px] font-bold text-stone-500 uppercase">Telefone / WhatsApp</label>
+                        <input
+                          type="text"
+                          value={customerPhone}
+                          onChange={(e) => setCustomerPhone(e.target.value)}
+                          className="w-full px-2.5 py-1.5 bg-stone-50 rounded-lg border border-stone-200 text-xs font-bold text-stone-900 outline-none focus:border-[#6a2092] focus:bg-white transition-colors"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="space-y-1">
+                        <label className="block text-[10px] font-bold text-stone-500 uppercase">CPF (Opcional)</label>
+                        <input
+                          type="text"
+                          value={customerNif}
+                          onChange={(e) => setCustomerNif(e.target.value)}
+                          placeholder="123.456.789-00"
+                          className="w-full px-2.5 py-1.5 bg-stone-50 rounded-lg border border-stone-200 text-xs font-bold text-stone-900 outline-none focus:border-[#6a2092] focus:bg-white transition-colors font-mono"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="block text-[10px] font-bold text-stone-500 uppercase">Tipo</label>
+                        <select
+                          value={orderType}
+                          onChange={(e) => setOrderType(e.target.value)}
+                          className="w-full px-2 py-1.5 bg-stone-50 rounded-lg border border-stone-200 text-xs font-bold text-stone-900 outline-none focus:border-[#6a2092] focus:bg-white transition-colors cursor-pointer"
+                        >
+                          <option value="entrega">Entrega</option>
+                          <option value="retirada">Retirada</option>
+                          <option value="mesa">Balcão/Mesa</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="block text-[10px] font-bold text-stone-500 uppercase">Pagamento</label>
+                        <select
+                          value={paymentMethod}
+                          onChange={(e) => setPaymentMethod(e.target.value)}
+                          className="w-full px-2 py-1.5 bg-stone-50 rounded-lg border border-stone-200 text-xs font-bold text-stone-900 outline-none focus:border-[#6a2092] focus:bg-white transition-colors cursor-pointer"
+                        >
+                          <option value="PIX">PIX</option>
+                          <option value="Cartão de Crédito">Crédito</option>
+                          <option value="Cartão de Débito">Débito</option>
+                          <option value="Dinheiro">Dinheiro</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {(orderType === 'entrega' || orderType === 'Delivery') && (
+                      <div className="pt-2 border-t border-stone-100 space-y-2">
+                        <div className="space-y-1">
+                          <label className="block text-[10px] font-bold text-stone-500 uppercase flex items-center gap-1">
+                            <MapPin size={11} className="text-[#6a2092]" /> Endereço de Entrega
+                          </label>
+                          <input
+                            type="text"
+                            value={deliveryAddress}
+                            onChange={(e) => setDeliveryAddress(e.target.value)}
+                            className="w-full px-2.5 py-1.5 bg-stone-50 rounded-lg border border-stone-200 text-xs font-medium text-stone-900 outline-none focus:border-[#6a2092] focus:bg-white transition-colors"
+                            placeholder="Rua, número, complemento, bairro..."
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="block text-[10px] font-bold text-stone-500 uppercase">
+                            Zona / Bairro de Entrega
+                          </label>
+                          <input
+                            type="text"
+                            value={deliveryZone}
+                            onChange={(e) => setDeliveryZone(e.target.value)}
+                            className="w-full px-2.5 py-1.5 bg-stone-50 rounded-lg border border-stone-200 text-xs font-bold text-stone-900 outline-none focus:border-[#6a2092] focus:bg-white transition-colors"
+                            placeholder="Ex: Centro, Afonso Pena..."
+                          />
                         </div>
                       </div>
                     )}
 
-                    {/* Botão para abrir o combobox de sabor adicional */}
-                    {searchingFlavorSlot === null && customAdditionalFlavors.length < maxAdditionalFlavors && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSearchingFlavorSlot(customAdditionalFlavors.length);
-                          setFlavorSearchQuery('');
-                        }}
-                        className="w-full py-1.5 px-2 border border-dashed border-amber-400 hover:border-amber-500 bg-amber-50/50 hover:bg-amber-50 text-amber-950 rounded-md text-[11px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer"
-                      >
-                        <Plus size={12} className="text-amber-700 stroke-[3]" />
-                        <span>
-                          + Adicionar {customAdditionalFlavors.length === 0 ? (selectedSize === 'priceG' ? '2º Sabor (Meio a Meio)' : '2º Sabor') : `${customAdditionalFlavors.length + 2}º Sabor`}
-                        </span>
-                      </button>
+                    {paymentMethod === 'Dinheiro' && (
+                      <div className="pt-2 border-t border-stone-100 grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <label className="block text-[10px] font-bold text-stone-500 uppercase">Troco Para (R$)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={cashProvided || ''}
+                            onChange={(e) => setCashProvided(parseFloat(e.target.value) || 0)}
+                            className="w-full px-2.5 py-1.5 bg-stone-50 rounded-lg border border-stone-200 text-xs font-bold text-stone-900 outline-none focus:border-[#6a2092] focus:bg-white transition-colors"
+                            placeholder="50,00"
+                          />
+                        </div>
+                        <div className="flex flex-col justify-center bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200">
+                          <span className="text-[10px] font-bold text-emerald-800 uppercase">Troco a Devolver:</span>
+                          <span className="text-sm font-black text-emerald-700 font-mono">{brl(Number(calculatedChange))}</span>
+                        </div>
+                      </div>
                     )}
                   </div>
-                )}
-
-                {/* Button to Include or Update Item */}
-                <button
-                  type="button"
-                  onClick={handleAddItem}
-                  disabled={!selectedProductId && !selectedProductSearch.trim()}
-                  className={`w-full py-2 px-3 rounded-lg text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer ${
-                    editingItemIndex !== null
-                      ? 'bg-amber-500 hover:bg-amber-600 text-stone-950'
-                      : 'bg-stone-950 hover:bg-stone-900 text-white'
-                  } disabled:opacity-40 disabled:cursor-not-allowed`}
-                >
-                  <Check size={14} className="stroke-[2.5]" />
-                  <span>{editingItemIndex !== null ? 'Salvar Alteração no Pedido' : 'Incluir no Pedido'}</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Section 3: Financial Adjustments Compacto */}
-            <div className="bg-white p-2 rounded-lg border border-stone-200/90 shadow-2xs space-y-1.5">
-              <h4 className="text-[9px] font-mono font-bold text-stone-400 uppercase tracking-wider">Ajustes Financeiros</h4>
-              
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-0.5">
-                  <label className="block text-[8px] font-mono font-bold text-emerald-700 uppercase tracking-wider">
-                    Desconto (- R$)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={discountAmount || ''}
-                    onChange={(e) => setDiscountAmount(parseFloat(e.target.value) || 0)}
-                    placeholder="0.00"
-                    className="w-full px-2 py-1 bg-emerald-50/20 rounded border border-emerald-200 text-xs font-bold text-emerald-900 outline-none focus:border-emerald-500 transition-colors"
-                  />
                 </div>
-                <div className="space-y-0.5">
-                  <label className="block text-[8px] font-mono font-bold text-amber-700 uppercase tracking-wider">
-                    Taxa Extra (+ R$)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={additionalAmount || ''}
-                    onChange={(e) => setAdditionalAmount(parseFloat(e.target.value) || 0)}
-                    placeholder="0.00"
-                    className="w-full px-2 py-1 bg-amber-50/20 rounded border border-amber-200 text-xs font-bold text-amber-900 outline-none focus:border-[#6a2092] transition-colors"
-                  />
-                </div>
-              </div>
 
-              <div className="space-y-0.5">
-                <label className="block text-[8px] font-mono font-bold text-stone-500 uppercase tracking-wider">
-                  Obs. Taxa Adicional (Sai no Talão)
-                </label>
-                <input
-                  type="text"
-                  value={editReason}
-                  onChange={(e) => setEditReason(e.target.value)}
-                  placeholder="Ex: Embalagem extra, taxa atendimento..."
-                  className="w-full px-2 py-1 bg-amber-50/20 rounded border border-amber-300 text-[11px] font-medium text-stone-900 outline-none focus:border-[#6a2092] transition-colors"
-                />
+                {/* 2. Ajustes Financeiros */}
+                <div className="bg-white p-3.5 rounded-xl border border-stone-200 shadow-2xs space-y-2.5">
+                  <h4 className="text-xs font-bold text-stone-800 uppercase tracking-wider flex items-center gap-1.5 pb-1 border-b border-stone-100">
+                    <DollarSign size={14} className="text-[#6a2092]" />
+                    Ajustes Financeiros
+                  </h4>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="block text-[10px] font-bold text-emerald-700 uppercase">
+                        Desconto (- R$)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={discountAmount || ''}
+                        onChange={(e) => setDiscountAmount(parseFloat(e.target.value) || 0)}
+                        placeholder="0,00"
+                        className="w-full px-2.5 py-1.5 bg-emerald-50/40 rounded-lg border border-emerald-200 text-xs font-bold text-emerald-900 outline-none focus:border-emerald-500 transition-colors"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-[10px] font-bold text-amber-700 uppercase">
+                        Taxa Extra / Entrega (+ R$)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={additionalAmount || ''}
+                        onChange={(e) => setAdditionalAmount(parseFloat(e.target.value) || 0)}
+                        placeholder="0,00"
+                        className="w-full px-2.5 py-1.5 bg-amber-50/40 rounded-lg border border-amber-200 text-xs font-bold text-amber-900 outline-none focus:border-[#6a2092] transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-stone-500 uppercase">
+                      Obs. Taxa / Motivo do Ajuste (Sai no Talão)
+                    </label>
+                    <input
+                      type="text"
+                      value={editReason}
+                      onChange={(e) => setEditReason(e.target.value)}
+                      placeholder="Ex: Embalagem térmica, taxa motoboy..."
+                      className="w-full px-2.5 py-1.5 bg-stone-50 rounded-lg border border-stone-200 text-xs font-medium text-stone-900 outline-none focus:border-[#6a2092] transition-colors"
+                    />
+                  </div>
+                </div>
+
+                {/* 3. Resumo da Conta */}
+                <div className="bg-purple-50/60 p-3.5 rounded-xl border border-purple-200 shadow-2xs space-y-1.5">
+                  <div className="flex justify-between items-center text-xs text-stone-600">
+                    <span>Subtotal dos Itens:</span>
+                    <span className="font-mono font-bold text-stone-800">{brl(Number(subtotal))}</span>
+                  </div>
+                  {Number(additionalAmount) > 0 && (
+                    <div className="flex justify-between items-center text-xs text-amber-800">
+                      <span>(+) Taxa extra / entrega:</span>
+                      <span className="font-mono font-bold">+{brl(Number(additionalAmount))}</span>
+                    </div>
+                  )}
+                  {Number(discountAmount) > 0 && (
+                    <div className="flex justify-between items-center text-xs text-emerald-800">
+                      <span>(-) Desconto concedido:</span>
+                      <span className="font-mono font-bold">-{brl(Number(discountAmount))}</span>
+                    </div>
+                  )}
+                  <div className="pt-2 border-t border-purple-200 flex justify-between items-baseline">
+                    <span className="text-xs font-bold text-stone-700 uppercase tracking-wider">Total Recalculado:</span>
+                    <span className="text-xl font-black text-[#6a2092] font-mono leading-none">{brl(Number(finalTotal))}</span>
+                  </div>
+                </div>
+
               </div>
             </div>
           </div>
 
-          {/* Section 4: Live Total Calculation & Actions Bar Integrada */}
-          <div className="mt-1 pt-1.5 border-t border-stone-200/80 flex items-center justify-between gap-2 bg-stone-950 text-white p-2 rounded-lg shadow-sm shrink-0">
-            <div>
-              <span className="block text-[8px] font-mono text-stone-400 uppercase">Total Recalculado</span>
-              <span className="text-xl font-black text-rose-500 leading-none font-mono">R$ {finalTotal.toFixed(2)}</span>
+          {/* Rodapé Premium Fixo com Ações */}
+          <div className="px-5 py-3 bg-white border-t border-stone-200 flex items-center justify-between gap-3 shrink-0">
+            <div className="text-xs text-stone-500">
+              <span className="font-bold text-stone-800">{items.length} {items.length === 1 ? 'item' : 'itens'}</span> no pedido · <span className="font-bold text-stone-800">{paymentMethod}</span>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-3 py-1.5 rounded font-bold text-xs bg-stone-800 hover:bg-stone-700 text-stone-300 transition-colors cursor-pointer border border-stone-700"
+                className="px-4 py-2 rounded-xl font-bold text-xs bg-stone-100 hover:bg-stone-200 text-stone-700 transition-colors cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={saving}
-                className="px-4 py-1.5 rounded font-bold text-xs bg-rose-600 hover:bg-rose-700 text-white shadow-sm transition-all active:translate-y-px cursor-pointer flex items-center gap-1 border border-rose-500"
+                className="px-6 py-2 rounded-xl font-extrabold text-xs bg-[#6a2092] hover:bg-[#521872] text-white shadow-sm transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
               >
-                {saving ? 'Salvando...' : 'Salvar'}
+                <Check size={15} className="stroke-[2.5]" />
+                <span>{saving ? 'Salvando Pedido...' : 'Salvar Alterações'}</span>
               </button>
             </div>
           </div>
-
         </form>
       </div>
     </div>
@@ -5731,6 +5905,81 @@ function KpiCard({
         <span className="text-[10px] font-mono text-stone-400">{description}</span>
       </div>
     </div>
+  );
+}
+
+// Painel de relatório (aba Relatórios): número principal + resumo; o clique abre o relatório completo
+function PainelRelatorio({
+  titulo,
+  Icone,
+  destaque,
+  legenda,
+  onAbrir,
+  tom = 'neutro',
+  children,
+}: {
+  titulo: string;
+  Icone: any;
+  destaque?: string;
+  legenda?: string;
+  onAbrir: () => void;
+  tom?: 'neutro' | 'alerta';
+  children?: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onAbrir}
+      className="group text-left bg-white rounded-2xl border border-stone-200/80 shadow-[0_1px_2px_rgba(28,25,23,0.04),0_4px_16px_-8px_rgba(59,2,87,0.08)] hover:border-brand-300 hover:shadow-[0_8px_24px_-12px_rgba(59,2,87,0.25)] transition-all cursor-pointer p-4 flex flex-col gap-3 min-h-[180px]"
+    >
+      <div className="flex items-center gap-2.5">
+        <span className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${tom === 'alerta' ? 'bg-rose-50 text-rose-600' : 'bg-brand-50 text-brand-700'}`}>
+          <Icone size={18} />
+        </span>
+        <span className="text-[14px] font-semibold text-stone-900">{titulo}</span>
+        <span className="ml-auto text-[13px] font-semibold text-brand-700 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+          Abrir <ArrowRight size={14} />
+        </span>
+      </div>
+      {destaque !== undefined && (
+        <div>
+          <p className={`font-display text-[28px] font-extrabold tracking-tight tabular-nums leading-none ${tom === 'alerta' ? 'text-rose-600' : 'text-stone-900'}`}>{destaque}</p>
+          {legenda && <p className="text-[13px] text-stone-500 mt-1">{legenda}</p>}
+        </div>
+      )}
+      {children && <div className="flex-1 flex flex-col min-h-0">{children}</div>}
+    </button>
+  );
+}
+
+// Barras pequenas do faturamento por dia (sem eixo; o detalhe fica no relatório completo)
+function MiniBarras({ valores }: { valores: number[] }) {
+  if (!valores.length) return <p className="text-[13px] text-stone-400">Sem vendas no período.</p>;
+  const maior = Math.max(...valores, 1);
+  return (
+    <div className="flex-1 min-h-16 flex items-end gap-1.5">
+      {valores.map((v, i) => (
+        <div key={i} className="flex-1 rounded-t-md bg-brand-100 group-hover:bg-brand-200 transition-colors relative" style={{ height: `${Math.max(6, (v / maior) * 100)}%` }}>
+          {v === maior && <span className="absolute inset-0 rounded-t-md bg-brand-600" />}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Ranking curto (top 4) usado em Produtos e Adicionais
+function ListaRanking({ itens, vazio }: { itens: { nome: string; detalhe: string; valor: string }[]; vazio: string }) {
+  if (!itens.length) return <p className="text-[13px] text-stone-400">{vazio}</p>;
+  return (
+    <ol className="space-y-2.5">
+      {itens.map((i, n) => (
+        <li key={n} className="flex items-center gap-2 text-[13px]">
+          <span className={`w-5 h-5 rounded-md flex items-center justify-center text-[11px] font-bold tabular-nums shrink-0 ${n === 0 ? 'bg-brand-700 text-white' : 'bg-stone-100 text-stone-500'}`}>{n + 1}</span>
+          <span className="text-stone-800 truncate flex-1">{i.nome}</span>
+          <span className="text-stone-400 tabular-nums whitespace-nowrap">{i.detalhe}</span>
+          <span className="font-semibold text-stone-900 tabular-nums whitespace-nowrap w-[76px] text-right">{i.valor}</span>
+        </li>
+      ))}
+    </ol>
   );
 }
 

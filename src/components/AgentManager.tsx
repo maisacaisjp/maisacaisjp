@@ -899,7 +899,7 @@ export default function AgentManager() {
             onClick={() => setShowMetricsDashboard(prev => !prev)}
             className={`min-h-[34px] px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border ${
               showMetricsDashboard
-                ? 'bg-stone-900 text-white border-stone-900 shadow-2xs'
+                ? 'bg-[#6a2092] text-white border-[#6a2092] shadow-2xs'
                 : 'bg-stone-50 hover:bg-stone-100 text-stone-700 border-stone-200'
             }`}
             title="Exibir ou ocultar telemetria de atendimento"
@@ -1077,7 +1077,7 @@ export default function AgentManager() {
       )}
 
       {/* Espelho de Conversas estilo WhatsApp Command Center */}
-      <div className="bg-white rounded-xl border border-stone-200 shadow-2xs overflow-hidden flex flex-col md:flex-row h-[520px] sm:h-[550px] lg:h-[570px] xl:h-[600px] min-h-[460px]">
+      <div className="bg-white rounded-xl border border-stone-200 shadow-2xs overflow-hidden flex flex-col md:flex-row h-[520px] lg:h-[calc(100dvh-318px)] min-h-[300px] [@media(max-height:780px)]:lg:h-[calc(100dvh-324px)]">
         {/* Coluna Esquerda: Lista de Conversas (Em mobile, oculta quando conversa está aberta) */}
         <div className={`w-full md:w-60 lg:w-64 xl:w-72 shrink-0 border-r border-stone-200 flex-col h-full bg-stone-50/40 ${selectedPhone ? 'hidden md:flex' : 'flex'}`}>
           {/* Busca & Filtros com Layout Estruturado */}
@@ -1568,7 +1568,7 @@ export default function AgentManager() {
               <button
                 type="submit"
                 disabled={!manualMessage.trim() || sendingManual}
-                className="min-h-[42px] px-3.5 sm:px-5 py-2.5 bg-stone-900 hover:bg-amber-600 text-white rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 transition-all disabled:opacity-40 cursor-pointer shadow-xs shrink-0 active:scale-95"
+                className="min-h-[42px] px-3.5 sm:px-5 py-2.5 bg-[#6a2092] hover:bg-[#521872] text-white rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 transition-all disabled:opacity-40 cursor-pointer shadow-xs shrink-0 active:scale-95"
               >
                 {sendingManual ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
                 <span>Enviar</span>

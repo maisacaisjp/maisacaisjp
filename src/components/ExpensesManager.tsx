@@ -6,6 +6,7 @@ import {
   RotateCcw, ArrowUpDown, Printer, ChevronDown, 
   Building, DollarSign, Smartphone, TrendingDown
 } from 'lucide-react';
+import { brl } from '../utils/formatacao';
 
 export interface Expense {
   id: number | string;
@@ -34,22 +35,22 @@ const DEFAULT_CATEGORIES = [
 ];
 
 const SUGGESTIONS = [
-  { label: 'Queijo Mozzarella', cat: 'Fornecedores & Insumos' },
-  { label: 'Farinha de Trigo', cat: 'Fornecedores & Insumos' },
-  { label: 'Molho de Tomate', cat: 'Fornecedores & Insumos' },
-  { label: 'Caixas de Pizza 8 Fatias', cat: 'Embalagens & Descartáveis' },
-  { label: 'Conta de Energia (Luz)', cat: 'Água, Luz, Gás & Net' },
-  { label: 'Gás de Cozinha', cat: 'Água, Luz, Gás & Net' },
-  { label: 'Diária / Freelancer', cat: 'Salários & Equipe' },
-  { label: 'Hortifruti & Verduras', cat: 'Fornecedores & Insumos' },
-  { label: 'Bebidas & Refrigerantes', cat: 'Fornecedores & Insumos' },
+  { label: 'Açaí', cat: 'Fornecedores & Insumos' },
+  { label: 'Frutas', cat: 'Fornecedores & Insumos' },
+  { label: 'Embalagens', cat: 'Embalagens & Descartáveis' },
+  { label: 'Leite em pó', cat: 'Fornecedores & Insumos' },
+  { label: 'Conta de energia', cat: 'Água, Luz, Gás & Net' },
+  { label: 'Chocolates e coberturas', cat: 'Fornecedores & Insumos' },
+  { label: 'Diária / freelancer', cat: 'Salários & Equipe' },
+  { label: 'Motoboy (entregas)', cat: 'Salários & Equipe' },
+  { label: 'Bebidas', cat: 'Fornecedores & Insumos' },
 ];
 
 const PAYMENT_METHODS = [
   { id: 'Dinheiro', label: 'Dinheiro', icon: DollarSign },
   { id: 'PIX', label: 'PIX', icon: Smartphone },
-  { id: 'Cartão', label: 'Cartão / TPA', icon: CreditCard },
-  { id: 'Transferência', label: 'Transferência', icon: Building }
+  { id: 'Cartão', label: 'Cartão', icon: CreditCard },
+  { id: 'Transferência', label: 'Transf.', icon: Building }
 ];
 
 type PeriodFilterType = 'todos' | 'hoje' | 'ontem' | '7dias' | '30dias' | 'este_mes' | 'mes_passado' | 'custom';
@@ -484,16 +485,16 @@ export default function ExpensesManager({ expenses = [], onExpenseChange }: Expe
   };
 
   return (
-    <div className="max-w-7xl mx-auto font-sans h-full flex flex-col pt-1">
+    <div className="max-w-7xl mx-auto font-sans h-full flex flex-col">
       
       {/* CABEÇALHO REFINADO */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-stone-200/80 shrink-0">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-stone-900 flex items-center gap-2">
-            Despesas &amp; Saídas
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
+        <div className="flex flex-wrap items-baseline gap-x-3">
+          <h1 className="font-display text-[24px] font-extrabold tracking-tight text-stone-900 leading-tight">
+            Despesas
           </h1>
-          <p className="text-xs text-stone-500 mt-0.5 max-w-2xl">
-            Lançamento e controle de custos operacionais e contas a pagar.
+          <p className="text-[14px] text-stone-500">
+            Lançamento e controle de custos e contas a pagar.
           </p>
         </div>
 
@@ -531,58 +532,44 @@ export default function ExpensesManager({ expenses = [], onExpenseChange }: Expe
       )}
 
       {/* 3-COLUMN COCKPIT LAYOUT */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 mt-4 flex-1 min-h-0">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 mt-3 flex-1 min-h-0">
         
         {/* COLUNA ESQUERDA: KPIs & Formulário (Fixo) */}
-        <div className="lg:col-span-4 flex flex-col gap-4 overflow-y-auto pr-1 pb-4">
+        <div className="lg:col-span-4 flex flex-col gap-3 overflow-y-auto pr-1 pb-2">
           
-          {/* KPIs Grid */}
-          <div className="grid grid-cols-2 gap-3 shrink-0">
-            {/* Total */}
-            <div className="bg-stone-950 text-white rounded-xl p-4 shadow-xs flex flex-col justify-between col-span-2">
-              <div className="flex items-start justify-between">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">Total</span>
-                <span className="text-[10px] text-stone-500">{filteredExpenses.length} {filteredExpenses.length === 1 ? 'saída' : 'saídas'}</span>
+          {/* Resumo do período: total, maior categoria e média num card só */}
+          <div className="shrink-0 rounded-2xl px-4 py-3.5 text-white bg-gradient-to-br from-[#3b0257] to-[#2a0a3f] shadow-[0_8px_24px_-12px_rgba(59,2,87,0.6)]">
+            <div className="flex items-start justify-between">
+              <span className="text-[12px] font-semibold text-white/60">Total no período</span>
+              <span className="text-[12px] text-white/50 tabular-nums">{filteredExpenses.length} {filteredExpenses.length === 1 ? 'saída' : 'saídas'}</span>
+            </div>
+            <p className="font-display text-[28px] font-extrabold tracking-tight tabular-nums leading-tight mt-0.5">
+              {brl(Number(filteredTotalAmount))}
+            </p>
+            <div className="grid grid-cols-2 gap-3 mt-2.5 pt-2.5 border-t border-white/10 adm-compactavel-esconder">
+              <div className="min-w-0">
+                <p className="text-[12px] text-white/50">Maior categoria</p>
+                <p className="text-[13px] font-semibold truncate" title={topCategory.name}>{topCategory.name}</p>
+                <p className="text-[12px] text-[#fdde58] tabular-nums">{brl(Number(topCategory.amount))}</p>
               </div>
-              <p className="text-2xl font-bold tracking-tight text-white mt-1 tabular-nums">
-                R$ {filteredTotalAmount.toFixed(2)}
-              </p>
-            </div>
-            
-            {/* Maior Categoria */}
-            <div className="bg-stone-900 text-stone-100 rounded-xl p-3 border border-stone-800 shadow-2xs flex flex-col justify-between">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-stone-500 mb-1">Maior Cat.</span>
-              <p className="text-sm font-bold tracking-tight truncate text-stone-200" title={topCategory.name}>
-                {topCategory.name}
-              </p>
-              <span className="text-[10px] text-amber-400/90 font-medium tabular-nums mt-1">R$ {topCategory.amount.toFixed(2)}</span>
-            </div>
-
-            {/* Média */}
-            <div className="bg-stone-900 text-stone-100 rounded-xl p-3 border border-stone-800 shadow-2xs flex flex-col justify-between">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-stone-500 mb-1">Ticket Médio</span>
-              <p className="text-sm font-bold tracking-tight text-stone-200 tabular-nums">
-                R$ {averageExpense.toFixed(2)}
-              </p>
-              <span className="text-[10px] text-stone-500 font-medium tabular-nums mt-1">por despesa</span>
+              <div>
+                <p className="text-[12px] text-white/50">Média por despesa</p>
+                <p className="text-[13px] font-semibold tabular-nums">{brl(Number(averageExpense))}</p>
+              </div>
             </div>
           </div>
 
           {/* Formulário Permanente */}
-          <div className="bg-white rounded-xl border border-stone-200 shadow-xs flex flex-col shrink-0">
-            <div className="p-4 border-b border-stone-100 bg-stone-50/50 rounded-t-xl">
-              <h2 className="text-sm font-bold text-stone-900 flex items-center gap-1.5">
-                <Plus size={15} className="text-amber-500" /> Nova Despesa
+          <div className="bg-white rounded-2xl border border-stone-200/80 shadow-[0_1px_2px_rgba(28,25,23,0.04),0_4px_16px_-8px_rgba(59,2,87,0.08)] flex flex-col shrink-0">
+            <form onSubmit={handleSubmit} className="p-4 space-y-3 flex-1">
+              <h2 className="text-[15px] font-semibold text-stone-900 flex items-center gap-1.5">
+                <Plus size={16} className="text-brand-600" /> Nova despesa
               </h2>
-            </div>
-
-            <form onSubmit={handleSubmit} className="p-4 space-y-3.5 flex-1">
               
               {/* Sugestões Rápidas */}
-              <div className="pb-3 border-b border-stone-100">
-                <span className="block text-[10px] font-semibold text-stone-500 uppercase tracking-wider mb-2">Sugestões Rápidas</span>
+              <div className="pb-3 border-b border-stone-100 adm-compactavel-esconder">
                 <div className="flex flex-wrap gap-1.5">
-                  {SUGGESTIONS.slice(0, 5).map(sug => (
+                  {SUGGESTIONS.slice(0, 4).map(sug => (
                     <button
                       key={sug.label}
                       type="button"
@@ -591,7 +578,7 @@ export default function ExpensesManager({ expenses = [], onExpenseChange }: Expe
                         setCategory(sug.cat);
                         setIsCustomCategory(false);
                       }}
-                      className="px-2 py-1 text-[10px] font-medium rounded bg-stone-100 hover:bg-stone-200 text-stone-700 transition-colors"
+                      className="h-7 px-2.5 text-[12px] font-medium rounded-full bg-stone-100 hover:bg-brand-50 hover:text-brand-800 text-stone-700 transition-colors"
                     >
                       {sug.label}
                     </button>
@@ -606,7 +593,7 @@ export default function ExpensesManager({ expenses = [], onExpenseChange }: Expe
                   ref={descInputRef}
                   type="text"
                   required
-                  placeholder="Ex: Fornecedor de Queijo"
+                  placeholder="Ex.: Açaí 10 kg (fornecedor)"
                   value={description}
                   onChange={e => setDescription(e.target.value)}
                   className="w-full h-9 px-3 bg-stone-50 border border-stone-200 rounded-md text-xs font-medium text-stone-900 placeholder:text-stone-400 focus:bg-white focus:border-stone-900 focus:ring-1 focus:ring-stone-900 outline-none transition-all"
@@ -624,10 +611,10 @@ export default function ExpensesManager({ expenses = [], onExpenseChange }: Expe
                       step="0.01"
                       min="0.01"
                       required
-                      placeholder="0.00"
+                      placeholder="0,00"
                       value={amount}
                       onChange={e => setAmount(e.target.value)}
-                      className="w-full h-9 pl-6 pr-2 bg-stone-50 border border-stone-200 rounded-md text-xs font-bold text-stone-900 tabular-nums focus:bg-white focus:border-stone-900 focus:ring-1 focus:ring-stone-900 outline-none transition-all"
+                      className="w-full h-9 pl-8 pr-2 bg-stone-50 border border-stone-200 rounded-md text-xs font-bold text-stone-900 tabular-nums focus:bg-white focus:border-stone-900 focus:ring-1 focus:ring-stone-900 outline-none transition-all"
                     />
                   </div>
                 </div>
@@ -680,7 +667,7 @@ export default function ExpensesManager({ expenses = [], onExpenseChange }: Expe
               {/* Meio de Pagamento */}
               <div className="space-y-1.5">
                 <label className="block text-[11px] font-semibold text-stone-700">Meio de Pagamento *</label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-4 gap-1.5">
                   {PAYMENT_METHODS.map(pm => {
                     const isSelected = paymentMethod === pm.id;
                     const Icon = pm.icon;
@@ -689,13 +676,14 @@ export default function ExpensesManager({ expenses = [], onExpenseChange }: Expe
                         key={pm.id}
                         type="button"
                         onClick={() => setPaymentMethod(pm.id)}
-                        className={`h-8 flex items-center justify-center gap-1.5 rounded text-[11px] font-semibold transition-all border ${
-                          isSelected 
-                            ? 'bg-stone-900 text-white border-stone-900' 
-                            : 'bg-white text-stone-700 border-stone-200 hover:bg-stone-50'
+                        title={pm.id}
+                        className={`h-9 flex items-center justify-center gap-1 rounded-lg text-[12px] font-semibold transition-all border ${
+                          isSelected
+                            ? 'bg-brand-700 text-white border-brand-700'
+                            : 'bg-white text-stone-700 border-stone-200 hover:border-brand-300'
                         }`}
                       >
-                        <Icon size={12} className={isSelected ? 'text-amber-400' : 'text-stone-400'} />
+                        <Icon size={13} className={isSelected ? 'text-white/80' : 'text-stone-400'} />
                         <span className="truncate">{pm.label}</span>
                       </button>
                     );
@@ -726,7 +714,7 @@ export default function ExpensesManager({ expenses = [], onExpenseChange }: Expe
               )}
 
               {/* Botão de Salvar */}
-              <div className="pt-3 border-t border-stone-100">
+              <div className="pt-1">
                 <button
                   type="submit"
                   disabled={submitting}
@@ -876,7 +864,7 @@ export default function ExpensesManager({ expenses = [], onExpenseChange }: Expe
                             </span>
                           </td>
                           <td className="px-4 py-3 text-right font-bold text-stone-900 tabular-nums">
-                            R$ {Number(exp.amount || 0).toFixed(2)}
+                            {brl(Number(Number(exp.amount || 0)))}
                           </td>
                           <td className="px-4 py-3 text-center">
                             <button
@@ -900,7 +888,7 @@ export default function ExpensesManager({ expenses = [], onExpenseChange }: Expe
             {filteredExpenses.length > 0 && (
               <div className="bg-stone-50 border-t border-stone-200 p-3 shrink-0 flex items-center justify-between text-xs font-semibold text-stone-700">
                 <span>Total Filtrado ({filteredExpenses.length})</span>
-                <span className="text-stone-900 text-sm tabular-nums">R$ {filteredTotalAmount.toFixed(2)}</span>
+                <span className="text-stone-900 text-sm tabular-nums">{brl(Number(filteredTotalAmount))}</span>
               </div>
             )}
           </div>
