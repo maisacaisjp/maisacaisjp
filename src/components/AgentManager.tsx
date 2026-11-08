@@ -1533,7 +1533,7 @@ export default function AgentManager() {
               </span>
               <button
                 type="button"
-                onClick={() => setManualMessage("Olá! Acompanhe nosso cardápio completo pelo link: https://maisacaisjpbr.netlify.app 🍇")}
+                onClick={() => setManualMessage("Olá! Acompanhe nosso cardápio completo pelo link: https://cardapiomaisacaisjp.netlify.app 🍇")}
                 className="text-[11px] font-semibold text-stone-700 bg-stone-100 hover:bg-stone-200 px-2.5 py-1 rounded-lg shrink-0 transition-colors cursor-pointer"
               >
                 📋 Cardápio

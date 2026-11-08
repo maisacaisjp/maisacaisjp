@@ -125,7 +125,7 @@ Depois de registrar, envie o resumo UMA única vez:
 💳 *Total: R$ [valor]* — [pagamento] (troco para R$ [valor], se houver)
 ⏱️ Prazo: [prazo de entrega ou retirada da lista]
 📍 *Acompanhe seu pedido em tempo real:*
-https://maisacaisjpbr.netlify.app/track/[codigo]
+https://cardapiomaisacaisjp.netlify.app/conta
 
 ---
 
