@@ -1564,7 +1564,7 @@
     {
       "parameters": {
         "toolDescription": "Cardápio completo do Mais Açaí SJP com preços, combos, adicionais e receitas atualizadas ao vivo.",
-        "url": "https://maisacaisjpoficial.netlify.app/.netlify/functions/agent-menu",
+        "url": "https://cardapiomaisacaisjp.netlify.app/.netlify/functions/agent-menu",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequestTool",
