@@ -34,7 +34,7 @@ export default function PublicReviewsModal({ isOpen, onClose }: PublicReviewsMod
           .select('id, customer_name, rating, tags, comment, store_reply, replied_at, created_at')
           .eq('is_public', true)
           .order('created_at', { ascending: false })
-          .limit(50);
+          .limit(200);
 
         if (error) throw error;
         setReviews(data || []);
