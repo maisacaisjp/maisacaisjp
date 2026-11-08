@@ -18,7 +18,7 @@ import { CartItem } from "./types";
 import { playVictorySound } from "./utils/sound";
 import { getStoreDate } from "./utils/date";
 import { hapticLight, hapticMedium, hapticSuccess } from "./utils/haptics";
-import { Search, ShoppingBag, X, MapPin, ArrowUp, Clock, Bike, Check, ChevronRight, Receipt, Star } from "lucide-react";
+import { Search, ShoppingBag, X, MapPin, ArrowUp, Clock, Bike, Check, ChevronLeft, ChevronRight, Receipt, Star } from "lucide-react";
 import { brl, nomeBonito, tituloCategoria } from "./utils/formatacao";
 import Cart from "./components/Cart";
 import MenuItemCard from "./components/MenuItemCard";
@@ -96,8 +96,19 @@ function App({ abrirConta = false }: { abrirConta?: boolean }) {
   const extrasAtuais = useExtras();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
+  const maisPedidosRef = useRef<HTMLDivElement>(null);
   // Enquanto a página rola por clique numa aba, o scrollspy não troca a aba ativa
   const scrollLockRef = useRef(false);
+
+  const scrollMaisPedidos = (direction: "left" | "right") => {
+    if (maisPedidosRef.current) {
+      const scrollAmount = Math.max(260, Math.floor(maisPedidosRef.current.clientWidth * 0.7));
+      maisPedidosRef.current.scrollBy({
+        left: direction === "left" ? -scrollAmount : scrollAmount,
+        behavior: "smooth",
+      });
+    }
+  };
   
   const { trackEvent } = useAnalytics();
 
@@ -610,34 +621,26 @@ function App({ abrirConta = false }: { abrirConta?: boolean }) {
     setIsCartOpen(true);
   };
 
-  // Preloader com identidade visual oficial Mais Açaí (Desde 2016)
+  // Preloader minimalista e moderno com a logo oficial Mais Açaí
   if (menuLoading && menuItems.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[#3b0764] via-[#4d0471] to-[#26013a] flex flex-col items-center justify-center p-6 text-white text-center select-none animate-fade-in">
-        <div className="relative mb-6">
-          <div className="absolute -inset-4 rounded-full bg-[#fdde58]/25 blur-xl animate-pulse" />
+      <div className="min-h-screen bg-[#fcfbf9] flex flex-col items-center justify-center p-6 text-center select-none animate-fade-in">
+        <div className="relative mb-5 flex items-center justify-center">
+          <div className="absolute w-24 h-24 rounded-full border-2 border-stone-200 border-t-brand-700 animate-spin" />
           <img
             src="/logo.png"
             alt="Mais Açaí"
-            className="relative w-28 h-28 rounded-full shadow-2xl ring-4 ring-[#fdde58]/40 object-cover bg-white"
+            className="w-20 h-20 rounded-full object-cover shadow-sm bg-white ring-1 ring-stone-200/60"
           />
         </div>
 
-        <h1 className="font-display text-3xl sm:text-4xl font-black tracking-tight text-white mb-2">
+        <h1 className="font-display text-xl sm:text-2xl font-bold tracking-tight text-stone-900">
           Mais Açaí
         </h1>
 
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#fdde58]/15 border border-[#fdde58]/35 shadow-xs mb-6">
-          <span className="w-2 h-2 rounded-full bg-[#fdde58] animate-ping" />
-          <span className="text-[#fdde58] text-xs sm:text-sm font-bold tracking-wide uppercase">
-            Desde 2016 · A primeira loja de açaí
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2.5 text-white/80 text-xs font-semibold">
-          <div className="w-4 h-4 border-2 border-[#fdde58] border-t-transparent rounded-full animate-spin" />
-          <span>Carregando cardápio...</span>
-        </div>
+        <p className="mt-1 text-xs sm:text-[13px] text-stone-400 font-medium tracking-wide">
+          Carregando cardápio...
+        </p>
       </div>
     );
   }
@@ -874,22 +877,52 @@ function App({ abrirConta = false }: { abrirConta?: boolean }) {
                       </h2>
                       {sub && <p className="mt-1 text-[14px] text-stone-500">{sub}</p>}
                     </div>
-                    <span className="shrink-0 text-[12px] font-medium text-stone-400 tabular-nums pb-0.5">
-                      {items.length} {items.length === 1 ? "item" : "itens"}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {destaque && items.length > 2 && (
+                        <div className="hidden sm:flex items-center gap-1.5 mr-1">
+                          <button
+                            type="button"
+                            onClick={() => scrollMaisPedidos("left")}
+                            aria-label="Ver anteriores"
+                            className="w-8 h-8 rounded-full bg-white ring-1 ring-stone-200 text-stone-600 hover:text-stone-900 hover:bg-stone-50 flex items-center justify-center transition shadow-xs cursor-pointer active:scale-95"
+                          >
+                            <ChevronLeft className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => scrollMaisPedidos("right")}
+                            aria-label="Ver próximos"
+                            className="w-8 h-8 rounded-full bg-white ring-1 ring-stone-200 text-stone-600 hover:text-stone-900 hover:bg-stone-50 flex items-center justify-center transition shadow-xs cursor-pointer active:scale-95"
+                          >
+                            <ChevronRight className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+                      <span className="shrink-0 text-[12px] font-medium text-stone-400 tabular-nums pb-0.5">
+                        {items.length} {items.length === 1 ? "item" : "itens"}
+                      </span>
+                    </div>
                   </div>
 
                   <div
+                    ref={destaque ? maisPedidosRef : undefined}
                     className={
                       destaque
-                        ? "-mx-4 px-4 flex gap-3 overflow-x-auto snap-x snap-mandatory hide-scrollbar pb-1 scroll-px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible"
+                        ? "-mx-4 px-4 sm:mx-0 sm:px-0 flex gap-3.5 sm:gap-4 overflow-x-auto snap-x snap-mandatory hide-scrollbar pb-3 pt-1 scroll-smooth"
                         : "grid gap-3 grid-cols-1 md:grid-cols-2 md:gap-4"
                     }
                   >
                     {items.map((item) => {
                       const cacheKey = item.id + (item.isMaisPedido ? "-mp" : "");
                       return (
-                        <div key={cacheKey} className={destaque ? "w-[46%] min-w-[156px] max-w-[200px] shrink-0 snap-start sm:w-auto sm:min-w-0 sm:max-w-none" : ""}>
+                        <div
+                          key={cacheKey}
+                          className={
+                            destaque
+                              ? "w-[170px] sm:w-[210px] md:w-[230px] shrink-0 snap-start"
+                              : ""
+                          }
+                        >
                           <MenuItemCard
                             item={item}
                             catId={cat.id}
