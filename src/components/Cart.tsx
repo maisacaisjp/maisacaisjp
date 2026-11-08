@@ -497,7 +497,7 @@ export default function Cart({
 
     const baseUrl = (typeof window !== 'undefined' && !window.location.hostname.includes('localhost'))
       ? window.location.origin
-      : 'https://cardapiomaisacaisjp.netlify.app';
+      : 'https://maisacaisjpoficial.netlify.app';
     const trackingUrl = `${baseUrl}/conta`;
 
     text += `-----------------------------------\n`;

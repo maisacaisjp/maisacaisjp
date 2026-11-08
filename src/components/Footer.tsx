@@ -30,8 +30,8 @@ export default function Footer() {
             </a>
           </li>
           <li>
-            <a href="https://maisacaisjpbr.netlify.app/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2.5 hover:text-white transition-colors">
-              <Globe className="w-4 h-4 text-brand-300" /> maisacaisjpbr.netlify.app
+            <a href="https://maisacaisjpoficial.netlify.app/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2.5 hover:text-white transition-colors">
+              <Globe className="w-4 h-4 text-brand-300" /> maisacaisjpoficial.netlify.app
             </a>
           </li>
           <li className="flex items-start gap-2.5">
