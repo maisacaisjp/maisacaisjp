@@ -73,6 +73,8 @@ createRoot(document.getElementById('root')!).render(
         <Routes>
           <Route path="/" element={<App />} />
           <Route path="/conta" element={<App abrirConta />} />
+          <Route path="/pedidos" element={<App abrirConta />} />
+          <Route path="/meus-pedidos" element={<App abrirConta />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/:tab" element={<AdminDashboard />} />
           <Route path="/ADMIN" element={<AdminDashboard />} />

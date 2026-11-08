@@ -72,8 +72,14 @@ export default function ContaCliente({ isOpen, onClose, onRepetir }: Props) {
     setEtapa(s ? 'conta' : etapa === 'codigo' ? 'codigo' : 'telefone');
     if (!telefone) {
       try {
-        const salvo = JSON.parse(localStorage.getItem('customer_checkout_data') || '{}');
-        if (salvo.telefone) setTelefone(formatarCelular(celularLocal(salvo.telefone) || String(salvo.telefone)));
+        const params = new URLSearchParams(window.location.search);
+        const urlTel = params.get('tel') || params.get('telefone');
+        if (urlTel) {
+          setTelefone(formatarCelular(celularLocal(urlTel) || String(urlTel)));
+        } else {
+          const salvo = JSON.parse(localStorage.getItem('customer_checkout_data') || '{}');
+          if (salvo.telefone) setTelefone(formatarCelular(celularLocal(salvo.telefone) || String(salvo.telefone)));
+        }
       } catch {
         // sem dados salvos
       }

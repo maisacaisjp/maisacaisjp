@@ -9,7 +9,7 @@ export default function BannerManager() {
     active: false,
     image_url: '',
     title: '🎉 Bem-vindo(a) ao Mais Açaí!',
-    message: 'Obrigado pela visita! 💜\nSou a Bia, do Mais Açaí SJP.\nQuer pedir ou tirar uma dúvida? É só chamar no WhatsApp!',
+    message: 'Obrigado pela visita! 💜\nSou a Maya, do Mais Açaí SJP.\nQuer pedir ou tirar uma dúvida? É só chamar no WhatsApp!',
     button_text: 'Falar no WhatsApp'
   });
 

@@ -247,20 +247,6 @@ export const pizzaExtras = acaiExtras;
 // Produtos do Cardápio
 export const menuData: MenuItem[] = [
   {
-    "id": "acai-1371881",
-    "name": "COMBO MAGNÍFICO BROWNIE",
-    "ingredients": "Açaí com nutella, mousse de ninho e pedacinhos de brownie.",
-    "category": "novidades",
-    "priceSingle": 30,
-    "priceP": 30,
-    "priceM": 34,
-    "priceG": 38,
-    "priceBig": 46,
-    "priceSuperBig": 56,
-    "imageUrl": "/produtos/acai-1371881.webp",
-    "isBestseller": false
-  },
-  {
     "id": "acai-54163",
     "name": "COMBO NEVADO",
     "ingredients": "Açaí com leite condensado e leite em pó.",

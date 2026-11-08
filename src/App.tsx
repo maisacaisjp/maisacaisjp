@@ -18,7 +18,7 @@ import { CartItem } from "./types";
 import { playVictorySound } from "./utils/sound";
 import { getStoreDate } from "./utils/date";
 import { hapticLight, hapticMedium, hapticSuccess } from "./utils/haptics";
-import { Search, ShoppingBag, X, MapPin, ArrowUp, Clock, Bike, Check, ChevronRight, Receipt } from "lucide-react";
+import { Search, ShoppingBag, X, MapPin, ArrowUp, Clock, Bike, Check, ChevronRight, Receipt, Star } from "lucide-react";
 import { brl, nomeBonito, tituloCategoria } from "./utils/formatacao";
 import Cart from "./components/Cart";
 import MenuItemCard from "./components/MenuItemCard";
@@ -28,6 +28,7 @@ import PromoModal from "./components/PromoModal";
 import MenuDoDiaModal from "./components/MenuDoDiaModal";
 import GhostCursor from "./components/GhostCursor";
 import ContaCliente from "./components/ContaCliente";
+import PublicReviewsModal from "./components/PublicReviewsModal";
 import { useExtras } from "./hooks/useExtras";
 import { montarItensParaRepetir } from "./utils/repetirPedido";
 import { PedidoCliente, ultimoPedido, esquecerUltimoPedido, rotuloStatus, STATUS_FINAIS, ehDeHoje } from "./utils/contaCliente";
@@ -111,6 +112,9 @@ function App({ abrirConta = false }: { abrirConta?: boolean }) {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isPromoOpen, setIsPromoOpen] = useState(false);
   const [isMenuDoDiaOpen, setIsMenuDoDiaOpen] = useState(false);
+  const [isReviewsOpen, setIsReviewsOpen] = useState(false);
+  const [storeRating, setStoreRating] = useState('');
+  const [reviewsCount, setReviewsCount] = useState(0);
   const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   const [pausedItems, setPausedItems] = useState<string[]>([]);
@@ -119,6 +123,64 @@ function App({ abrirConta = false }: { abrirConta?: boolean }) {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [cartBounce, setCartBounce] = useState(false);
   const [coverUrl, setCoverUrl] = useState<string>('/capa.png');
+
+  // Carrega resumo das avaliações públicas da loja
+  useEffect(() => {
+    async function loadRatingSummary() {
+      try {
+        const { data } = await supabase
+          .from('order_reviews')
+          .select('rating')
+          .eq('is_public', true);
+        if (data && data.length > 0) {
+          const avg = (data.reduce((a, b) => a + (b.rating || 5), 0) / data.length).toFixed(1);
+          setStoreRating(avg);
+          setReviewsCount(data.length);
+        }
+      } catch (err) {
+        console.warn('Aviso ao carregar resumo de avaliações:', err);
+      }
+    }
+    loadRatingSummary();
+  }, []);
+
+  // Histórico de navegação do navegador e botão "Voltar" do celular
+  // Evita que o usuário saia do cardápio digital quando estiver navegando/selecionando produto
+  useEffect(() => {
+    const handlePopState = () => {
+      if (isReviewsOpen) {
+        setIsReviewsOpen(false);
+        return;
+      }
+      if (zoomedImage) {
+        setZoomedImage(null);
+        return;
+      }
+      if (isModalOpen) {
+        setIsModalOpen(false);
+        return;
+      }
+      if (isCartOpen) {
+        setIsCartOpen(false);
+        return;
+      }
+      if (contaAberta) {
+        setContaAberta(false);
+        return;
+      }
+      if (isPromoOpen) {
+        setIsPromoOpen(false);
+        return;
+      }
+      if (isMenuDoDiaOpen) {
+        setIsMenuDoDiaOpen(false);
+        return;
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [isReviewsOpen, zoomedImage, isModalOpen, isCartOpen, contaAberta, isPromoOpen, isMenuDoDiaOpen]);
 
   useEffect(() => {
     const loadCover = async () => {
@@ -304,6 +366,35 @@ function App({ abrirConta = false }: { abrirConta?: boolean }) {
   const handleSelectItem = (item: MenuItem) => {
     setSelectedItem(item);
     setIsModalOpen(true);
+    try {
+      window.history.pushState({ modal: 'produto' }, '');
+    } catch {
+      // fallback
+    }
+  };
+
+  const handleCloseItemModal = () => {
+    setIsModalOpen(false);
+    if (window.history.state?.modal === 'produto') {
+      window.history.back();
+    }
+  };
+
+  const handleOpenReviews = () => {
+    hapticLight();
+    setIsReviewsOpen(true);
+    try {
+      window.history.pushState({ modal: 'avaliacoes' }, '');
+    } catch {
+      // fallback
+    }
+  };
+
+  const handleCloseReviews = () => {
+    setIsReviewsOpen(false);
+    if (window.history.state?.modal === 'avaliacoes') {
+      window.history.back();
+    }
   };
 
   const totalCartQty = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -519,6 +610,38 @@ function App({ abrirConta = false }: { abrirConta?: boolean }) {
     setIsCartOpen(true);
   };
 
+  // Preloader com identidade visual oficial Mais Açaí (Desde 2016)
+  if (menuLoading && menuItems.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-[#3b0764] via-[#4d0471] to-[#26013a] flex flex-col items-center justify-center p-6 text-white text-center select-none animate-fade-in">
+        <div className="relative mb-6">
+          <div className="absolute -inset-4 rounded-full bg-[#fdde58]/25 blur-xl animate-pulse" />
+          <img
+            src="/logo.png"
+            alt="Mais Açaí"
+            className="relative w-28 h-28 rounded-full shadow-2xl ring-4 ring-[#fdde58]/40 object-cover bg-white"
+          />
+        </div>
+
+        <h1 className="font-display text-3xl sm:text-4xl font-black tracking-tight text-white mb-2">
+          Mais Açaí
+        </h1>
+
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#fdde58]/15 border border-[#fdde58]/35 shadow-xs mb-6">
+          <span className="w-2 h-2 rounded-full bg-[#fdde58] animate-ping" />
+          <span className="text-[#fdde58] text-xs sm:text-sm font-bold tracking-wide uppercase">
+            Desde 2016 · A primeira loja de açaí
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2.5 text-white/80 text-xs font-semibold">
+          <div className="w-4 h-4 border-2 border-[#fdde58] border-t-transparent rounded-full animate-spin" />
+          <span>Carregando cardápio...</span>
+        </div>
+      </div>
+    );
+  }
+
   if (!businessStatus.loading && businessStatus.subscriptionStatus === 'blocked') {
     return (
       <div className="min-h-screen bg-page flex items-center justify-center p-4 font-sans">
@@ -582,6 +705,18 @@ function App({ abrirConta = false }: { abrirConta?: boolean }) {
             </div>
 
             <div className="mt-4 flex flex-wrap items-center gap-2 text-[12.5px] font-medium">
+              {/* Avaliações Multipedidos Style */}
+              {reviewsCount > 0 && <button
+                type="button"
+                onClick={handleOpenReviews}
+                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-amber-50 text-amber-900 border border-amber-200/70 hover:bg-amber-100 transition cursor-pointer active:scale-95 shadow-2xs"
+                title="Ver avaliações dos clientes"
+              >
+                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
+                <span className="font-black font-mono text-[13px]">{storeRating}</span>
+                <span className="text-[11.5px] text-amber-800/80">({reviewsCount})</span>
+              </button>}
+
               {!carregandoStatus && (
                 <span
                   className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-full ${
@@ -892,11 +1027,12 @@ function App({ abrirConta = false }: { abrirConta?: boolean }) {
         pausedItems={pausedItems}
         item={selectedItem}
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={handleCloseItemModal}
         initialSize="G"
         onAddToCart={handleAddToCart}
         allMenuItems={menuItems}
       />
+      <PublicReviewsModal isOpen={isReviewsOpen} onClose={handleCloseReviews} />
       <MenuDoDiaModal
         isOpen={isMenuDoDiaOpen}
         onClose={() => setIsMenuDoDiaOpen(false)}

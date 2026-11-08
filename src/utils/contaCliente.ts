@@ -81,9 +81,12 @@ export async function enviarCodigo(telefone: string): Promise<{ ok: boolean; err
       body: JSON.stringify({ telefone }),
     });
     const j = await r.json().catch(() => ({}));
-    return r.ok && j.ok ? { ok: true } : { ok: false, erro: j.erro || 'Não foi possível enviar o código. Tente de novo.' };
+    if (r.ok && j.ok) {
+      return { ok: true };
+    }
+    return { ok: false, erro: j.erro || 'Não foi possível enviar o código no WhatsApp. Tente de novo.' };
   } catch {
-    return { ok: false, erro: 'Sem conexão. Confira a internet e tente de novo.' };
+    return { ok: false, erro: 'Sem conexão. Verifique sua internet e tente de novo.' };
   }
 }
 

@@ -5,7 +5,8 @@ import {
   Clock, Truck, Building2, Key, FileSpreadsheet, 
   Sparkles, Check, CheckCircle2, 
   Sliders, AlertCircle, Trash2, Upload,
-  Shield, CheckCheck, RefreshCw, Image as ImageIcon
+  Shield, CheckCheck, RefreshCw, Image as ImageIcon,
+  BotMessageSquare, Send, Bike
 } from 'lucide-react';
 
 import { getCashbackConfig, saveCashbackConfig, DEFAULT_CASHBACK_PERCENT, DEFAULT_CASHBACK_VALIDADE_DIAS } from '../utils/cashback';
@@ -23,7 +24,7 @@ interface SettingsManagerProps {
   onTestSound?: () => void;
 }
 
-type SettingsTab = 'empresa' | 'capa' | 'horarios' | 'impressao' | 'entregas' | 'cashback' | 'notificacoes' | 'seguranca';
+type SettingsTab = 'empresa' | 'capa' | 'horarios' | 'impressao' | 'entregas' | 'cashback' | 'automacoes' | 'notificacoes' | 'seguranca';
 
 export default function SettingsManager({ 
   onTestPrint, 
@@ -231,6 +232,43 @@ export default function SettingsManager({
     }
   };
 
+  // ────────────────── ESTADO: AUTOMAÇÕES WHATSAPP & MOTOBOY ──────────────────
+  const [waStatusPedidos, setWaStatusPedidos] = useState(false);
+  const [waPosVendaAvaliacao, setWaPosVendaAvaliacao] = useState(false);
+  const [waCampanhaReativacao, setWaCampanhaReativacao] = useState(false);
+  const [motoboyDefaultFee, setMotoboyDefaultFee] = useState('6.00');
+  const [savingAutomacoes, setSavingAutomacoes] = useState(false);
+
+  useEffect(() => {
+    async function loadAutomacoes() {
+      const { data } = await supabase.from('settings').select('key, value').in('key', [
+        'whatsapp_status_pedidos',
+        'whatsapp_pos_venda_avaliacao',
+        'whatsapp_campanha_reativacao',
+        'motoboy_default_fee'
+      ]);
+      data?.forEach((row: any) => {
+        if (row.key === 'whatsapp_status_pedidos') setWaStatusPedidos(row.value === 'true');
+        if (row.key === 'whatsapp_pos_venda_avaliacao') setWaPosVendaAvaliacao(row.value === 'true');
+        if (row.key === 'whatsapp_campanha_reativacao') setWaCampanhaReativacao(row.value === 'true');
+        if (row.key === 'motoboy_default_fee') setMotoboyDefaultFee(row.value || '6.00');
+      });
+    }
+    loadAutomacoes();
+  }, []);
+
+  const handleSaveAutomacoes = async (status = waStatusPedidos, posVenda = waPosVendaAvaliacao, reativacao = waCampanhaReativacao, fee = motoboyDefaultFee) => {
+    setSavingAutomacoes(true);
+    await supabase.from('settings').upsert([
+      { key: 'whatsapp_status_pedidos', value: String(status), updated_at: new Date().toISOString() },
+      { key: 'whatsapp_pos_venda_avaliacao', value: String(posVenda), updated_at: new Date().toISOString() },
+      { key: 'whatsapp_campanha_reativacao', value: String(reativacao), updated_at: new Date().toISOString() },
+      { key: 'motoboy_default_fee', value: String(fee), updated_at: new Date().toISOString() },
+    ]);
+    setSavingAutomacoes(false);
+    showSavedFeedback("Automações e taxa salvas com sucesso!");
+  };
+
   // Categorias do menu lateral de navegação
   const navItems = [
     { id: 'empresa' as SettingsTab, label: 'Empresa & Marca', icon: Building2, desc: 'Nome, CNPJ, endereço e logo' },
@@ -239,6 +277,7 @@ export default function SettingsManager({
     { id: 'impressao' as SettingsTab, label: 'Impressão Térmica', icon: Printer, desc: 'Auto-impressão e atrasos' },
     { id: 'entregas' as SettingsTab, label: 'Entregas & Prazos', icon: Truck, desc: 'Tempo estimado de espera e entrega' },
     { id: 'cashback' as SettingsTab, label: 'Fidelidade & Cashback', icon: Sparkles, desc: '% de bônus por compra do cliente' },
+    { id: 'automacoes' as SettingsTab, label: 'Automações WhatsApp', icon: BotMessageSquare, desc: 'Avisos de saída, pós-venda e reativação' },
     { id: 'notificacoes' as SettingsTab, label: 'Notificações & Som', icon: Bell, desc: 'Alertas sonoros de novos pedidos' },
     { id: 'seguranca' as SettingsTab, label: 'Segurança & Backup', icon: Key, desc: 'Troca de senha e exportação CSV' },
   ];
@@ -760,6 +799,167 @@ export default function SettingsManager({
                     <Save size={14} />
                     <span>{savingCashback ? 'Salvando...' : 'Salvar Regras de Cashback'}</span>
                   </button>
+                </div>
+              </div>
+            )}
+
+            {/* ═══════════ AUTOMAÇÕES WHATSAPP & MOTOBOY ═══════════ */}
+            {activeTab === 'automacoes' && (
+              <div className="p-6 space-y-6">
+                <div className="flex items-center gap-3 pb-4 border-b border-stone-100">
+                  <div className="w-8 h-8 rounded-lg bg-[#4d0471]/10 text-[#4d0471] flex items-center justify-center border border-[#4d0471]/20">
+                    <BotMessageSquare size={16} />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-bold text-stone-900">Automações Ativas de WhatsApp</h2>
+                    <p className="text-xs text-stone-500">Controle mensagens automáticas de saída, pós-venda, avaliações e retenção.</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  {/* Switch 1: Status de Entrega */}
+                  <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = !waStatusPedidos;
+                          setWaStatusPedidos(next);
+                          handleSaveAutomacoes(next, waPosVendaAvaliacao, waCampanhaReativacao);
+                        }}
+                        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out mt-0.5 ${
+                          waStatusPedidos ? 'bg-[#4d0471]' : 'bg-stone-300'
+                        }`}
+                        role="switch"
+                        aria-checked={waStatusPedidos}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                            waStatusPedidos ? 'translate-x-5' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-stone-900">Aviso de Saída para Entrega</span>
+                          <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                            waStatusPedidos ? 'bg-emerald-100 text-emerald-800' : 'bg-stone-200 text-stone-600'
+                          }`}>
+                            {waStatusPedidos ? 'Ativado' : 'Desligado (Padrão)'}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-stone-500 mt-0.5">
+                          Envia uma mensagem no WhatsApp do cliente assim que o pedido for despachado com o motoboy.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Switch 2: Pós-Venda & Avaliação */}
+                  <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = !waPosVendaAvaliacao;
+                          setWaPosVendaAvaliacao(next);
+                          handleSaveAutomacoes(waStatusPedidos, next, waCampanhaReativacao);
+                        }}
+                        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out mt-0.5 ${
+                          waPosVendaAvaliacao ? 'bg-[#4d0471]' : 'bg-stone-300'
+                        }`}
+                        role="switch"
+                        aria-checked={waPosVendaAvaliacao}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                            waPosVendaAvaliacao ? 'translate-x-5' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-stone-900">Pesquisa de Pós-Venda & Avaliação</span>
+                          <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                            waPosVendaAvaliacao ? 'bg-emerald-100 text-emerald-800' : 'bg-stone-200 text-stone-600'
+                          }`}>
+                            {waPosVendaAvaliacao ? 'Ativado' : 'Desligado (Padrão)'}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-stone-500 mt-0.5">
+                          Envia mensagem 40 minutos após a entrega perguntando se o açaí estava perfeito e com link para avaliar no site.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Switch 3: Reativação com Cupom */}
+                  <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = !waCampanhaReativacao;
+                          setWaCampanhaReativacao(next);
+                          handleSaveAutomacoes(waStatusPedidos, waPosVendaAvaliacao, next);
+                        }}
+                        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out mt-0.5 ${
+                          waCampanhaReativacao ? 'bg-[#4d0471]' : 'bg-stone-300'
+                        }`}
+                        role="switch"
+                        aria-checked={waCampanhaReativacao}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                            waCampanhaReativacao ? 'translate-x-5' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-stone-900">Campanha de Reativação de Clientes Sumidos</span>
+                          <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                            waCampanhaReativacao ? 'bg-emerald-100 text-emerald-800' : 'bg-stone-200 text-stone-600'
+                          }`}>
+                            {waCampanhaReativacao ? 'Ativado' : 'Desligado (Padrão)'}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-stone-500 mt-0.5">
+                          Dispara mensagem com cupom de desconto para clientes que não realizam pedidos há mais de 20 dias.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Campo Taxa Padrão Motoboy Sob Demanda */}
+                  <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Bike size={16} className="text-[#4d0471]" />
+                      <span className="text-xs font-bold text-stone-900">Taxa Padrão por Corrida do Motoboy (Sob Demanda)</span>
+                    </div>
+                    <p className="text-[11px] text-stone-500 mb-3">
+                      Valor padrão pago por corrida para entregadores freelancers em São José dos Pinhais (usado no cálculo de acerto de diária).
+                    </p>
+                    <div className="flex items-center gap-3">
+                      <div className="relative w-40">
+                        <span className="absolute left-3 top-2.5 text-xs font-bold text-stone-400">R$</span>
+                        <input
+                          type="text"
+                          value={motoboyDefaultFee}
+                          onChange={(e) => setMotoboyDefaultFee(e.target.value)}
+                          placeholder="6.00"
+                          className="w-full pl-9 pr-3 py-2 bg-white rounded-xl border border-stone-300 text-xs font-bold text-stone-900 outline-none focus:border-[#4d0471]"
+                        />
+                      </div>
+                      <button
+                        onClick={() => handleSaveAutomacoes(waStatusPedidos, waPosVendaAvaliacao, waCampanhaReativacao, motoboyDefaultFee)}
+                        disabled={savingAutomacoes}
+                        className="px-4 py-2 bg-[#4d0471] hover:bg-[#3b0357] text-white text-xs font-bold rounded-xl transition-all shadow-xs"
+                      >
+                        {savingAutomacoes ? 'Salvando...' : 'Salvar Taxa'}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

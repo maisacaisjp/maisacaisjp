@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MenuItem, ExtraIngredient } from '../data/menu';
 import { CartItem, ProductSize, SIZE_LABELS } from '../types';
-import { X, Check, Minus, Plus } from 'lucide-react';
+import { X, Check, Minus, Plus, ArrowLeft } from 'lucide-react';
 import { useExtras } from '../hooks/useExtras';
 import { useCremes } from '../hooks/useCremes';
 import { hapticLight } from '../utils/haptics';
@@ -133,6 +133,17 @@ export default function PizzaModal({
       <div className="absolute inset-0 bg-stone-950/55 backdrop-blur-[2px] animate-fade-in" onClick={onClose} />
 
       <div className="relative w-full sm:max-w-[520px] h-[94dvh] sm:h-auto sm:max-h-[88vh] bg-white rounded-t-[28px] sm:rounded-[28px] shadow-2xl flex flex-col overflow-hidden animate-sheet-in sm:animate-pop-in">
+        {/* Voltar ao cardápio (sempre visível no topo esquerdo) */}
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Voltar ao cardápio"
+          className="absolute top-2 left-3 z-30 h-10 px-3.5 rounded-full bg-white/95 text-stone-800 shadow-md ring-1 ring-black/5 flex items-center gap-1.5 hover:bg-white hover:text-stone-900 transition cursor-pointer font-semibold text-[13px] backdrop-blur-xs active:scale-95"
+        >
+          <ArrowLeft className="w-4 h-4 stroke-[2.5]" />
+          <span>Voltar</span>
+        </button>
+
         {/* Fechar (sempre visível) */}
         <button
           type="button"
@@ -146,9 +157,17 @@ export default function PizzaModal({
         {/* Barra com o nome do produto, aparece ao rolar */}
         <div
           aria-hidden={!barraTopo}
-          className={`absolute top-0 inset-x-0 z-20 h-14 pl-5 pr-16 flex items-center bg-white/95 backdrop-blur border-b border-stone-100 transition-opacity duration-200 ${barraTopo ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+          className={`absolute top-0 inset-x-0 z-20 h-14 pl-3 pr-16 flex items-center gap-2.5 bg-white/95 backdrop-blur border-b border-stone-100 transition-opacity duration-200 ${barraTopo ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         >
-          <span className="font-display text-[16px] font-bold text-stone-900 truncate">{nome}</span>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Voltar ao cardápio"
+            className="w-9 h-9 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-700 flex items-center justify-center transition cursor-pointer shrink-0"
+          >
+            <ArrowLeft className="w-4 h-4 stroke-[2.5]" />
+          </button>
+          <span className="font-display text-[15px] font-bold text-stone-900 truncate">{nome}</span>
         </div>
 
         <div

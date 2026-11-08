@@ -14,7 +14,7 @@ export interface Category {
 }
 
 export function useMenu() {
-  const [menuItems, setMenuItems] = useState<MenuItem[]>(ALL_MENU_ITEMS);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [usingFallback, setUsingFallback] = useState(false);

@@ -33,6 +33,8 @@ import {
 } from "lucide-react";
 import { useAnalytics } from '../hooks/useAnalytics';
 import { getCashbackConfig, getCustomerCashbackInfo, applyOrderCashback, dataCurta, DEFAULT_CASHBACK_PERCENT } from '../utils/cashback';
+import PixPaymentCard from './PixPaymentCard';
+import { gerarPixCopiaECola, PIX_CONFIG_PADRAO } from '../utils/pix';
 
 const ENDERECO_LOJA = "Rua Almirante Alexandrino, 909, sala 02 – Parque da Fonte";
 const MAPA_LOJA = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent("Rua Almirante Alexandrino, 909, São José dos Pinhais - PR")}`;
@@ -493,6 +495,11 @@ export default function Cart({
       text += `Saldo Disponível Próximo Pedido: R$ ${nextBal.toFixed(2)}\n`;
     }
 
+    const baseUrl = (typeof window !== 'undefined' && !window.location.hostname.includes('localhost'))
+      ? window.location.origin
+      : 'https://maisacaisjpbr.netlify.app';
+    const trackingUrl = `${baseUrl}/conta`;
+
     text += `-----------------------------------\n`;
     text += `[PAGAMENTO]\n`;
     text += `Forma: ${pagamento}\n`;
@@ -502,9 +509,20 @@ export default function Cart({
     if (pagamento.includes("Cartão") && orderType === "Delivery") {
       text += `(Levar maquininha de cartão)\n`;
     }
+    if (pagamento === "PIX") {
+      const pixCodigo = gerarPixCopiaECola({
+        valor: total,
+        identificador: trackingCode || String(newOrderId || orderNumber)
+      });
+      text += `\n🔑 *DADOS PARA PAGAMENTO PIX:*\n`;
+      text += `• Chave (Celular): *${PIX_CONFIG_PADRAO.telefoneFormatado}*\n`;
+      text += `• Titular: *${PIX_CONFIG_PADRAO.beneficiario} (Mais Açaí)*\n`;
+      text += `• Valor: *R$ ${total.toFixed(2)}*\n\n`;
+      text += `📋 *Código Copia e Cola (toque para copiar):*\n${pixCodigo}\n`;
+    }
     text += `-----------------------------------`;
-    if (trackingCode) {
-      text += `\n📍 Acompanhe seu pedido:\n${window.location.origin}/track/${trackingCode}`;
+    if (trackingUrl) {
+      text += `\n\n📍 *ACOMPANHE SEU PEDIDO EM MEUS PEDIDOS:*\n${trackingUrl}\n`;
     }
 
     const encoded = encodeURIComponent(text);
@@ -524,12 +542,10 @@ export default function Cart({
       <div className="w-full max-w-xs mx-auto flex flex-col gap-2.5 mt-5">
         {savedOrderId && (
           <a
-            href={`/track/${savedTrackingCode}`}
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/conta"
             className="w-full h-12 bg-brand-700 hover:bg-brand-800 text-white font-semibold text-[15px] rounded-2xl flex items-center justify-center gap-2 transition cursor-pointer"
           >
-            Acompanhar pedido
+            Acompanhar em Meus Pedidos
           </a>
         )}
         <a
@@ -565,6 +581,15 @@ export default function Cart({
         </div>
         <h2 className="font-display text-[22px] font-extrabold text-stone-900">Pedido enviado!</h2>
         <p className="text-stone-500 text-[14px] mt-1">Recebemos seu pedido. Confirme pelo WhatsApp.</p>
+        {pagamento === 'PIX' && (
+          <div className="w-full text-left mt-4">
+            <PixPaymentCard
+              valor={total}
+              identificador={savedTrackingCode || String(savedOrderId || '')}
+              className="w-full"
+            />
+          </div>
+        )}
         {successActionButtons}
       </div>
     );
@@ -975,6 +1000,12 @@ export default function Cart({
                       </button>
                     ))}
                   </div>
+
+                  {pagamento === "PIX" && (
+                    <div className="mt-3">
+                      <PixPaymentCard valor={total} mostrarQrCode={false} />
+                    </div>
+                  )}
 
                   {(pagamento === "Cartão de Crédito" || pagamento === "Cartão de Débito") && (
                     <p className="mt-2 text-[13px] text-brand-700 bg-brand-50 rounded-xl px-3 py-2">

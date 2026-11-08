@@ -5,7 +5,7 @@ import { Plus, Edit2, Trash2, Save, X, Image as ImageIcon, Search, ChevronDown, 
 import { CATEGORIA_CREMES, CREMES_GELADOS } from '../data/variacoes';
 import { getSizeOptions } from '../utils/produto';
 import { nomeBonito, tituloCategoria } from '../utils/formatacao';
-import { ChipFiltro, Paginacao, useLinhasQueCabem, usePaginacao } from './admin/ui';
+import { ChipFiltro } from './admin/ui';
 
 // Rótulo curto de cada tamanho para os botões de pausa
 const ROTULO_TAMANHO: Record<string, string> = { P: '330ml', M: '440ml', G: '550ml', Big: '770ml', 'Super Big': '1 Litro', '2L': '2 Litros' };
@@ -242,7 +242,7 @@ export default function MenuManager() {
         .from('cardapio-maisacai')
         .getPublicUrl(filePath);
 
-      setEditingItem({ ...editingItem, image_url: data.publicUrl });
+      setEditingItem(prev => prev ? { ...prev, image_url: data.publicUrl } : null);
       setFeedback("Upload de imagem concluído com sucesso!");
     } catch (error: any) {
       console.error(error);
@@ -428,12 +428,8 @@ export default function MenuManager() {
     setIsModalOpen(true);
   };
 
-  const listaRef = useRef<HTMLDivElement>(null);
-  const porPagina = useLinhasQueCabem(listaRef, 57, { reserva: 130, min: 3, deps: [loading, activeCategory] });
-
   const filteredItems = (activeCategory === 'all' ? items : items.filter(i => i.category === activeCategory))
     .filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase()) || String(i.id).toLowerCase().includes(searchTerm.toLowerCase()) || (i.ingredients && i.ingredients.toLowerCase().includes(searchTerm.toLowerCase())));
-  const paginacao = usePaginacao(filteredItems, porPagina, [activeCategory, searchTerm]);
 
   if (loading) return <div className="p-8 text-center text-stone-500">Carregando produtos…</div>;
 
@@ -511,8 +507,8 @@ export default function MenuManager() {
         </div>
       )}
 
-      {/* Lista (edição rápida): cabe na tela, o resto vai para as próximas páginas */}
-      <div ref={listaRef} className="overflow-x-auto">
+      {/* Lista (edição rápida): rolagem vertical livre em página única com cabeçalho fixo */}
+      <div className="overflow-x-auto overflow-y-auto max-h-[calc(100dvh-295px)] min-h-[400px] adm-rolagem">
         <table className="w-full table-fixed text-left border-collapse">
           <colgroup>
             <col className="w-[34%]" />
@@ -520,16 +516,16 @@ export default function MenuManager() {
             <col className="w-[136px]" />
             <col className="w-[92px]" />
           </colgroup>
-          <thead>
+          <thead className="sticky top-0 bg-white z-10 shadow-[0_1px_0_rgba(0,0,0,0.06)]">
             <tr className="border-b border-stone-100 text-[11px] font-semibold text-stone-400 uppercase tracking-wider">
-              <th className="h-9 pl-4 pr-3 font-semibold">Produto</th>
-              <th className="h-9 px-3 font-semibold">Preço por tamanho <span className="normal-case tracking-normal font-normal">· toque no tamanho para pausar só ele</span></th>
-              <th className="h-9 px-3 font-semibold">Disponível</th>
-              <th className="h-9 pl-3 pr-4 font-semibold text-right">Ações</th>
+              <th className="h-9 pl-4 pr-3 font-semibold bg-white">Produto</th>
+              <th className="h-9 px-3 font-semibold bg-white">Preço por tamanho <span className="normal-case tracking-normal font-normal">· toque no tamanho para pausar só ele</span></th>
+              <th className="h-9 px-3 font-semibold bg-white">Disponível</th>
+              <th className="h-9 pl-3 pr-4 font-semibold text-right bg-white">Ações</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-100">
-            {paginacao.itens.map(item => {
+            {filteredItems.map(item => {
               const isPaused = pausedItems.includes(item.id);
               const tamanhos = tamanhosDoItem(item);
               const precoUnico = item.price_single !== null && item.price_single !== undefined && item.price_single !== '';
@@ -639,15 +635,11 @@ export default function MenuManager() {
         )}
       </div>
 
-      <Paginacao
-        pagina={paginacao.pagina}
-        totalPaginas={paginacao.totalPaginas}
-        inicio={paginacao.inicio}
-        mostrando={paginacao.itens.length}
-        total={filteredItems.length}
-        onIr={paginacao.irPara}
-        rotulo={filteredItems.length === 1 ? 'produto' : 'produtos'}
-      />
+      {/* Rodapé informativo: contagem e aviso de rolagem livre */}
+      <div className="px-4 py-2.5 bg-stone-50/70 border-t border-stone-100 flex items-center justify-between text-[12px] text-stone-500">
+        <span>Mostrando <b>{filteredItems.length}</b> {filteredItems.length === 1 ? 'produto' : 'produtos'}</span>
+        <span className="text-[11px] text-stone-400">Página única com rolagem livre</span>
+      </div>
 
       {/* Editor Modal */}
       {isModalOpen && editingItem && (

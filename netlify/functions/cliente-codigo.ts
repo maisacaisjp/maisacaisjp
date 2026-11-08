@@ -41,9 +41,10 @@ export default async (req: Request) => {
   const evolutionUrl = process.env.EVOLUTION_API_URL;
   const evolutionKey = process.env.EVOLUTION_API_KEY;
   const instancia = process.env.EVOLUTION_INSTANCE_NAME || process.env.EVOLUTION_INSTANCE;
+
   if (!segredo || !evolutionUrl || !evolutionKey || !instancia) {
-    console.error('[cliente-codigo] Faltam variáveis: CLIENTE_OTP_SEGREDO e/ou EVOLUTION_*');
-    return resposta(503, { ok: false, erro: 'Entrada temporariamente indisponível. Tente mais tarde.' });
+    console.error('[cliente-codigo] Configurações de ambiente incompletas (CLIENTE_OTP_SEGREDO ou EVOLUTION_*)');
+    return resposta(503, { ok: false, erro: 'Envio por WhatsApp temporariamente indisponível. Entre em contato com a loja.' });
   }
 
   let telefone = '';
@@ -83,8 +84,4 @@ export default async (req: Request) => {
   }
 
   return resposta(200, { ok: true });
-};
-
-export const config = {
-  path: '/.netlify/functions/cliente-codigo',
 };

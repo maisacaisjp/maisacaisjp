@@ -1,5 +1,11 @@
 {
+  "updatedAt": "2026-11-08T02:33:24.708Z",
+  "createdAt": "2026-09-30T14:21:03.015Z",
+  "id": "vjeDpsq8JzCw6M7A",
   "name": "ATENDENTE HUMANIZADO - MAIS AÇAÍ SJP",
+  "description": null,
+  "active": true,
+  "isArchived": false,
   "nodes": [
     {
       "parameters": {},
@@ -29,8 +35,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        5840,
-        1008
+        6000,
+        1072
       ],
       "id": "ec079ffe-619f-44ad-b248-8232c74ab4ae",
       "name": "SEPARA MENSAGENS2"
@@ -44,8 +50,8 @@
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        6160,
-        1008
+        6464,
+        1088
       ]
     },
     {
@@ -67,8 +73,8 @@
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        6592,
-        1008
+        6896,
+        1088
       ],
       "webhookId": "6d02588c-2679-4d65-9ddd-1a5700d0fc19"
     },
@@ -83,7 +89,7 @@
         },
         "table": {
           "__rl": true,
-          "value": "maisacai_buffer_mensagens",
+          "value": "messages",
           "mode": "list",
           "cachedResultName": "maisacai_buffer_mensagens"
         },
@@ -116,6 +122,12 @@
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 2000,
+      "credentials": {
+        "postgres": {
+          "id": "LlNWKTJHq8YCSCZX",
+          "name": "postgres_cloudfy"
+        }
+      },
       "onError": "continueRegularOutput"
     },
     {
@@ -150,7 +162,7 @@
         },
         "table": {
           "__rl": true,
-          "value": "maisacai_buffer_mensagens",
+          "value": "messages",
           "mode": "list",
           "cachedResultName": "maisacai_buffer_mensagens"
         },
@@ -176,6 +188,12 @@
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 2000,
+      "credentials": {
+        "postgres": {
+          "id": "LlNWKTJHq8YCSCZX",
+          "name": "postgres_cloudfy"
+        }
+      },
       "onError": "continueRegularOutput"
     },
     {
@@ -282,7 +300,7 @@
     {
       "parameters": {
         "resource": "messages-api",
-        "instanceName": "maisacai",
+        "instanceName": "Maisacaisjp",
         "remoteJid": "={{ $('Coleta').item.json.telefone.replace(/^=+/, '') }}",
         "messageText": "={{ $json.item }}",
         "options_message": {}
@@ -290,11 +308,17 @@
       "type": "n8n-nodes-evolution-api.evolutionApi",
       "typeVersion": 1,
       "position": [
-        6384,
-        1008
+        6688,
+        1088
       ],
       "id": "5bd3325f-64af-4122-94e5-504da0e0a04e",
-      "name": "Envia mensagem para o WhatsApp"
+      "name": "Envia mensagem para o WhatsApp",
+      "credentials": {
+        "evolutionApi": {
+          "id": "SvkoJsMtlGFyG93s",
+          "name": "evolution_cloudfy"
+        }
+      }
     },
     {
       "parameters": {
@@ -303,7 +327,7 @@
             {
               "id": "5356af18-19e2-43c7-a230-a250eae425cf",
               "name": "text",
-              "value": "={{ $('AGRUPA MENSAGENS').item.json.concatenated_content.replace(/^=+/, '') }}",
+              "value": "={{\n  (function() {\n    const agrupa = String($('AGRUPA MENSAGENS').first()?.json?.concatenated_content || '').replace(/^=+/, '').trim();\n    if (agrupa) return agrupa;\n    const coleta = String($('Coleta').first()?.json?.mensagem || '').trim();\n    if (coleta && coleta !== '[Arquivo/Midia]') return coleta;\n    const raw = String($('Recebe mensagem').first()?.json?.body?.data?.message?.conversation || $('Recebe mensagem').first()?.json?.body?.data?.message?.extendedTextMessage?.text || '').trim();\n    return raw || 'Olá';\n  })()\n}}",
               "type": "string"
             }
           ]
@@ -329,7 +353,7 @@
         },
         "table": {
           "__rl": true,
-          "value": "maisacai_buffer_mensagens",
+          "value": "messages",
           "mode": "list",
           "cachedResultName": "maisacai_buffer_mensagens"
         },
@@ -557,6 +581,12 @@
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 2000,
+      "credentials": {
+        "postgres": {
+          "id": "LlNWKTJHq8YCSCZX",
+          "name": "postgres_cloudfy"
+        }
+      },
       "onError": "continueRegularOutput"
     },
     {
@@ -729,15 +759,15 @@
         "promptType": "define",
         "text": "={{ $json.text }}",
         "options": {
-          "systemMessage": "# CONTEXTO (recalculado a cada mensagem — é a única verdade)\n{{ $json.avisoHorarioAgente }}\nAgora: {{ $json.dataHoraAtual }} ({{ $json.diaSemanaAtual }})\nLoja: {{ $json.statusAtendimento }}\nAinda abre hoje: {{ $json.aindaAbreHoje }} (às {{ $json.horaAberturaHoje }})\nPróximo atendimento: {{ $json.proximoDiaUtilNome }}, {{ $json.proximoDiaUtilData }} às {{ $json.horaAberturaHoje }}\nCliente: {{ $('Coleta').item.json.nome }}\nWhatsApp do cliente: {{ $('Coleta').item.json.telefone }}\n\n---\n\n# QUEM VOCÊ É\nBia, atendente do Mais Açaí SJP (São José dos Pinhais - PR) no WhatsApp.\nNão diga que é IA ou robô. Se perguntarem: \"Sou a Bia, da equipe do Mais Açaí SJP 🍇\"\n\n---\n\n# ATENDIMENTO DIRETO E OBJETIVO\n- Responda exatamente o que foi perguntado, já com o preço. Sem enrolação.\n- Máximo 2 linhas por mensagem. Nada de textão.\n- No máximo 1 emoji por mensagem.\n- Uma pergunta por vez, ou duas que andam juntas (ex.: \"Entrega ou retirada? E vai pagar como?\").\n- Cumprimente só na primeira mensagem. Depois, vá direto ao ponto.\n- Não repita a lista de itens a cada mensagem: confirme curto (\"Anotado!\") e siga. A lista completa aparece só no resumo final.\n- Português do Brasil, moeda R$. Nunca use \"€\", \"euros\", \"morada\", \"telemóvel\", \"MB Way\".\n- Proibido: \"Em que posso ser útil?\", \"Ficou alguma dúvida?\", \"Estou à disposição\", \"Não hesite em contatar\".\n\n---\n\n# CARDÁPIO — ÚNICA FONTE DE PREÇOS\nO cardápio abaixo vem do sistema agora. Use SOMENTE estes produtos, tamanhos e preços.\n- Nunca invente produto, tamanho, sabor, promoção ou preço. Se não está na lista, diga que não temos e ofereça o mais parecido.\n- Combos têm 3 tamanhos: 330ml, 440ml e 550ml. Se o cliente não disser o tamanho, pergunte.\n- \"Monte do seu jeito\": preço do copo + preço de cada adicional escolhido. Nenhum adicional é grátis.\n- Adicional pedido em combo também é cobrado à parte.\n- Se pedirem \"o cardápio\", NÃO mande a lista inteira: diga as categorias (Mais vendidos, Combos especiais, Monte do seu jeito, Kits, Milkshakes, Bebidas) com o menor preço de cada uma e pergunte o que prefere.\n- Taxa de entrega: use a tabela de bairros. Bairro fora da lista: diga que vai confirmar com a equipe se entregamos e a taxa. Não chute valor.\n- Respeite o pedido mínimo para entrega e use os prazos da lista.\n\n{{ $json.cardapio || '⚠️ CARDÁPIO INDISPONÍVEL AGORA: não informe nenhum preço. Diga que vai confirmar com a equipe e já retorna.' }}\n\n---\n\n# HORÁRIO\n- Loja ABERTA → atenda e anote o pedido.\n- Loja FECHADA → avise em 1 linha, diga quando abre e não anote pedido.\n\n---\n\n# PAGAMENTO\nPIX, Cartão (débito ou crédito na maquininha, na entrega ou na retirada) ou Dinheiro.\n- Dinheiro: pergunte \"Troco para quanto?\".\n- PIX: diga que a equipe envia a chave PIX em seguida.\n\n---\n\n# FECHAR O PEDIDO — TOOL `finalizar_pedido`\nAssim que tiver: itens (com tamanho e adicionais) + entrega (rua, número e bairro) ou retirada + forma de pagamento → chame `finalizar_pedido` na hora. Não espere o cliente dizer \"confirmo\".\n- Total = itens + adicionais + taxa do bairro. Confira a conta antes de enviar.\n- Em `items`, mande cada item com nome e tamanho, quantidade, preço unitário já somando os adicionais, e os adicionais em notes.\n- Se a tool der erro, NÃO diga que o pedido foi confirmado: avise que houve uma falha e que a equipe vai confirmar.\n\nDepois de registrar, envie o resumo UMA única vez:\n\n✅ *Pedido confirmado!*\n👤 [Nome] | 📞 [Telefone]\n🛵 Entrega: [Rua, nº - Bairro]  (ou 🏪 Retirada no balcão)\n🍨 *Itens:*\n• [Qtd]x [Item + tamanho] — R$ [valor]\n  _+ [adicionais]_\n💰 Subtotal: R$ [valor]\n🛵 Taxa de entrega: R$ [valor]\n💳 *Total: R$ [valor]* — [pagamento] (troco para R$ [valor], se houver)\n⏱️ Prazo: [prazo de entrega ou retirada da lista]\n\n---\n\n# DEPOIS DO PEDIDO\n- Pedido confirmado = atendimento encerrado. Não puxe assunto e não ofereça mais nada.\n- \"Obrigado\", \"ok\", \"já paguei\", comprovante: responda com 1 frase curta. Ex.: \"Por nada, {{ $('Coleta').item.json.nome }}! Já estamos preparando 🍇\"\n- \"Cadê meu pedido?\": use `consultar_status_pedido` com o telefone do cliente (só dígitos, com DDD, sem o 55) e responda o status em 1 linha.\n- Novo pedido: só se o cliente pedir. Confirme se mantém endereço e pagamento.\n\n---\n\n# QUANDO CHAMAR A EQUIPE\nReclamação, problema com pedido, encomenda grande/evento ou algo que você não sabe: diga \"Vou chamar alguém da equipe pra te ajudar 🙏\" e não invente resposta.\n",
+          "systemMessage": "# CONTEXTO (recalculado a cada mensagem — é a única verdade)\n{{ $json.avisoHorarioAgente }}\nAgora: {{ $json.dataHoraAtual }} ({{ $json.diaSemanaAtual }})\nLoja: {{ $json.statusAtendimento }}\nAinda abre hoje: {{ $json.aindaAbreHoje }} (às {{ $json.horaAberturaHoje }})\nPróximo atendimento: {{ $json.proximoDiaUtilNome }}, {{ $json.proximoDiaUtilData }} às {{ $json.horaAberturaHoje }}\nCliente: {{ $('Coleta').item.json.nome }}\nWhatsApp do cliente: {{ $('Coleta').item.json.telefone }}\n\n---\n\n# QUEM É VOCÊ: ATENDENTE DE BALCÃO DO MAIS AÇAÍ SJP 🍇\nVocê é a Maya, uma típica atendente de balcão de açaiteria: ágil, simples, simpática e muito prestativa!\n- Seu objetivo número 1 é **converter e fechar o pedido** do cliente com máxima agilidade e praticidade.\n- Comunicação direta, humana, sem rodeios e sem enrolação.\n- Não diga que é IA ou robô. Se perguntarem diretamente: \"Sou a Maya, atendente aqui do Mais Açaí SJP 🍇\"\n\n---\n\n# DINÂMICA DE ATENDIMENTO DE BALCÃO (AGILIDADE & CONVERSÃO):\n- **Seja direta, calorosa e prática**: 1 a 2 linhas por mensagem.\n- **Encaixe perguntas combinadas** sempre que tiver oportunidade para adiantar o fechamento com velocidade:\n  • Se o cliente só disse que quer açaí: *\"Qual tamanho você prefere? E vai ser para entrega ou retirada aqui no balcão?\"*\n  • Se já escolheu o produto/tamanho: *\"Quer colocar algum adicional por cima? E qual será a forma de pagamento (PIX, Cartão ou Dinheiro)?\"*\n  • Se for entrega: *\"Qual o endereço com número e bairro? E vai pagar no PIX, cartão ou dinheiro com troco?\"*\n- Não fique enrolando com gentilezas vazias de telemarketing (nada de \"Em que posso ser útil?\", \"Como posso te ajudar hoje?\"). Vá direto à ação!\n\n---\n\n# REGRA DE FIDELIDADE ABSOLUTA AO CARDÁPIO DIGITAL / PDV (NUNCA INVENTE PREÇOS)\nTodo e qualquer preço de combo, copo, adicional ou taxa de entrega DEVE ser rigorosamente consultado nas tabelas oficiais do PDV abaixo. É PROIBIDO inventar, chutar, arredondar ou supor valores.\n\n### TABELA OFICIAL DE ADICIONAIS & TOPPINGS (CONSULTE SEMPRE):\n- **Nutella**: R$ 10,00 (NUNCA informe outro valor!)\n- **Kinder Bueno ao Leite**: R$ 10,00\n- **Caribe Bueno**: R$ 10,00\n- **Morango fresca**: R$ 6,00\n- **Calda de Morango com pedaços**: R$ 6,00\n- **Mousse de Ninho**: R$ 6,00\n- **Danoninho Caseiro**: R$ 6,00\n- **Ovomaltine**: R$ 6,00\n- **Bis Extra (ao Leite ou Oreo)**: R$ 6,00\n- **Kinder Barrinha**: R$ 6,00\n- **Banana, Kiwi, Uva Verde, Abacaxi**: R$ 4,00 cada\n- **Leite Condensado, Leite em Pó**: R$ 4,00 cada\n- **Paçoca, Granola, Amendoim, Chocoball, Farinha Láctea**: R$ 4,00 cada\n- **Doce de Leite, Mel, Confete, Gotas de Chocolate**: R$ 4,00 cada\n- **Coberturas (Caramelo, Chocolate, Morango)**: R$ 3,00 cada\n\n### TABELA OFICIAL DE TAXAS DE ENTREGA (SÃO JOSÉ DOS PINHAIS):\n- **Parque da Fonte: GRÁTIS (R$ 0,00)** — A nossa loja fica no Parque da Fonte, NUNCA cobre taxa de entrega no Parque da Fonte!\n- **Afonso Pena**: R$ 5,00\n- **Águas Belas**: R$ 5,00\n- **Boneca do Iguaçu**: R$ 6,00\n- **Centro (SJP)**: R$ 6,00\n- **Aristocrata, Bom Jesus, Cruzeiro, São Pedro**: R$ 7,00\n- **Guatupê, Iná, Rio Pequeno, São Cristóvão**: R$ 8,00\n- **Academia, Costeira**: R$ 9,00\n- **Quississana**: R$ 10,00\n- Se o bairro não estiver na lista: informe que vai confirmar a taxa com a equipe. NUNCA invente valor.\n\n---\n\n# REGRA DE OURO: RECONHECIMENTO INTELIGENTE DE COMBOS (ECONOMIA PARA O CLIENTE)\nQuando o cliente listar os ingredientes ou montar do jeito dele, identifique NA HORA se é um dos nossos COMBOS oficiais e valorize o desconto:\n- **Banana + Morango + Leite Condensado + Leite em Pó** ➔ **COMBO FAVORITO**!\n  Explique com inteligência comercial: *\"Essa combinação é o nosso **Combo Favorito**! No combo você ganha desconto: avulso ficaria bem mais caro, mas no Combo Favorito de 330ml sai por apenas **R$ 24,00**! 🍇\"*\n- **Leite Condensado + Leite em Pó** ➔ **COMBO NEVADO**!\n  Explique: *\"Essa combinação é o nosso **Combo Nevado**! No combo você ganha desconto: avulso ficaria mais caro, mas no Combo Nevado de 330ml sai por apenas **R$ 22,00**! 🍨\"*\n- **Banana + Kiwi + Morango** ➔ **COMBO TROPICAL**!\n- **Mousse de Ninho + Leite Condensado + Leite em Pó** ➔ **COMBO BRANCA DE NEVE**!\n- **Nutella + Leite Condensado + Leite em Pó** ➔ **COMBO SENSAÇÃO AVELÃ**!\n- **Morango + Leite Condensado + Leite em Pó** ➔ **COMBO SENSAÇÃO MORANGO**!\n- **Banana + Leite Condensado + Leite em Pó** ➔ **COMBO SENSAÇÃO BANANA**!\n- **Danoninho Caseiro + Leite em Pó + [Fruta]** ➔ **COMBO DANONINHO [FRUTA]**!\n\nSe o cliente quiser adicionais extras no combo:\nMantenha o valor do combo da tabela e some o valor real do adicional da lista.\nExemplo: Combo Favorito 330ml (R$ 24,00) + Nutella (R$ 10,00) = R$ 34,00.\n\n---\n\n# DICIONÁRIO E REGRAS DE SABORES (AÇAITERIA):\n1. **TAPIOCA COM COCO**: \"tapioca\", \"caldo de tapioca\", \"tapioca com coco\" ➔ Entenda imediatamente como o sabor de base **Tapioca com Coco**.\n2. **PAÇOCA (BASE vs ADICIONAL)**:\n   - Creme de Paçoca: sabor de base no copo (gratuito).\n   - Adicional de Paçoca: paçoca triturada por cima (adicional cobrado conforme tabela: R$ 4,00).\n   - Se disser só \"paçoca\", confirme rápido: *\"Prefere o Creme de Paçoca na base ou a paçoca como adicional por cima?\"*\n3. **CASADINHO (2 SABORES DE BASE)**:\n   - Até 2 sabores de creme no mesmo copo SEM custo extra! Pergunte objetivamente quais os 2 sabores.\n4. **LEITE NINHO (CREME vs MOUSSE)**:\n   - Não temos creme de Ninho na base. Temos **Mousse de Leite Ninho** (adicional R$ 6,00) e Leite em Pó (R$ 4,00). Esclareça em 1 linha com simpatia.\n\n---\n\n# CARDÁPIO COMPLETO DINÂMICO DO PDV (INJETADO):\n{{ $json.cardapio || '⚠️ CARDÁPIO INDISPONÍVEL AGORA: não informe nenhum preço. Diga que vai confirmar com a equipe e já retorna.' }}\n\n---\n\n# HORÁRIO DA LOJA\n- Loja ABERTA → atenda com simpatia e anote o pedido.\n- Loja FECHADA → avise em 1 linha com carinho, informe quando abre e não anote pedido.\n\n---\n\n# ENTREGA E RETIRADA EM SÃO JOSÉ DOS PINHAIS\n- Retirada no balcão: Rua Almirante Alexandrino, 909, sala 02 – Parque da Fonte. Prazo: 15 a 25 min.\n- Entrega (Delivery): Parque da Fonte é GRÁTIS! Demais bairros consulte a tabela oficial. Prazo: 10 a 40 min.\n\n---\n\n# FORMAS DE PAGAMENTO\n- **PIX**: Chave celular: **41997349076** (Michele Alvarez - Mais Açaí).\n  SEMPRE que o cliente escolher PIX, envie a chave para pagamento e peça o comprovante.\n- **Cartão**: Débito ou Crédito na maquininha (levamos até o cliente na entrega ou na retirada).\n- **Dinheiro**: Pergunte se vai precisar de troco (\"Troco para quanto?\").\n\n---\n\n# FECHAR O PEDIDO — TOOL `finalizar_pedido`\nAssim que tiver as informações essenciais:\n1. Itens (com tamanho e adicionais)\n2. Forma de entrega (rua, número e bairro) ou retirada no balcão\n3. Forma de pagamento (PIX, Cartão ou Dinheiro)\n\n→ Chame IMEDIATAMENTE a ferramenta `finalizar_pedido` para cadastrar o pedido no sistema do gestor! Não fique esperando o cliente dizer \"confirmo\".\n- Total = valor dos produtos + adicionais reais do PDV + taxa de entrega do bairro (se retirada ou Parque da Fonte, taxa = 0).\n- A ferramenta grava no sistema e retorna os dados com `tracking_code` e `id`.\n\nLogo após chamar a ferramenta com sucesso, envie o resumo formatado em UMA ÚNICA mensagem:\n\n✅ *Pedido confirmado!*\n👤 {{ $('Coleta').item.json.nome || 'Cliente' }} | 📞 {{ $('Coleta').item.json.telefone }}\n[🛵 Entrega: Rua Tal, 123 - Bairro | ou 🏪 Retirada no balcão]\n🍨 *Itens:*\n• [Qtd]x [Item + tamanho] — R$ [valor]\n  _+ [recheios / adicionais]_\n💰 *Subtotal:* R$ [valor]\n🛵 *Taxa de entrega:* R$ [valor] (ou Grátis se retirada ou Parque da Fonte)\n💳 *Total a pagar:* R$ [valor] — [Forma de Pagamento]\n⏱️ *Prazo estimado:* [15-25 min para retirada / 35-50 min para entrega]\n\nSE O PAGAMENTO FOR PIX, inclua obrigatoriamente logo abaixo do resumo:\n🔑 *Chave PIX (Celular):*\n41997349076\n_Michele Alvarez - Mais Açaí_\nEnvie o comprovante por aqui assim que efetuar o pagamento! 💜\n\n📍 *Acompanhe seu pedido em Meus Pedidos:*\nhttps://maisacaisjpbr.netlify.app/conta\n\n---\n\n# CONSULTA DE STATUS DO PEDIDO (QUANDO O CLIENTE PERGUNTAR SOBRE O PEDIDO):\nQuando o cliente entrar em contato perguntando: \"cadê meu pedido?\", \"como está meu pedido?\", \"o pedido 6 já saiu?\", \"vai demorar?\", \"qual o status?\":\n1. Chame IMEDIATAMENTE a ferramenta `consultar_status_pedido` passando o número do pedido, código de rastreio ou o telefone dele.\n2. A regra de status foca exclusivamente nos marcos decisivos (Pronto para retirada ou Saiu para entrega):\n   • **Se for RETIRADA e o status for PRONTO**:\n     \"Seu pedido #{{id}} já está prontinho! Pode vir retirar aqui no nosso balcão 🏪\"\n   • **Se for ENTREGA e o status for SAIU PARA ENTREGA**:\n     \"O motoboy já pegou seu pedido #{{id}} e está a caminho do seu endereço! 🛵💨\"\n   • **Se ainda estiver em PREPARO ou PENDENTE**:\n     \"Seu pedido #{{id}} já está sendo preparado com muito carinho! Assim que [estiver pronto para você retirar / o motoboy sair para entrega], te avisamos por aqui! 🍨\"\n   • **Se o status for FINALIZADO / ENTREGUE**:\n     \"Seu pedido #{{id}} consta como entregue! Se precisar de algo, só me chamar. Bom apetite! 💜\"\n   • **Se não encontrar nenhum pedido**:\n     \"Não encontrei nenhum pedido recente no seu número. Gostaria de fazer um pedido agora? 🍇\"\n   • Link para o cliente acompanhar em Meus Pedidos no cardápio:\n     https://maisacaisjpbr.netlify.app/conta\n\n# DEPOIS DO PEDIDO\n- Pedido confirmado = atendimento encerrado. Não puxe assunto.\n- \"Obrigado\", \"já paguei\", comprovante: responda com 1 frase curta. Ex.: \"Por nada! Já estamos preparando seu açaí com muito carinho 🍇\"\n- Comprovante de PIX: agradeça e confirme: \"Recebido com sucesso! Muito obrigado 💜\"\n\n# QUANDO CHAMAR A EQUIPE (HUMAN HANDOVER)\nReclamação, cancelamento, encomenda grande/festa ou qualquer situação que você não tenha certeza:\nDiga: \"Vou chamar alguém da equipe pra te ajudar rapidinho! 🙏\" e não invente resposta.",
           "maxIterations": 15
         }
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 1.7,
       "position": [
-        5392,
-        1008
+        5488,
+        1184
       ],
       "id": "428f96cc-144a-4abb-ba93-0884765aca2d",
       "name": "AGENTE DE I.A.",
@@ -755,8 +785,8 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        4960,
-        1312
+        5024,
+        1280
       ],
       "typeVersion": 1,
       "id": "9c3fea21-0845-43a9-9941-16dd51ac92d5",
@@ -770,8 +800,8 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        4960,
-        1520
+        4256,
+        1552
       ],
       "typeVersion": 1,
       "id": "b12fafd1-d025-4628-82d9-c4315a04b019",
@@ -786,8 +816,8 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        5280,
-        1312
+        5440,
+        1392
       ],
       "typeVersion": 1,
       "id": "14480f67-9697-4087-9d42-9cdc074a7fe9",
@@ -801,8 +831,8 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        5280,
-        1520
+        3968,
+        1552
       ],
       "typeVersion": 1,
       "id": "bc3c8523-6384-490e-b52f-2d96e7c2bec7",
@@ -817,8 +847,8 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        6064,
-        944
+        6368,
+        1024
       ],
       "typeVersion": 1,
       "id": "07e211a5-906c-4262-a273-89da8d721a0f",
@@ -833,8 +863,8 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        4368,
-        1024
+        4160,
+        976
       ],
       "typeVersion": 1,
       "id": "f503b046-2e91-4a17-8f85-e4c7436622e1",
@@ -880,11 +910,17 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
       "typeVersion": 1,
       "position": [
-        5056,
-        1376
+        5088,
+        1328
       ],
       "id": "6c8c05eb-7b75-42a6-ad8e-8b60a8ffa851",
-      "name": "OpenRouter Chat Model"
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "vXW3HihqakLMEzrJ",
+          "name": "openrouter_cloudfy"
+        }
+      }
     },
     {
       "parameters": {
@@ -897,22 +933,13 @@
           },
           "conditions": [
             {
-              "id": "2a7b6424-292b-464d-ba3c-c78d9b2f0caf",
-              "leftValue": "={{ $json.body.data?.key?.fromMe ?? $json.body?.data?.message?.key?.fromMe ?? $json.data?.message?.key?.fromMe }}",
+              "id": "filtro-mensagens-validas",
+              "leftValue": "={{ (function() {\n  const data = $json.body?.data || $json.data || {};\n  const msgType = String(data.messageType || '');\n  if (msgType === 'reactionMessage') return false;\n\n  const key = data.key || {};\n  const fromMe = Boolean(key.fromMe);\n  const remoteJid = String(key.remoteJid || '');\n  const phone = remoteJid.replace(/\\D/g, '');\n  const id = String(key.id || '');\n  const source = String(data.source || '').toLowerCase();\n  const isBotApi = id.startsWith('3EB0') || id.startsWith('BAE5') || source === 'web' || source === 'api';\n\n  // 1. Quando a atendente humana ou a Michele mandar mensagem no WhatsApp para um cliente:\n  if (fromMe && !isBotApi) {\n    const isMicheleSelf = phone.endsWith('997349076') || phone.endsWith('97349076');\n    // Se a Michele estiver conversando com ela mesma (chat Você para testar):\n    if (isMicheleSelf) {\n      return (source === 'android' || source === 'ios' || !isBotApi);\n    }\n    // Intervenção humana no circuito da conversa: pausa a Maya por 2 minutos para este cliente!\n    const sd = $getWorkflowStaticData('global');\n    if (!sd.pausaHumana) sd.pausaHumana = {};\n    sd.pausaHumana[phone] = Date.now() + (2 * 60 * 1000);\n    return false;\n  }\n\n  // Se for mensagem enviada pela própria API da Maya: bloqueia para não gerar loop\n  if (fromMe && isBotApi) return false;\n\n  // 2. Quando o cliente enviar mensagem (fromMe === false):\n  // Verifica se a conversa está no período de pausa humana automática de 2 minutos:\n  const sd = $getWorkflowStaticData('global');\n  const pausaAte = sd.pausaHumana?.[phone] || 0;\n  if (Date.now() < pausaAte) {\n    // Atendente humana assumiu nos últimos 2 minutos -> Maya permanece pausada em silêncio\n    return false;\n  }\n\n  // Passou de 2 minutos sem novas mensagens da atendente -> Maya assume o atendimento automaticamente!\n  return true;\n})() }}",
               "rightValue": "",
               "operator": {
                 "type": "boolean",
-                "operation": "false",
+                "operation": "true",
                 "singleValue": true
-              }
-            },
-            {
-              "id": "filter-reaction-msg-001",
-              "leftValue": "={{ $json.body.data.messageType }}",
-              "rightValue": "reactionMessage",
-              "operator": {
-                "type": "string",
-                "operation": "notEquals"
               }
             }
           ],
@@ -932,7 +959,7 @@
     {
       "parameters": {
         "resource": "messages-api",
-        "instanceName": "maisacai",
+        "instanceName": "Maisacaisjp",
         "remoteJid": "={{ $('Coleta').item.json.telefone.replace(/^=+/, '') }}",
         "messageText": "Tivemos uma instabilidade momentânea 🙏 Tenta novamente em instantes.",
         "options_message": {}
@@ -940,11 +967,17 @@
       "type": "n8n-nodes-evolution-api.evolutionApi",
       "typeVersion": 1,
       "position": [
-        5648,
-        224
+        7360,
+        1472
       ],
       "id": "e3017152-be14-431d-9d77-7e2641ecd6a2",
-      "name": "Enviar texto"
+      "name": "Enviar texto",
+      "credentials": {
+        "evolutionApi": {
+          "id": "SvkoJsMtlGFyG93s",
+          "name": "evolution_cloudfy"
+        }
+      }
     },
     {
       "parameters": {
@@ -1033,17 +1066,23 @@
       "parameters": {
         "sessionIdType": "customKey",
         "sessionKey": "={{ $('Coleta').item.json.telefone.replace(/^=+/, '') }}_maisacai_v1",
-        "contextWindowLength": 10,
-        "tableName": "maisacai_chat_historico"
+        "tableName": "maisacai_chat_historico",
+        "contextWindowLength": 10
       },
       "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
       "typeVersion": 1.4,
       "position": [
-        5360,
-        1376
+        5504,
+        1456
       ],
       "id": "00259dd7-8947-4152-b6b4-5f8948cc3575",
-      "name": "Postgres Chat Memory"
+      "name": "Postgres Chat Memory",
+      "credentials": {
+        "postgres": {
+          "id": "LlNWKTJHq8YCSCZX",
+          "name": "postgres_cloudfy"
+        }
+      }
     },
     {
       "parameters": {
@@ -1090,7 +1129,7 @@
           "conditions": [
             {
               "id": "bot-active-condition",
-              "leftValue": "={{ $json[0]?.value ?? $json.value ?? true }}",
+              "leftValue": "={{ \n  (function() {\n    const rawJid = String($('Recebe mensagem').first()?.json?.body?.data?.key?.remoteJid || '');\n    const phone = rawJid.replace(/\\D/g, '');\n    const isDono = ['996560080', '96560080', '997349076', '97349076'].some(d => phone.endsWith(d));\n    if (isDono) return true;\n    return Boolean($json[0]?.value ?? $json.value ?? true);\n  })()\n}}",
               "rightValue": "",
               "operator": {
                 "type": "boolean",
@@ -1118,35 +1157,79 @@
         "method": "POST",
         "url": "https://wpxujeieopgoxodttjqp.supabase.co/rest/v1/orders",
         "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "parametersHeaders": {
+          "values": [
             {
               "name": "apikey",
+              "valueProvider": "fieldValue",
               "value": "sb_publishable_JoS0KkaP2raT82CeuIdokw_xHa1N63X"
             },
             {
               "name": "Authorization",
+              "valueProvider": "fieldValue",
               "value": "Bearer sb_publishable_JoS0KkaP2raT82CeuIdokw_xHa1N63X"
             },
             {
               "name": "Content-Type",
+              "valueProvider": "fieldValue",
               "value": "application/json"
             },
             {
               "name": "Prefer",
+              "valueProvider": "fieldValue",
               "value": "return=representation"
             }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  customer_name: $fromAI('customer_name', 'Nome completo do cliente', 'string'),\n  customer_phone: String($fromAI('customer_phone', 'Telefone com DDD apenas digitos. Ex: 41999999999', 'string') || '').replace(/\\D/g, ''),\n  order_type: $fromAI('order_type', 'Delivery ou Retirada', 'string'),\n  payment_method: $fromAI('payment_method', 'PIX, Cartao ou Dinheiro', 'string'),\n  total_amount: Number($fromAI('total_amount', 'Valor total numerico em reais somando entrega se houver', 'number')) || 0,\n  delivery_address: $fromAI('delivery_address', 'Endereco completo com rua e numero se Delivery ou null se Retirada', 'string') || null,\n  delivery_zone: $fromAI('delivery_zone', 'Bairro em Sao Jose dos Pinhais se Delivery ou null se Retirada', 'string') || null,\n  change_for: $fromAI('change_for', 'Troco para quanto se dinheiro ou null', 'string') || null,\n  notes: $fromAI('notes', 'Observacoes do pedido ou null', 'string') || null,\n  items: (function() {\n    const raw = $fromAI('items', 'JSON string representando array de itens. Ex: [{\"name\":\"Copo 500ml Acai\",\"quantity\":1,\"priceCalculated\":22.0,\"notes\":\"Banana, Ninho, Morango\"}]', 'string');\n    try {\n      return typeof raw === 'string' ? JSON.parse(raw) : (raw || []);\n    } catch(e) {\n      return [{ name: 'Acai', quantity: 1, priceCalculated: Number($fromAI('total_amount', '0', 'number')), notes: '' }];\n    }\n  })()\n}) }}"
+        "jsonBody": "={{\n  (function() {\n    const phone = String($('Coleta').first()?.json?.telefone || '').replace(/\\D/g, '');\n    const defaultName = String($('Coleta').first()?.json?.nome || 'Cliente').trim();\n    const name = String($fromAI('customer_name', 'Nome do cliente', 'string') || defaultName).trim();\n    const orderType = String($fromAI('order_type', 'Delivery ou Retirada', 'string') || 'Delivery').trim();\n    const payment = String($fromAI('payment_method', 'PIX, Cartao ou Dinheiro', 'string') || 'PIX').trim();\n    const total = Number($fromAI('total_amount', 'Valor total', 'number')) || 0;\n    const address = String($fromAI('delivery_address', 'Endereco', 'string') || '').trim() || null;\n    const zone = String($fromAI('delivery_zone', 'Bairro', 'string') || '').trim() || null;\n    const itemsDesc = String($fromAI('items_description', 'Itens', 'string') || 'Acai').trim();\n\n    return JSON.stringify({\n      customer_name: name,\n      customer_phone: phone,\n      order_type: orderType,\n      payment_method: payment,\n      total_amount: total,\n      delivery_address: address,\n      delivery_zone: zone,\n      notes: itemsDesc,\n      items: [\n        {\n          name: itemsDesc,\n          quantity: 1,\n          priceCalculated: total\n        }\n      ]\n    });\n  })()\n}}",
+        "specifyHeaders": "keypair",
+        "placeholderDefinitions": {
+          "values": [
+            {
+              "name": "customer_name",
+              "description": "Nome do cliente",
+              "type": "string"
+            },
+            {
+              "name": "order_type",
+              "description": "Delivery ou Retirada",
+              "type": "string"
+            },
+            {
+              "name": "payment_method",
+              "description": "PIX, Cartao ou Dinheiro",
+              "type": "string"
+            },
+            {
+              "name": "total_amount",
+              "description": "Valor total numerico em reais somando entrega (ex: 28.00)",
+              "type": "number"
+            },
+            {
+              "name": "delivery_address",
+              "description": "Rua e numero da entrega ou vazio se Retirada",
+              "type": "string"
+            },
+            {
+              "name": "delivery_zone",
+              "description": "Bairro em Sao Jose dos Pinhais ou vazio se Retirada",
+              "type": "string"
+            },
+            {
+              "name": "items_description",
+              "description": "Descricao dos itens pedidos com tamanho. Ex: 1x Combo Favorito 330ml",
+              "type": "string"
+            }
+          ]
+        }
       },
       "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
       "typeVersion": 1.1,
       "position": [
-        6080,
-        1328
+        6000,
+        1392
       ],
       "id": "0a3d7cd8-8be8-4b59-b6f4-8dfd5bb9a414",
       "name": "finalizar_pedido"
@@ -1159,8 +1242,8 @@
       "type": "n8n-nodes-base.itemLists",
       "typeVersion": 3.1,
       "position": [
-        6032,
-        688
+        6192,
+        1120
       ],
       "id": "905fbfe4-5628-4a3f-bdd0-3711ad715dd4",
       "name": "Divide Mensagens"
@@ -1233,17 +1316,19 @@
     },
     {
       "parameters": {
-        "toolDescription": "Consulta o status do pedido mais recente do cliente no sistema do Mais Açaí SJP usando o número do pedido ou telefone.",
-        "url": "https://wpxujeieopgoxodttjqp.supabase.co/rest/v1/orders?customer_phone=ilike.*{telefone_cliente}*&select=id,status,customer_name,order_type,total_amount,items,created_at&order=created_at.desc&limit=1",
+        "toolDescription": "Consulta em tempo real o status do pedido no gestor do Mais Açaí SJP usando o número do pedido, o código de rastreamento ou o telefone do cliente.",
+        "url": "={{\n  (function() {\n    const raw = String('{termo_busca}' || $('Coleta').first()?.json?.telefone || '').replace(/[#\\s]/g, '');\n    const isNum = /^\\d+$/.test(raw);\n    const phone = String($('Coleta').first()?.json?.telefone || '').replace(/\\D/g, '');\n    let filter = '';\n    if (isNum && raw.length <= 6) {\n      filter = 'or=(id.eq.' + raw + ',customer_phone.ilike.*' + phone + '*)';\n    } else if (raw.length > 6 && !isNaN(raw)) {\n      filter = 'customer_phone.ilike.*' + raw + '*';\n    } else if (raw) {\n      filter = 'or=(tracking_code.ilike.*' + raw + '*,customer_phone.ilike.*' + phone + '*)';\n    } else {\n      filter = 'customer_phone.ilike.*' + phone + '*';\n    }\n    return 'https://wpxujeieopgoxodttjqp.supabase.co/rest/v1/orders?' + filter + '&select=id,status,customer_name,order_type,total_amount,items,created_at,tracking_code,delivery_address,delivery_zone&order=created_at.desc&limit=1';\n  })()\n}}",
         "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "parametersHeaders": {
+          "values": [
             {
               "name": "apikey",
+              "valueProvider": "fieldValue",
               "value": "sb_publishable_JoS0KkaP2raT82CeuIdokw_xHa1N63X"
             },
             {
               "name": "Authorization",
+              "valueProvider": "fieldValue",
               "value": "Bearer sb_publishable_JoS0KkaP2raT82CeuIdokw_xHa1N63X"
             }
           ]
@@ -1251,33 +1336,32 @@
         "placeholderDefinitions": {
           "values": [
             {
-              "name": "telefone_cliente",
-              "description": "Telefone do cliente com DDD apenas dígitos para buscar o último pedido. Ex: 41999999999",
+              "name": "termo_busca",
+              "description": "Número do pedido (ex: 6), código de rastreamento (ex: 23b3471dfbf8) ou telefone do cliente. Se o cliente não informar, envie o telefone dele.",
               "type": "string"
             }
           ]
-        }
+        },
+        "specifyHeaders": "keypair"
       },
       "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
       "typeVersion": 1.1,
       "position": [
-        6096,
-        1520
+        5840,
+        1424
       ],
       "id": "7266a1e4-6fc3-42b6-b754-959617731885",
       "name": "consultar_status_pedido"
     },
     {
       "parameters": {
-        "resume": "timeInterval",
-        "amount": 2,
-        "unit": "seconds"
+        "amount": 2
       },
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        6048,
-        480
+        5808,
+        1088
       ],
       "id": "db41c2d4-329c-43b5-97aa-c53fe5eb9f84",
       "name": "Delay Humano",
@@ -1311,8 +1395,305 @@
       ],
       "id": "287dc146-73d2-4b95-a377-b0df617bf99c",
       "name": "Busca Cardapio",
-      "onError": "continueRegularOutput",
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ================= CONFIGURAÇÃO DOS SÓCIOS (MAIS AÇAÍ SJP) =================\nconst item = $input.first().json;\nconst phone = String($('Coleta').first()?.json?.telefone || '').replace(/\\D/g, '');\n\nconst DONOS_JUNIOR = ['5541996560080', '41996560080', '996560080', '554196560080', '4196560080', '96560080'];\nconst DONOS_MICHELE = ['5541997349076', '41997349076', '997349076', '554197349076', '4197349076', '97349076'];\nconst TODOS_DONOS = [...DONOS_JUNIOR, ...DONOS_MICHELE];\n\nif (!TODOS_DONOS.some(d => phone.endsWith(d) || d.endsWith(phone))) {\n  return [{ json: { ...item, rota: 'cliente' } }];\n}\n\nconst isJunior = DONOS_JUNIOR.some(d => phone.endsWith(d) || d.endsWith(phone));\nconst nomeDono = isJunior ? 'Junior' : 'Michele';\n\nconst sd = $getWorkflowStaticData('global');\nconst agoraSp = DateTime.now().setZone('America/Sao_Paulo');\nconst hoje = agoraSp.toFormat('yyyyMMdd');\nconst chaveModo = 'modoDono_' + (isJunior ? 'junior' : 'michele');\nlet modo = (sd[chaveModo] && sd[chaveModo].dia === hoje) ? sd[chaveModo].modo : 'assistente';\n\nlet texto = String(item.text || '');\nconst re = /#?\\bmodo\\s+(cliente|assistente|gestor|dono|dona|socio|sócio)\\b[.!\\s]*/i;\nconst m = texto.match(re);\nlet aviso = '';\nif (m) {\n  modo = m[1].toLowerCase() === 'cliente' ? 'cliente' : 'assistente';\n  sd[chaveModo] = { modo, dia: hoje };\n  texto = texto.replace(re, '').trim();\n  if (!texto) {\n    aviso = modo === 'cliente'\n      ? '👤 Modo cliente ativado. A partir de agora a Maya te atende como cliente normal da açaiteria. Para voltar, envie: *modo assistente*'\n      : '👑 Modo assistente ativado, ' + nomeDono + '! Estou pronta para te passar relatórios de vendas, copos mais vendidos, faturamento, bairros com mais entregas ou status da loja. Para testar como cliente, envie: *modo cliente*';\n  }\n}\n\nconst base = { ...item, text: texto, nomeDono };\nif (aviso) return [{ json: { ...base, rota: 'aviso', resposta: aviso } }];\nreturn [{ json: { ...base, rota: modo } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4896,
+        1984
+      ],
+      "id": "node-modo-gestor",
+      "name": "Modo Gestor"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "rota-cli",
+                    "leftValue": "={{ $json.rota }}",
+                    "rightValue": "cliente",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "cliente"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "rota-ass",
+                    "leftValue": "={{ $json.rota }}",
+                    "rightValue": "assistente",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "assistente"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "rota-avi",
+                    "leftValue": "={{ $json.rota }}",
+                    "rightValue": "aviso",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "aviso"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        5072,
+        1968
+      ],
+      "id": "node-rota-gestor",
+      "name": "Rota Gestor"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "options": {
+          "systemMessage": "=Você é a Maya, assistente executiva, financeira e de inteligência da Mais Açaí SJP.\nVocê está conversando agora diretamente pelo WhatsApp com a diretoria: {{ $('Modo Gestor').first().json.nomeDono || 'proprietário(a)' }}.\nSempre trate a pessoa pelo nome dela (Junior ou Michele).\n\nAgora em São José dos Pinhais (Horário de Brasília): {{ $now.setZone('America/Sao_Paulo').setLocale('pt-BR').toFormat(\"cccc, dd/MM/yyyy HH:mm\") }}\nHoje (ISO): {{ $now.setZone('America/Sao_Paulo').toFormat('yyyy-MM-dd') }}\n\nO QUE VOCÊ FAZ (DIRETORIA, OPERAÇÃO & FINANCEIRO COMPLETO)\n1. MOVIMENTO & VENDAS:\n   - Número de pedidos, faturamento bruto, ticket médio, canais (Entrega vs Retirada) e formas de pagamento (PIX, Cartão, Dinheiro).\n   - Copos vendidos por tamanho: 330ml, 440ml, 550ml, 770ml, 1 Litro, 2 Litros.\n   - Combos mais pedidos, bases mais consumidas e adicionais/extras mais vendidos.\n   - Bairros de São José dos Pinhais com mais entregas (Parque da Fonte, Afonso Pena, Centro, etc.).\n   - Pedidos em aberto no momento, cancelados e detalhes de um pedido.\n\n2. ENGENHARIA DE CARDÁPIO & FICHAS TÉCNICAS (CMV E CUSTOS):\n   - Custo real de produção de qualquer copo, combo ou produto do cardápio (use relatorio_gestor com tipo 'ficha' e passe o nome em 'termo', ex: termo='nevado').\n   - Quebra exata de custos: Custo da Base (copo descartável + tampa + colher + açaí/polpa) + Custo dos Recheios (gramas de cada ingrediente).\n   - Custo Total de Mercadoria Vendida (CMV em R$ e em %).\n   - Margem de Contribuição Bruta (quanto sobra no bolso em R$ e em %).\n   - Produtos mais lucrativos (use relatorio_gestor com tipo 'ranking_margens').\n   - Produtos com maior CMV / custo mais alto (use relatorio_gestor com tipo 'maior_cmv').\n\n3. INSUMOS, COMPRAS & MATÉRIA-PRIMA:\n   - Preços de compra, tamanho das embalagens e custo por quilo/unidade de insumos (use relatorio_gestor com tipo 'insumo' e passe o nome em 'termo', ex: termo='nutella', termo='leite em pó', termo='açaí natural').\n\n4. CUSTOS FIXOS & ESTRUTURA:\n   - Custos fixos mensais cadastrados (use relatorio_gestor com tipo 'custos_fixos').\n\n5. SITUAÇÃO DA LOJA & CLIENTES:\n   - Status da loja (aberta/fechada, bot de clientes, horários da semana) -> tipo 'loja'.\n   - Histórico e valor total gasto por um cliente (use tipo 'cliente' com telefone).\n   - Ranking dos melhores clientes -> tipo 'ranking_clientes'.\n\nCOMO CHAMAR A FERRAMENTA relatorio_gestor:\n- tipo: 'resumo', 'ficha', 'insumo', 'ranking_margens', 'maior_cmv', 'custos_fixos', 'pedido', 'cliente', 'ranking_clientes', 'loja'.\n- termo: nome do produto, insumo ou identificador quando aplicável (ex: 'nevado', 'morango', 'nutella').\n- data_inicio e data_fim: formato AAAA-MM-DD (para 'hoje', use {{ $now.setZone('America/Sao_Paulo').toFormat('yyyy-MM-dd') }}).\n\nREGRAS DE RESPOSTA\n- Tom: Parceira, ágil, direta, executiva e precisa.\n- Valores monetários sempre em reais formatados (ex: R$ 14,17).\n- NUNCA invente números, custos ou gramaturas. Se a ferramenta não retornar o dado, diga exatamente o que falta."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        5648,
+        1872
+      ],
+      "id": "node-assistente-gestor",
+      "name": "ASSISTENTE DOS SÓCIOS (MAYA GESTORA)"
+    },
+    {
+      "parameters": {
+        "model": "google/gemini-2.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        5568,
+        2112
+      ],
+      "id": "node-openrouter-gestor",
+      "name": "OpenRouter Gestor",
+      "credentials": {
+        "openRouterApi": {
+          "id": "vXW3HihqakLMEzrJ",
+          "name": "openrouter_cloudfy"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Coleta').first().json.telefone.replace(/\\D/g, '') }}_gestor_{{ $now.toFormat('yyyyMMdd') }}",
+        "contextWindowLength": 20,
+        "tableName": "maisacai_chat_historico"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.4,
+      "position": [
+        5728,
+        2112
+      ],
+      "id": "node-memoria-gestor",
+      "name": "Memória Gestor",
+      "credentials": {
+        "postgres": {
+          "id": "LlNWKTJHq8YCSCZX",
+          "name": "postgres_cloudfy"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "Cardápio completo do Mais Açaí SJP com preços, combos, adicionais e receitas atualizadas ao vivo.",
+        "url": "https://cardapiomaisacaisjp.netlify.app/.netlify/functions/agent-menu",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        6048,
+        2112
+      ],
+      "id": "node-tool-cardapio-gestor",
+      "name": "cardapio_mais_acai_gestor"
+    },
+    {
+      "parameters": {
+        "description": "Consulta os dados REAIS de vendas, financeiro e fichas técnicas do Mais Açaí SJP. Campos:\n- tipo:\n  'resumo' = movimento geral do período (pedidos, faturamento, ticket médio, copos vendidos por tamanho, mais pedidos, bases, adicionais, bairros)\n  'ficha' = ficha técnica detalhada com custo de base, recheio, CMV R$ e %, margem bruta e receita em gramas (passe nome do produto em termo)\n  'insumo' = custo de compra, embalagem, perda e fornecedor de matéria-prima (passe nome do insumo em termo)\n  'ranking_margens' = top 10 produtos mais lucrativos da loja\n  'maior_cmv' = produtos com custo relativo mais alto\n  'custos_fixos' = despesas fixas mensais\n  'pedido' = detalhe de um pedido por número\n  'cliente' = histórico e total gasto de um cliente\n  'ranking_clientes' = top clientes\n  'loja' = status da loja, horários e bot\n- termo: nome do combo, insumo ou termo de busca\n- data_inicio e data_fim: AAAA-MM-DD",
+        "workflowId": {
+          "__rl": true,
+          "value": "9yGHwRbZDao1PKgb",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/9yGHwRbZDao1PKgb",
+          "cachedResultName": "Relatório Assistente Mais Açaí SJP"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "tipo": "={{ $fromAI('tipo', 'resumo, ficha, insumo, ranking_margens, maior_cmv, custos_fixos, pedido, cliente, ranking_clientes ou loja', 'string') }}",
+            "termo": "={{ $fromAI('termo', 'Nome do produto, combo ou insumo pesquisado', 'string') }}",
+            "data_inicio": "={{ $fromAI('data_inicio', 'Data inicial AAAA-MM-DD ou string vazia', 'string') }}",
+            "data_fim": "={{ $fromAI('data_fim', 'Data final AAAA-MM-DD ou string vazia', 'string') }}",
+            "telefone": "={{ $fromAI('telefone', 'Telefone do cliente ou string vazia', 'string') }}",
+            "order_id": "={{ $fromAI('order_id', 'Número do pedido ou string vazia', 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "tipo",
+              "displayName": "tipo",
+              "type": "string"
+            },
+            {
+              "id": "termo",
+              "displayName": "termo",
+              "type": "string"
+            },
+            {
+              "id": "data_inicio",
+              "displayName": "data_inicio",
+              "type": "string"
+            },
+            {
+              "id": "data_fim",
+              "displayName": "data_fim",
+              "type": "string"
+            },
+            {
+              "id": "telefone",
+              "displayName": "telefone",
+              "type": "string"
+            },
+            {
+              "id": "order_id",
+              "displayName": "order_id",
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        5888,
+        2112
+      ],
+      "id": "node-tool-relatorio-gestor",
+      "name": "relatorio_gestor"
+    },
+    {
+      "parameters": {
+        "jsCode": "const j = $input.first().json;\nconst txt = String(j.output ?? j.resposta ?? '').replace(/\\[\\s*SIL[EÊ]NCIO\\s*\\]/gi, '').trim();\nconst partes = txt.split('|||').map(s => s.trim()).filter(Boolean);\nreturn partes.map(p => ({ json: { item: p } }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5424,
+        2272
+      ],
+      "id": "node-prepara-envio-gestor",
+      "name": "Prepara Envio Gestor"
+    },
+    {
+      "parameters": {
+        "resource": "messages-api",
+        "instanceName": "Maisacaisjp",
+        "remoteJid": "={{ $('Coleta').first().json.telefone.replace(/^=+/, '') }}",
+        "messageText": "={{ $json.item }}",
+        "options_message": {
+          "delay": 900
+        }
+      },
+      "type": "n8n-nodes-evolution-api.evolutionApi",
+      "typeVersion": 1,
+      "position": [
+        5664,
+        2272
+      ],
+      "id": "node-envia-resposta-gestor",
+      "name": "Envia Resposta Gestor",
+      "credentials": {
+        "evolutionApi": {
+          "id": "SvkoJsMtlGFyG93s",
+          "name": "evolution_cloudfy"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp = $input.first()?.json || {};\nconst agrupa = String($('AGRUPA MENSAGENS').first()?.json?.concatenated_content || '').replace(/^=+/, '').trim();\nconst coleta = String($('Coleta').first()?.json?.mensagem || '').trim();\nconst raw = String($('Recebe mensagem').first()?.json?.body?.data?.message?.conversation || $('Recebe mensagem').first()?.json?.body?.data?.message?.extendedTextMessage?.text || '').trim();\nconst txt = String(inp.text || agrupa || (coleta !== '[Arquivo/Midia]' ? coleta : '') || raw || 'Olá').trim();\nreturn [{ json: { text: txt || 'Olá' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5460,
+        1860
+      ],
+      "id": "node-prepara-entrada-gestor",
+      "name": "Prepara Entrada Gestor"
     }
   ],
   "connections": {
@@ -1515,7 +1896,7 @@
       "main": [
         [
           {
-            "node": "AGENTE DE I.A.",
+            "node": "Modo Gestor",
             "type": "main",
             "index": 0
           }
@@ -1631,12 +2012,2276 @@
           }
         ]
       ]
+    },
+    "Modo Gestor": {
+      "main": [
+        [
+          {
+            "node": "Rota Gestor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rota Gestor": {
+      "main": [
+        [
+          {
+            "node": "AGENTE DE I.A.",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepara Entrada Gestor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepara Envio Gestor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Gestor": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "ASSISTENTE DOS SÓCIOS (MAYA GESTORA)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memória Gestor": {
+      "ai_memory": [
+        [
+          {
+            "node": "ASSISTENTE DOS SÓCIOS (MAYA GESTORA)",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "relatorio_gestor": {
+      "ai_tool": [
+        [
+          {
+            "node": "ASSISTENTE DOS SÓCIOS (MAYA GESTORA)",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "cardapio_mais_acai_gestor": {
+      "ai_tool": [
+        [
+          {
+            "node": "ASSISTENTE DOS SÓCIOS (MAYA GESTORA)",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ASSISTENTE DOS SÓCIOS (MAYA GESTORA)": {
+      "main": [
+        [
+          {
+            "node": "Prepara Envio Gestor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepara Envio Gestor": {
+      "main": [
+        [
+          {
+            "node": "Envia Resposta Gestor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepara Entrada Gestor": {
+      "main": [
+        [
+          {
+            "node": "ASSISTENTE DOS SÓCIOS (MAYA GESTORA)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
     "executionOrder": "v1",
     "saveDataErrorExecution": "all",
     "saveDataSuccessExecution": "all",
-    "saveManualExecutions": true
+    "saveManualExecutions": true,
+    "binaryMode": "separate"
+  },
+  "staticData": {
+    "global": {
+      "modoDono_junior": {
+        "modo": "cliente",
+        "dia": "20261107"
+      },
+      "modoDono_michele": {
+        "modo": "cliente",
+        "dia": "20261107"
+      }
+    }
+  },
+  "meta": null,
+  "pinData": {},
+  "versionId": "9351e019-b277-4bf9-8800-66d7f3da218c",
+  "activeVersionId": "9351e019-b277-4bf9-8800-66d7f3da218c",
+  "versionCounter": 109,
+  "triggerCount": 1,
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-11-08T02:33:24.799Z",
+    "createdAt": "2026-11-08T02:33:24.799Z",
+    "versionId": "9351e019-b277-4bf9-8800-66d7f3da218c",
+    "workflowId": "vjeDpsq8JzCw6M7A",
+    "nodes": [
+      {
+        "parameters": {},
+        "type": "n8n-nodes-base.merge",
+        "typeVersion": 3,
+        "position": [
+          5120,
+          752
+        ],
+        "id": "b1a124d4-f371-4056-9ce0-a003a174e952",
+        "name": "Merge"
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "msg-split-1",
+                "name": "item",
+                "value": "={{ ($json.output || $json.text || '').replace(/\\\\+/g, '|||').split('|||').map(s => s.trim()).filter(Boolean) }}",
+                "type": "array"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          6000,
+          1072
+        ],
+        "id": "ec079ffe-619f-44ad-b248-8232c74ab4ae",
+        "name": "SEPARA MENSAGENS2"
+      },
+      {
+        "parameters": {
+          "options": {}
+        },
+        "id": "29be1f86-fc8b-4e7e-bb1c-50d74e1c06aa",
+        "name": "Loop Over Items1",
+        "type": "n8n-nodes-base.splitInBatches",
+        "typeVersion": 3,
+        "position": [
+          6464,
+          1088
+        ]
+      },
+      {
+        "parameters": {},
+        "type": "n8n-nodes-base.wait",
+        "typeVersion": 1.1,
+        "position": [
+          4000,
+          752
+        ],
+        "id": "067ef811-98db-4cc1-ab18-9f53d6d89513",
+        "name": "PAUSA DE 7 SEGUNDOS",
+        "webhookId": "179bfea1-31c5-4f13-aa84-dc213e9b0aa7"
+      },
+      {
+        "parameters": {},
+        "id": "3f6559d3-4455-401f-967c-439c074ac8cc",
+        "name": "DELAY 1 SEGUNDO",
+        "type": "n8n-nodes-base.wait",
+        "typeVersion": 1.1,
+        "position": [
+          6896,
+          1088
+        ],
+        "webhookId": "6d02588c-2679-4d65-9ddd-1a5700d0fc19"
+      },
+      {
+        "parameters": {
+          "operation": "select",
+          "schema": {
+            "__rl": true,
+            "mode": "list",
+            "value": "public",
+            "cachedResultName": "public"
+          },
+          "table": {
+            "__rl": true,
+            "value": "messages",
+            "mode": "list",
+            "cachedResultName": "maisacai_buffer_mensagens"
+          },
+          "returnAll": true,
+          "where": {
+            "values": [
+              {
+                "column": "source_id",
+                "value": "={{ $('Recebe mensagem').item.json.body.data.key.remoteJid }}"
+              }
+            ]
+          },
+          "sort": {
+            "values": [
+              {
+                "column": "created_at"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          4224,
+          752
+        ],
+        "id": "3b3932a8-743d-4205-bb06-671d4088773d",
+        "name": "BUSCA MENSAGENS DO USUÁRIO",
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 2000,
+        "credentials": {
+          "postgres": {
+            "id": "LlNWKTJHq8YCSCZX",
+            "name": "postgres_cloudfy"
+          }
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "fieldsToSummarize": {
+            "values": [
+              {
+                "aggregation": "concatenate",
+                "field": "content"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.summarize",
+        "typeVersion": 1.1,
+        "position": [
+          4448,
+          752
+        ],
+        "id": "cd962938-ef55-405f-b9d3-502a7b3b059d",
+        "name": "AGRUPA MENSAGENS"
+      },
+      {
+        "parameters": {
+          "operation": "deleteTable",
+          "schema": {
+            "__rl": true,
+            "mode": "list",
+            "value": "public",
+            "cachedResultName": "public"
+          },
+          "table": {
+            "__rl": true,
+            "value": "messages",
+            "mode": "list",
+            "cachedResultName": "maisacai_buffer_mensagens"
+          },
+          "deleteCommand": "delete",
+          "where": {
+            "values": [
+              {
+                "column": "source_id",
+                "value": "={{ $('Recebe mensagem').item.json.body.data.key.remoteJid }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          4656,
+          752
+        ],
+        "id": "64648e50-dc3c-4dc1-92f0-f6e29da54cc2",
+        "name": "DELETA MENSAGENS",
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 2000,
+        "credentials": {
+          "postgres": {
+            "id": "LlNWKTJHq8YCSCZX",
+            "name": "postgres_cloudfy"
+          }
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "rules": {
+            "values": [
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "loose",
+                    "version": 2
+                  },
+                  "conditions": [
+                    {
+                      "leftValue": "={{ $('Recebe mensagem').item.json.body.data.messageType }}",
+                      "rightValue": "conversation",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      },
+                      "id": "9187681f-1216-4786-9c22-8861c428b577"
+                    },
+                    {
+                      "leftValue": "={{ $('Recebe mensagem').item.json.body.data.messageType }}",
+                      "rightValue": "extendedTextMessage",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      },
+                      "id": "ext-text-msg-route-001"
+                    }
+                  ],
+                  "combinator": "or"
+                },
+                "renameOutput": true,
+                "outputKey": "texto"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "loose",
+                    "version": 2
+                  },
+                  "conditions": [
+                    {
+                      "id": "f21fa68b-70b2-494a-b914-4b15aa5bae3f",
+                      "leftValue": "={{ $('Recebe mensagem').item.json.body.data.messageType }}",
+                      "rightValue": "audioMessage",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals",
+                        "name": "filter.operator.equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "Audio"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "loose",
+                    "version": 2
+                  },
+                  "conditions": [
+                    {
+                      "id": "dd71e80b-1078-46d5-b367-958e5790a113",
+                      "leftValue": "={{ $('Recebe mensagem').item.json.body.data.messageType }}",
+                      "rightValue": "imageMessage",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals",
+                        "name": "filter.operator.equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "Imagem"
+              }
+            ]
+          },
+          "looseTypeValidation": true,
+          "options": {}
+        },
+        "type": "n8n-nodes-base.switch",
+        "typeVersion": 3.3,
+        "position": [
+          3424,
+          992
+        ],
+        "id": "f3532772-1544-4b66-b71b-7923e09b5332",
+        "name": "Verifica tipo de arquivo"
+      },
+      {
+        "parameters": {
+          "resource": "messages-api",
+          "instanceName": "Maisacaisjp",
+          "remoteJid": "={{ $('Coleta').item.json.telefone.replace(/^=+/, '') }}",
+          "messageText": "={{ $json.item }}",
+          "options_message": {}
+        },
+        "type": "n8n-nodes-evolution-api.evolutionApi",
+        "typeVersion": 1,
+        "position": [
+          6688,
+          1088
+        ],
+        "id": "5bd3325f-64af-4122-94e5-504da0e0a04e",
+        "name": "Envia mensagem para o WhatsApp",
+        "credentials": {
+          "evolutionApi": {
+            "id": "SvkoJsMtlGFyG93s",
+            "name": "evolution_cloudfy"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "5356af18-19e2-43c7-a230-a250eae425cf",
+                "name": "text",
+                "value": "={{\n  (function() {\n    const agrupa = String($('AGRUPA MENSAGENS').first()?.json?.concatenated_content || '').replace(/^=+/, '').trim();\n    if (agrupa) return agrupa;\n    const coleta = String($('Coleta').first()?.json?.mensagem || '').trim();\n    if (coleta && coleta !== '[Arquivo/Midia]') return coleta;\n    const raw = String($('Recebe mensagem').first()?.json?.body?.data?.message?.conversation || $('Recebe mensagem').first()?.json?.body?.data?.message?.extendedTextMessage?.text || '').trim();\n    return raw || 'Olá';\n  })()\n}}",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          4848,
+          752
+        ],
+        "id": "1c198a4d-973f-4360-baa8-ea480e2165e7",
+        "name": "output mensagem"
+      },
+      {
+        "parameters": {
+          "schema": {
+            "__rl": true,
+            "value": "public",
+            "mode": "list",
+            "cachedResultName": "public"
+          },
+          "table": {
+            "__rl": true,
+            "value": "messages",
+            "mode": "list",
+            "cachedResultName": "maisacai_buffer_mensagens"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "status": 0,
+              "created_at": "={{ $now }}",
+              "updated_at": "={{ $now }}",
+              "inbox_id": 1,
+              "conversation_id": 1,
+              "message_type": 0,
+              "source_id": "={{ $('Coleta').item.json.telefone }}",
+              "content": "={{ $('Coleta').item.json.mensagem }}",
+              "account_id": 1,
+              "content_type": 0,
+              "sender_id": 0
+            },
+            "matchingColumns": [],
+            "schema": [
+              {
+                "id": "id",
+                "displayName": "id",
+                "required": false,
+                "defaultMatch": true,
+                "display": true,
+                "type": "number",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "content",
+                "displayName": "content",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "account_id",
+                "displayName": "account_id",
+                "required": true,
+                "defaultMatch": false,
+                "display": true,
+                "type": "number",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "inbox_id",
+                "displayName": "inbox_id",
+                "required": true,
+                "defaultMatch": false,
+                "display": true,
+                "type": "number",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "conversation_id",
+                "displayName": "conversation_id",
+                "required": true,
+                "defaultMatch": false,
+                "display": true,
+                "type": "number",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "message_type",
+                "displayName": "message_type",
+                "required": true,
+                "defaultMatch": false,
+                "display": true,
+                "type": "number",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "created_at",
+                "displayName": "created_at",
+                "required": true,
+                "defaultMatch": false,
+                "display": true,
+                "type": "dateTime",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "updated_at",
+                "displayName": "updated_at",
+                "required": true,
+                "defaultMatch": false,
+                "display": true,
+                "type": "dateTime",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "private",
+                "displayName": "private",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "boolean",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "status",
+                "displayName": "status",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "number",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "source_id",
+                "displayName": "source_id",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "content_type",
+                "displayName": "content_type",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "number",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "content_attributes",
+                "displayName": "content_attributes",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "object",
+                "canBeUsedToMatch": true,
+                "removed": true
+              },
+              {
+                "id": "sender_type",
+                "displayName": "sender_type",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": true
+              },
+              {
+                "id": "sender_id",
+                "displayName": "sender_id",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "number",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "external_source_ids",
+                "displayName": "external_source_ids",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "object",
+                "canBeUsedToMatch": true,
+                "removed": true
+              },
+              {
+                "id": "additional_attributes",
+                "displayName": "additional_attributes",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "object",
+                "canBeUsedToMatch": true,
+                "removed": true
+              },
+              {
+                "id": "processed_message_content",
+                "displayName": "processed_message_content",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": true
+              },
+              {
+                "id": "sentiment",
+                "displayName": "sentiment",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "object",
+                "canBeUsedToMatch": true,
+                "removed": true
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          3792,
+          752
+        ],
+        "id": "c1c3d393-b03e-4e04-aa77-b09d7eb49a70",
+        "name": "REGISTRA MENSAGEM2",
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 2000,
+        "credentials": {
+          "postgres": {
+            "id": "LlNWKTJHq8YCSCZX",
+            "name": "postgres_cloudfy"
+          }
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "content": "## 1. Webhook\n\nO nó Webhook é o ponto inicial desse fluxo n8n — responsável por receber eventos de mensagens provenientes da Evolution API (integrada com WhatsApp). Ele está configurado com as seguintes características principais:\n\n-Endpoint: URL de produção\nEssa URL é usada na configuração do Evolution para que todas as mensagens, documentos, imagens etc. sejam enviadas diretamente para o fluxo, disparando a automação.\n\n-Método: Recebe requisições POST (formato padrão de eventos/webhook enviados pelo Evolution para n8n).\n\n",
+          "height": 400,
+          "width": 400
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "position": [
+          2112,
+          960
+        ],
+        "typeVersion": 1,
+        "id": "1844466c-7307-4199-8b37-c38285d9d8cf",
+        "name": "Sticky Note1"
+      },
+      {
+        "parameters": {
+          "content": "## 1.1 Conectando no evolution\n\nPara conectar o webhook no Evolution, copie a URL exibida em “Production URL” no n8n e cole no campo “Webhook URL” nas configurações da Evolution API. Dessa forma, todos os eventos e mensagens serão enviados automaticamente para o seu fluxo, permitindo o processamento em tempo real.",
+          "height": 208,
+          "width": 352
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "position": [
+          2528,
+          1152
+        ],
+        "typeVersion": 1,
+        "id": "2b813cb2-1560-4346-8516-8f18b10d886e",
+        "name": "Sticky Note2"
+      },
+      {
+        "parameters": {
+          "content": "### Webhook",
+          "height": 176,
+          "width": 352,
+          "color": 4
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "position": [
+          2528,
+          960
+        ],
+        "typeVersion": 1,
+        "id": "07f176bd-84fb-4a83-95f6-80b0a5191a04",
+        "name": "Sticky Note3"
+      },
+      {
+        "parameters": {
+          "content": "## 2. Coleta\n\nEsse nó é responsável por separar todos os dados que serão utilizados ao longo do workflow. Como por exemplo: Nome, telefone, tipo de mensagem e a mensagem que foi recebida",
+          "height": 416,
+          "width": 272
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "position": [
+          2960,
+          784
+        ],
+        "typeVersion": 1,
+        "id": "91c4eac2-53cc-4374-b24b-c85bf0db397a",
+        "name": "Sticky Note5"
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "bb5f3999-fed4-44e1-972f-1397a3c6fee6",
+                "name": "nome",
+                "value": "={{ $('Recebe mensagem').item.json.body.data?.pushName ?? $('Recebe mensagem').item.json.body?.data?.message?.pushName ?? $('Recebe mensagem').item.json.data?.message?.pushName ?? \"Cliente\" }}",
+                "type": "string"
+              },
+              {
+                "id": "65cf5864-7b1f-457f-8007-0a2bc0380a3c",
+                "name": "telefone",
+                "value": "={{ $('Recebe mensagem').item.json.body.data?.key?.remoteJid ?? $('Recebe mensagem').item.json.body?.data?.message?.key?.remoteJid ?? $('Recebe mensagem').item.json.data?.message?.key?.remoteJid }}",
+                "type": "string"
+              },
+              {
+                "id": "be20cf5a-21c3-47e1-8344-fd78b9d04bff",
+                "name": "tipo",
+                "value": "={{ $('Recebe mensagem').item.json.body.data?.messageType ?? $('Recebe mensagem').item.json.body?.data?.message?.messageType ?? $('Recebe mensagem').item.json.data?.message?.messageType }}",
+                "type": "string"
+              },
+              {
+                "id": "cf2af045-3ffa-4d58-8a2d-c5cb8f85f849",
+                "name": "mensagem",
+                "value": "={{ $('Recebe mensagem').item.json.body.data?.message?.conversation ?? $('Recebe mensagem').item.json.body?.data?.message?.message?.conversation ?? $('Recebe mensagem').item.json.data?.message?.message?.conversation ?? $('Recebe mensagem').item.json.body.data?.message?.extendedTextMessage?.text ?? $('Recebe mensagem').item.json.body?.data?.message?.message?.extendedTextMessage?.text ?? $('Recebe mensagem').item.json.data?.message?.message?.extendedTextMessage?.text ?? \"[Arquivo/Midia]\" }}",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          2976,
+          1008
+        ],
+        "id": "e4fae991-f86b-4cf7-a196-214831b3cb12",
+        "name": "Coleta"
+      },
+      {
+        "parameters": {
+          "content": "## 4. Divisão por mensagem",
+          "height": 336,
+          "width": 288,
+          "color": 4
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "position": [
+          3328,
+          880
+        ],
+        "typeVersion": 1,
+        "id": "7713c587-ee6d-4746-bc37-b175786e8328",
+        "name": "Sticky Note10"
+      },
+      {
+        "parameters": {
+          "content": "## Switch\n\nComo funciona:\n\n- O nó avalia o campo messageType presente no corpo da mensagem (item.json.body.data.messageType).\n\n- Ele utiliza regras (“Routing Rules”) para comparar o valor desse campo:\n\n- Se for igual a conversation, classifica como texto.\n\n- Se for igual a audioMessage, classifica como áudio.\n\n- Se for igual a imageMessage, classifica como imagem.",
+          "height": 432,
+          "width": 288
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "position": [
+          3328,
+          1232
+        ],
+        "typeVersion": 1,
+        "id": "efb2a9e4-9d10-4efb-887f-2cf19273bbfd",
+        "name": "Sticky Note11"
+      },
+      {
+        "parameters": {
+          "content": "## 5.1 Mensagem de Texto (com espaçamento/buffer) ",
+          "height": 240,
+          "width": 1264,
+          "color": 4
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "position": [
+          3744,
+          688
+        ],
+        "typeVersion": 1,
+        "id": "66e83a2b-99cb-4b02-a927-1e953d38a5cd",
+        "name": "Sticky Note13"
+      },
+      {
+        "parameters": {
+          "content": "## Agente de I.A",
+          "height": 192,
+          "width": 256,
+          "color": 4
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "position": [
+          5392,
+          960
+        ],
+        "typeVersion": 1,
+        "id": "dbdab6e3-af27-4866-83fe-f25871481730",
+        "name": "Sticky Note18"
+      },
+      {
+        "parameters": {
+          "promptType": "define",
+          "text": "={{ $json.text }}",
+          "options": {
+            "systemMessage": "# CONTEXTO (recalculado a cada mensagem — é a única verdade)\n{{ $json.avisoHorarioAgente }}\nAgora: {{ $json.dataHoraAtual }} ({{ $json.diaSemanaAtual }})\nLoja: {{ $json.statusAtendimento }}\nAinda abre hoje: {{ $json.aindaAbreHoje }} (às {{ $json.horaAberturaHoje }})\nPróximo atendimento: {{ $json.proximoDiaUtilNome }}, {{ $json.proximoDiaUtilData }} às {{ $json.horaAberturaHoje }}\nCliente: {{ $('Coleta').item.json.nome }}\nWhatsApp do cliente: {{ $('Coleta').item.json.telefone }}\n\n---\n\n# QUEM É VOCÊ: ATENDENTE DE BALCÃO DO MAIS AÇAÍ SJP 🍇\nVocê é a Maya, uma típica atendente de balcão de açaiteria: ágil, simples, simpática e muito prestativa!\n- Seu objetivo número 1 é **converter e fechar o pedido** do cliente com máxima agilidade e praticidade.\n- Comunicação direta, humana, sem rodeios e sem enrolação.\n- Não diga que é IA ou robô. Se perguntarem diretamente: \"Sou a Maya, atendente aqui do Mais Açaí SJP 🍇\"\n\n---\n\n# DINÂMICA DE ATENDIMENTO DE BALCÃO (AGILIDADE & CONVERSÃO):\n- **Seja direta, calorosa e prática**: 1 a 2 linhas por mensagem.\n- **Encaixe perguntas combinadas** sempre que tiver oportunidade para adiantar o fechamento com velocidade:\n  • Se o cliente só disse que quer açaí: *\"Qual tamanho você prefere? E vai ser para entrega ou retirada aqui no balcão?\"*\n  • Se já escolheu o produto/tamanho: *\"Quer colocar algum adicional por cima? E qual será a forma de pagamento (PIX, Cartão ou Dinheiro)?\"*\n  • Se for entrega: *\"Qual o endereço com número e bairro? E vai pagar no PIX, cartão ou dinheiro com troco?\"*\n- Não fique enrolando com gentilezas vazias de telemarketing (nada de \"Em que posso ser útil?\", \"Como posso te ajudar hoje?\"). Vá direto à ação!\n\n---\n\n# REGRA DE FIDELIDADE ABSOLUTA AO CARDÁPIO DIGITAL / PDV (NUNCA INVENTE PREÇOS)\nTodo e qualquer preço de combo, copo, adicional ou taxa de entrega DEVE ser rigorosamente consultado nas tabelas oficiais do PDV abaixo. É PROIBIDO inventar, chutar, arredondar ou supor valores.\n\n### TABELA OFICIAL DE ADICIONAIS & TOPPINGS (CONSULTE SEMPRE):\n- **Nutella**: R$ 10,00 (NUNCA informe outro valor!)\n- **Kinder Bueno ao Leite**: R$ 10,00\n- **Caribe Bueno**: R$ 10,00\n- **Morango fresca**: R$ 6,00\n- **Calda de Morango com pedaços**: R$ 6,00\n- **Mousse de Ninho**: R$ 6,00\n- **Danoninho Caseiro**: R$ 6,00\n- **Ovomaltine**: R$ 6,00\n- **Bis Extra (ao Leite ou Oreo)**: R$ 6,00\n- **Kinder Barrinha**: R$ 6,00\n- **Banana, Kiwi, Uva Verde, Abacaxi**: R$ 4,00 cada\n- **Leite Condensado, Leite em Pó**: R$ 4,00 cada\n- **Paçoca, Granola, Amendoim, Chocoball, Farinha Láctea**: R$ 4,00 cada\n- **Doce de Leite, Mel, Confete, Gotas de Chocolate**: R$ 4,00 cada\n- **Coberturas (Caramelo, Chocolate, Morango)**: R$ 3,00 cada\n\n### TABELA OFICIAL DE TAXAS DE ENTREGA (SÃO JOSÉ DOS PINHAIS):\n- **Parque da Fonte: GRÁTIS (R$ 0,00)** — A nossa loja fica no Parque da Fonte, NUNCA cobre taxa de entrega no Parque da Fonte!\n- **Afonso Pena**: R$ 5,00\n- **Águas Belas**: R$ 5,00\n- **Boneca do Iguaçu**: R$ 6,00\n- **Centro (SJP)**: R$ 6,00\n- **Aristocrata, Bom Jesus, Cruzeiro, São Pedro**: R$ 7,00\n- **Guatupê, Iná, Rio Pequeno, São Cristóvão**: R$ 8,00\n- **Academia, Costeira**: R$ 9,00\n- **Quississana**: R$ 10,00\n- Se o bairro não estiver na lista: informe que vai confirmar a taxa com a equipe. NUNCA invente valor.\n\n---\n\n# REGRA DE OURO: RECONHECIMENTO INTELIGENTE DE COMBOS (ECONOMIA PARA O CLIENTE)\nQuando o cliente listar os ingredientes ou montar do jeito dele, identifique NA HORA se é um dos nossos COMBOS oficiais e valorize o desconto:\n- **Banana + Morango + Leite Condensado + Leite em Pó** ➔ **COMBO FAVORITO**!\n  Explique com inteligência comercial: *\"Essa combinação é o nosso **Combo Favorito**! No combo você ganha desconto: avulso ficaria bem mais caro, mas no Combo Favorito de 330ml sai por apenas **R$ 24,00**! 🍇\"*\n- **Leite Condensado + Leite em Pó** ➔ **COMBO NEVADO**!\n  Explique: *\"Essa combinação é o nosso **Combo Nevado**! No combo você ganha desconto: avulso ficaria mais caro, mas no Combo Nevado de 330ml sai por apenas **R$ 22,00**! 🍨\"*\n- **Banana + Kiwi + Morango** ➔ **COMBO TROPICAL**!\n- **Mousse de Ninho + Leite Condensado + Leite em Pó** ➔ **COMBO BRANCA DE NEVE**!\n- **Nutella + Leite Condensado + Leite em Pó** ➔ **COMBO SENSAÇÃO AVELÃ**!\n- **Morango + Leite Condensado + Leite em Pó** ➔ **COMBO SENSAÇÃO MORANGO**!\n- **Banana + Leite Condensado + Leite em Pó** ➔ **COMBO SENSAÇÃO BANANA**!\n- **Danoninho Caseiro + Leite em Pó + [Fruta]** ➔ **COMBO DANONINHO [FRUTA]**!\n\nSe o cliente quiser adicionais extras no combo:\nMantenha o valor do combo da tabela e some o valor real do adicional da lista.\nExemplo: Combo Favorito 330ml (R$ 24,00) + Nutella (R$ 10,00) = R$ 34,00.\n\n---\n\n# DICIONÁRIO E REGRAS DE SABORES (AÇAITERIA):\n1. **TAPIOCA COM COCO**: \"tapioca\", \"caldo de tapioca\", \"tapioca com coco\" ➔ Entenda imediatamente como o sabor de base **Tapioca com Coco**.\n2. **PAÇOCA (BASE vs ADICIONAL)**:\n   - Creme de Paçoca: sabor de base no copo (gratuito).\n   - Adicional de Paçoca: paçoca triturada por cima (adicional cobrado conforme tabela: R$ 4,00).\n   - Se disser só \"paçoca\", confirme rápido: *\"Prefere o Creme de Paçoca na base ou a paçoca como adicional por cima?\"*\n3. **CASADINHO (2 SABORES DE BASE)**:\n   - Até 2 sabores de creme no mesmo copo SEM custo extra! Pergunte objetivamente quais os 2 sabores.\n4. **LEITE NINHO (CREME vs MOUSSE)**:\n   - Não temos creme de Ninho na base. Temos **Mousse de Leite Ninho** (adicional R$ 6,00) e Leite em Pó (R$ 4,00). Esclareça em 1 linha com simpatia.\n\n---\n\n# CARDÁPIO COMPLETO DINÂMICO DO PDV (INJETADO):\n{{ $json.cardapio || '⚠️ CARDÁPIO INDISPONÍVEL AGORA: não informe nenhum preço. Diga que vai confirmar com a equipe e já retorna.' }}\n\n---\n\n# HORÁRIO DA LOJA\n- Loja ABERTA → atenda com simpatia e anote o pedido.\n- Loja FECHADA → avise em 1 linha com carinho, informe quando abre e não anote pedido.\n\n---\n\n# ENTREGA E RETIRADA EM SÃO JOSÉ DOS PINHAIS\n- Retirada no balcão: Rua Almirante Alexandrino, 909, sala 02 – Parque da Fonte. Prazo: 15 a 25 min.\n- Entrega (Delivery): Parque da Fonte é GRÁTIS! Demais bairros consulte a tabela oficial. Prazo: 10 a 40 min.\n\n---\n\n# FORMAS DE PAGAMENTO\n- **PIX**: Chave celular: **41997349076** (Michele Alvarez - Mais Açaí).\n  SEMPRE que o cliente escolher PIX, envie a chave para pagamento e peça o comprovante.\n- **Cartão**: Débito ou Crédito na maquininha (levamos até o cliente na entrega ou na retirada).\n- **Dinheiro**: Pergunte se vai precisar de troco (\"Troco para quanto?\").\n\n---\n\n# FECHAR O PEDIDO — TOOL `finalizar_pedido`\nAssim que tiver as informações essenciais:\n1. Itens (com tamanho e adicionais)\n2. Forma de entrega (rua, número e bairro) ou retirada no balcão\n3. Forma de pagamento (PIX, Cartão ou Dinheiro)\n\n→ Chame IMEDIATAMENTE a ferramenta `finalizar_pedido` para cadastrar o pedido no sistema do gestor! Não fique esperando o cliente dizer \"confirmo\".\n- Total = valor dos produtos + adicionais reais do PDV + taxa de entrega do bairro (se retirada ou Parque da Fonte, taxa = 0).\n- A ferramenta grava no sistema e retorna os dados com `tracking_code` e `id`.\n\nLogo após chamar a ferramenta com sucesso, envie o resumo formatado em UMA ÚNICA mensagem:\n\n✅ *Pedido confirmado!*\n👤 {{ $('Coleta').item.json.nome || 'Cliente' }} | 📞 {{ $('Coleta').item.json.telefone }}\n[🛵 Entrega: Rua Tal, 123 - Bairro | ou 🏪 Retirada no balcão]\n🍨 *Itens:*\n• [Qtd]x [Item + tamanho] — R$ [valor]\n  _+ [recheios / adicionais]_\n💰 *Subtotal:* R$ [valor]\n🛵 *Taxa de entrega:* R$ [valor] (ou Grátis se retirada ou Parque da Fonte)\n💳 *Total a pagar:* R$ [valor] — [Forma de Pagamento]\n⏱️ *Prazo estimado:* [15-25 min para retirada / 35-50 min para entrega]\n\nSE O PAGAMENTO FOR PIX, inclua obrigatoriamente logo abaixo do resumo:\n🔑 *Chave PIX (Celular):*\n41997349076\n_Michele Alvarez - Mais Açaí_\nEnvie o comprovante por aqui assim que efetuar o pagamento! 💜\n\n📍 *Acompanhe seu pedido em tempo real:*\nhttps://maisacaisjpbr.netlify.app/track/[codigo]\n\n---\n\n# CONSULTA DE STATUS DO PEDIDO (QUANDO O CLIENTE PERGUNTAR SOBRE O PEDIDO):\nQuando o cliente entrar em contato perguntando: \"cadê meu pedido?\", \"como está meu pedido?\", \"o pedido 6 já saiu?\", \"vai demorar?\", \"qual o status?\":\n1. Chame IMEDIATAMENTE a ferramenta `consultar_status_pedido` passando o número do pedido, código de rastreio ou o telefone dele.\n2. A regra de status foca exclusivamente nos marcos decisivos (Pronto para retirada ou Saiu para entrega):\n   • **Se for RETIRADA e o status for PRONTO**:\n     \"Seu pedido #{{id}} já está prontinho! Pode vir retirar aqui no nosso balcão 🏪\"\n   • **Se for ENTREGA e o status for SAIU PARA ENTREGA**:\n     \"O motoboy já pegou seu pedido #{{id}} e está a caminho do seu endereço! 🛵💨\"\n   • **Se ainda estiver em PREPARO ou PENDENTE**:\n     \"Seu pedido #{{id}} já está sendo preparado com muito carinho! Assim que [estiver pronto para você retirar / o motoboy sair para entrega], te avisamos por aqui! 🍨\"\n   • **Se o status for FINALIZADO / ENTREGUE**:\n     \"Seu pedido #{{id}} consta como entregue! Se precisar de algo, só me chamar. Bom apetite! 💜\"\n   • **Se não encontrar nenhum pedido**:\n     \"Não encontrei nenhum pedido recente no seu número. Gostaria de fazer um pedido agora? 🍇\"\n   • Envie sempre o link de rastreamento para o cliente acompanhar:\n     https://maisacaisjpbr.netlify.app/track/[codigo]\n\n# DEPOIS DO PEDIDO\n- Pedido confirmado = atendimento encerrado. Não puxe assunto.\n- \"Obrigado\", \"já paguei\", comprovante: responda com 1 frase curta. Ex.: \"Por nada! Já estamos preparando seu açaí com muito carinho 🍇\"\n- Comprovante de PIX: agradeça e confirme: \"Recebido com sucesso! Muito obrigado 💜\"\n\n# QUANDO CHAMAR A EQUIPE (HUMAN HANDOVER)\nReclamação, cancelamento, encomenda grande/festa ou qualquer situação que você não tenha certeza:\nDiga: \"Vou chamar alguém da equipe pra te ajudar rapidinho! 🙏\" e não invente resposta.",
+            "maxIterations": 15
+          }
+        },
+        "type": "@n8n/n8n-nodes-langchain.agent",
+        "typeVersion": 1.7,
+        "position": [
+          5488,
+          1184
+        ],
+        "id": "428f96cc-144a-4abb-ba93-0884765aca2d",
+        "name": "AGENTE DE I.A.",
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 5000,
+        "onError": "continueErrorOutput"
+      },
+      {
+        "parameters": {
+          "content": "## 6.2. Modelo",
+          "height": 192,
+          "width": 256,
+          "color": 4
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "position": [
+          5024,
+          1280
+        ],
+        "typeVersion": 1,
+        "id": "9c3fea21-0845-43a9-9941-16dd51ac92d5",
+        "name": "Sticky Note19"
+      },
+      {
+        "parameters": {
+          "content": "### Chat model\n\nÉ o cérebro do Agent, usando inteligência artificial para interpretar as mensagens do usuário e gerar respostas. O modelo pode entender perguntas, analisar contexto e criar interações de conversa de forma natural.",
+          "height": 224,
+          "width": 256
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "position": [
+          4256,
+          1552
+        ],
+        "typeVersion": 1,
+        "id": "b12fafd1-d025-4628-82d9-c4315a04b019",
+        "name": "Sticky Note20"
+      },
+      {
+        "parameters": {
+          "content": "## 6.3. Memory",
+          "height": 192,
+          "width": 256,
+          "color": 4
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "position": [
+          5440,
+          1392
+        ],
+        "typeVersion": 1,
+        "id": "14480f67-9697-4087-9d42-9cdc074a7fe9",
+        "name": "Sticky Note21"
+      },
+      {
+        "parameters": {
+          "content": "### Memory\n\nFunciona como uma memória de curto ou longo prazo do Agent. Ele armazena informações relevantes durante a conversa, como histórico, dados do usuário ou preferências, permitindo respostas mais personalizadas e contextualizadas",
+          "height": 224,
+          "width": 256
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "position": [
+          3968,
+          1552
+        ],
+        "typeVersion": 1,
+        "id": "bc3c8523-6384-490e-b52f-2d96e7c2bec7",
+        "name": "Sticky Note22"
+      },
+      {
+        "parameters": {
+          "content": "## Faz o envio fracionado das mensagens",
+          "height": 256,
+          "width": 688,
+          "color": 4
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "position": [
+          6368,
+          1024
+        ],
+        "typeVersion": 1,
+        "id": "07e211a5-906c-4262-a273-89da8d721a0f",
+        "name": "Sticky Note30",
+        "disabled": true
+      },
+      {
+        "parameters": {
+          "content": "## Mensagem de Texto\n\nComo funciona:\n- Quando o usuário manda uma mensagem, o agente espera alguns segundos.\n- Se o usuário mandar mais mensagens nesse tempo, todas são juntadas.\n- Depois desse tempo, o agente responde todas de uma vez.\n\nAssim, o agente não interrompe o usuário com várias respostas e pode responder de forma mais parecida com uma pessoa conversando normalmente.",
+          "height": 272,
+          "width": 464
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "position": [
+          4160,
+          976
+        ],
+        "typeVersion": 1,
+        "id": "f503b046-2e91-4a17-8f85-e4c7436622e1",
+        "name": "Sticky Note15"
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "mais-acai-sjp-atendente",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          2656,
+          1024
+        ],
+        "id": "8c321425-3901-4e4c-b3a3-10f86a1e85ca",
+        "name": "Recebe mensagem",
+        "webhookId": "68fb58cf-ce48-4436-93bb-068e01c9d550"
+      },
+      {
+        "parameters": {
+          "content": "## Execute para começar\n**Execute esse nó antes de começar seu fluxo. Ele irá fazer o Postgres funcionar.**",
+          "height": 304,
+          "width": 400,
+          "color": 3
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "position": [
+          2112,
+          576
+        ],
+        "typeVersion": 1,
+        "id": "05e67979-d79e-45e2-a98f-fab25c5767c2",
+        "name": "Sticky Note"
+      },
+      {
+        "parameters": {
+          "model": "google/gemini-2.5-flash",
+          "options": {}
+        },
+        "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+        "typeVersion": 1,
+        "position": [
+          5088,
+          1328
+        ],
+        "id": "6c8c05eb-7b75-42a6-ad8e-8b60a8ffa851",
+        "name": "OpenRouter Chat Model",
+        "credentials": {
+          "openRouterApi": {
+            "id": "vXW3HihqakLMEzrJ",
+            "name": "openrouter_cloudfy"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose",
+              "version": 3
+            },
+            "conditions": [
+              {
+                "id": "filtro-mensagens-validas",
+                "leftValue": "={{ (function() {\n  const data = $json.body?.data || $json.data || {};\n  const msgType = String(data.messageType || '');\n  if (msgType === 'reactionMessage') return false;\n\n  const key = data.key || {};\n  const fromMe = Boolean(key.fromMe);\n  const remoteJid = String(key.remoteJid || '');\n  const phone = remoteJid.replace(/\\D/g, '');\n  const id = String(key.id || '');\n  const source = String(data.source || '').toLowerCase();\n  const isBotApi = id.startsWith('3EB0') || id.startsWith('BAE5') || source === 'web' || source === 'api';\n\n  // 1. Quando a atendente humana ou a Michele mandar mensagem no WhatsApp para um cliente:\n  if (fromMe && !isBotApi) {\n    const isMicheleSelf = phone.endsWith('997349076') || phone.endsWith('97349076');\n    // Se a Michele estiver conversando com ela mesma (chat Você para testar):\n    if (isMicheleSelf) {\n      return (source === 'android' || source === 'ios' || !isBotApi);\n    }\n    // Intervenção humana no circuito da conversa: pausa a Maya por 2 minutos para este cliente!\n    const sd = $getWorkflowStaticData('global');\n    if (!sd.pausaHumana) sd.pausaHumana = {};\n    sd.pausaHumana[phone] = Date.now() + (2 * 60 * 1000);\n    return false;\n  }\n\n  // Se for mensagem enviada pela própria API da Maya: bloqueia para não gerar loop\n  if (fromMe && isBotApi) return false;\n\n  // 2. Quando o cliente enviar mensagem (fromMe === false):\n  // Verifica se a conversa está no período de pausa humana automática de 2 minutos:\n  const sd = $getWorkflowStaticData('global');\n  const pausaAte = sd.pausaHumana?.[phone] || 0;\n  if (Date.now() < pausaAte) {\n    // Atendente humana assumiu nos últimos 2 minutos -> Maya permanece pausada em silêncio\n    return false;\n  }\n\n  // Passou de 2 minutos sem novas mensagens da atendente -> Maya assume o atendimento automaticamente!\n  return true;\n})() }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.3,
+        "position": [
+          2736,
+          1488
+        ],
+        "id": "61ae2a48-4f49-4395-b020-8e46da0ec427",
+        "name": "If"
+      },
+      {
+        "parameters": {
+          "resource": "messages-api",
+          "instanceName": "Maisacaisjp",
+          "remoteJid": "={{ $('Coleta').item.json.telefone.replace(/^=+/, '') }}",
+          "messageText": "Tivemos uma instabilidade momentânea 🙏 Tenta novamente em instantes.",
+          "options_message": {}
+        },
+        "type": "n8n-nodes-evolution-api.evolutionApi",
+        "typeVersion": 1,
+        "position": [
+          7360,
+          1472
+        ],
+        "id": "e3017152-be14-431d-9d77-7e2641ecd6a2",
+        "name": "Enviar texto",
+        "credentials": {
+          "evolutionApi": {
+            "id": "SvkoJsMtlGFyG93s",
+            "name": "evolution_cloudfy"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "f1",
+                "name": "text",
+                "value": "={{ $('Merge').first().json.text }}",
+                "type": "string"
+              },
+              {
+                "id": "f2",
+                "name": "dataHoraAtual",
+                "value": "={{ $now.setZone('America/Sao_Paulo').setLocale('pt-BR').toFormat('cccc, dd/MM/yyyy HH:mm') }}",
+                "type": "string"
+              },
+              {
+                "id": "f3",
+                "name": "diaSemanaAtual",
+                "value": "={{ ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'][$now.setZone('America/Sao_Paulo').weekday % 7] }}",
+                "type": "string"
+              },
+              {
+                "id": "f4",
+                "name": "horaAberturaHoje",
+                "value": "={{ ($('Busca Horario Hoje').first().json.opens_at ?? '13:00:00').slice(0, 5).replace(':', 'h') }}",
+                "type": "string"
+              },
+              {
+                "id": "f5",
+                "name": "horaFechamentoHoje",
+                "value": "={{ ($('Busca Horario Hoje').first().json.closes_at ?? '23:00:00').slice(0, 5).replace(':', 'h') }}",
+                "type": "string"
+              },
+              {
+                "id": "f6",
+                "name": "statusAtendimento",
+                "value": "={{ ($('Busca Status Loja').first().json.value === 'open' || ($('Busca Horario Hoje').first().json.is_closed !== true && $('Busca Status Loja').first().json.value !== 'closed' && ($now.setZone('America/Sao_Paulo').hour * 60 + $now.setZone('America/Sao_Paulo').minute) >= (parseInt(($('Busca Horario Hoje').first().json.opens_at ?? '13:00:00').split(':')[0]) * 60 + parseInt(($('Busca Horario Hoje').first().json.opens_at ?? '13:00:00').split(':')[1])) && ($now.setZone('America/Sao_Paulo').hour * 60 + $now.setZone('America/Sao_Paulo').minute) <= (parseInt(($('Busca Horario Hoje').first().json.closes_at ?? '23:00:00').split(':')[0]) * 60 + parseInt(($('Busca Horario Hoje').first().json.closes_at ?? '23:00:00').split(':')[1])))) ? 'ABERTO' : 'FECHADO' }}",
+                "type": "string"
+              },
+              {
+                "id": "f7",
+                "name": "aindaAbreHoje",
+                "value": "={{ ($('Busca Horario Hoje').first().json.is_closed !== true && ($now.setZone('America/Sao_Paulo').hour * 60 + $now.setZone('America/Sao_Paulo').minute) < (parseInt(($('Busca Horario Hoje').first().json.opens_at ?? '13:00:00').split(':')[0]) * 60 + parseInt(($('Busca Horario Hoje').first().json.opens_at ?? '13:00:00').split(':')[1]))) ? 'SIM' : 'NAO' }}",
+                "type": "string"
+              },
+              {
+                "id": "f8",
+                "name": "proximoDiaUtilNome",
+                "value": "={{ ($now.setZone('America/Sao_Paulo').weekday === 6 && ($now.setZone('America/Sao_Paulo').hour * 60 + $now.setZone('America/Sao_Paulo').minute) > (parseInt(($('Busca Horario Hoje').first().json.closes_at ?? '23:00:00').split(':')[0]) * 60 + parseInt(($('Busca Horario Hoje').first().json.closes_at ?? '23:00:00').split(':')[1]))) ? 'Segunda-feira' : ($now.setZone('America/Sao_Paulo').weekday === 7 ? 'Segunda-feira' : (['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'][($now.setZone('America/Sao_Paulo').weekday + (($now.setZone('America/Sao_Paulo').hour * 60 + $now.setZone('America/Sao_Paulo').minute) > (parseInt(($('Busca Horario Hoje').first().json.closes_at ?? '23:00:00').split(':')[0]) * 60 + parseInt(($('Busca Horario Hoje').first().json.closes_at ?? '23:00:00').split(':')[1])) ? 1 : 0)) % 7])) }}",
+                "type": "string"
+              },
+              {
+                "id": "f9",
+                "name": "proximoDiaUtilData",
+                "value": "={{ $now.setZone('America/Sao_Paulo').plus({ days: ($now.setZone('America/Sao_Paulo').weekday === 7 ? 1 : (($now.setZone('America/Sao_Paulo').weekday === 6 && ($now.setZone('America/Sao_Paulo').hour * 60 + $now.setZone('America/Sao_Paulo').minute) > (parseInt(($('Busca Horario Hoje').first().json.closes_at ?? '23:00:00').split(':')[0]) * 60 + parseInt(($('Busca Horario Hoje').first().json.closes_at ?? '23:00:00').split(':')[1]))) ? 2 : (($now.setZone('America/Sao_Paulo').hour * 60 + $now.setZone('America/Sao_Paulo').minute) > (parseInt(($('Busca Horario Hoje').first().json.closes_at ?? '23:00:00').split(':')[0]) * 60 + parseInt(($('Busca Horario Hoje').first().json.closes_at ?? '23:00:00').split(':')[1])) ? 1 : 0))) }).toFormat('dd/MM/yyyy') }}",
+                "type": "string"
+              },
+              {
+                "id": "f10",
+                "name": "avisoHorarioAgente",
+                "value": "={{ ($('Busca Status Loja').first().json.value === 'open' || ($('Busca Horario Hoje').first().json.is_closed !== true && $('Busca Status Loja').first().json.value !== 'closed' && ($now.setZone('America/Sao_Paulo').hour * 60 + $now.setZone('America/Sao_Paulo').minute) >= (parseInt(($('Busca Horario Hoje').first().json.opens_at ?? '13:00:00').split(':')[0]) * 60 + parseInt(($('Busca Horario Hoje').first().json.opens_at ?? '13:00:00').split(':')[1])) && ($now.setZone('America/Sao_Paulo').hour * 60 + $now.setZone('America/Sao_Paulo').minute) <= (parseInt(($('Busca Horario Hoje').first().json.closes_at ?? '23:00:00').split(':')[0]) * 60 + parseInt(($('Busca Horario Hoje').first().json.closes_at ?? '23:00:00').split(':')[1])))) ? '⚠️ INSTRUÇÃO PRIORITÁRIA: O campo statusAtendimento = ABERTO. A loja está ABERTA agora. Atenda o cliente com carinho, entusiasmo e simpatia. NUNCA use a palavra fechado ou fechada nesta resposta.' : '' }}",
+                "type": "string"
+              },
+              {
+                "id": "f11",
+                "name": "cardapio",
+                "value": "={{ $('Busca Cardapio').first().json.cardapio ?? '' }}",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          5152,
+          960
+        ],
+        "id": "c32b8e46-f792-42b0-a5e0-fe9e47cc6282",
+        "name": "Code in JavaScript"
+      },
+      {
+        "parameters": {
+          "sessionIdType": "customKey",
+          "sessionKey": "={{ $('Coleta').item.json.telefone.replace(/^=+/, '') }}_maisacai_v1",
+          "tableName": "maisacai_chat_historico",
+          "contextWindowLength": 10
+        },
+        "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+        "typeVersion": 1.4,
+        "position": [
+          5504,
+          1456
+        ],
+        "id": "00259dd7-8947-4152-b6b4-5f8948cc3575",
+        "name": "Postgres Chat Memory",
+        "credentials": {
+          "postgres": {
+            "id": "LlNWKTJHq8YCSCZX",
+            "name": "postgres_cloudfy"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "url": "https://wpxujeieopgoxodttjqp.supabase.co/rest/v1/settings?key=eq.bot_active&select=value",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "apikey",
+                "value": "sb_publishable_JoS0KkaP2raT82CeuIdokw_xHa1N63X"
+              },
+              {
+                "name": "Authorization",
+                "value": "Bearer sb_publishable_JoS0KkaP2raT82CeuIdokw_xHa1N63X"
+              }
+            ]
+          },
+          "options": {
+            "timeout": 5000
+          }
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2736,
+          1776
+        ],
+        "id": "17a3da2a-6675-4dc8-9ad0-71cc90b5dcb7",
+        "name": "Verifica Status Bot",
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 2000,
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "bot-active-condition",
+                "leftValue": "={{ \n  (function() {\n    const rawJid = String($('Recebe mensagem').first()?.json?.body?.data?.key?.remoteJid || '');\n    const phone = rawJid.replace(/\\D/g, '');\n    const isDono = ['996560080', '96560080', '997349076', '97349076'].some(d => phone.endsWith(d));\n    if (isDono) return true;\n    return Boolean($json[0]?.value ?? $json.value ?? true);\n  })()\n}}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          3072,
+          1312
+        ],
+        "id": "23e828ec-aada-4175-8433-68cc665ff1b6",
+        "name": "Bot Ativo?"
+      },
+      {
+        "parameters": {
+          "toolDescription": "Use esta ferramenta OBRIGATORIAMENTE assim que o cliente definir os itens, a forma de entrega/retirada e o pagamento. Grava o pedido no sistema do Mais Açaí SJP e retorna a confirmação.",
+          "method": "POST",
+          "url": "https://wpxujeieopgoxodttjqp.supabase.co/rest/v1/orders",
+          "sendHeaders": true,
+          "parametersHeaders": {
+            "values": [
+              {
+                "name": "apikey",
+                "valueProvider": "fieldValue",
+                "value": "sb_publishable_JoS0KkaP2raT82CeuIdokw_xHa1N63X"
+              },
+              {
+                "name": "Authorization",
+                "valueProvider": "fieldValue",
+                "value": "Bearer sb_publishable_JoS0KkaP2raT82CeuIdokw_xHa1N63X"
+              },
+              {
+                "name": "Content-Type",
+                "valueProvider": "fieldValue",
+                "value": "application/json"
+              },
+              {
+                "name": "Prefer",
+                "valueProvider": "fieldValue",
+                "value": "return=representation"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{\n  (function() {\n    const phone = String($('Coleta').first()?.json?.telefone || '').replace(/\\D/g, '');\n    const defaultName = String($('Coleta').first()?.json?.nome || 'Cliente').trim();\n    const name = String($fromAI('customer_name', 'Nome do cliente', 'string') || defaultName).trim();\n    const orderType = String($fromAI('order_type', 'Delivery ou Retirada', 'string') || 'Delivery').trim();\n    const payment = String($fromAI('payment_method', 'PIX, Cartao ou Dinheiro', 'string') || 'PIX').trim();\n    const total = Number($fromAI('total_amount', 'Valor total', 'number')) || 0;\n    const address = String($fromAI('delivery_address', 'Endereco', 'string') || '').trim() || null;\n    const zone = String($fromAI('delivery_zone', 'Bairro', 'string') || '').trim() || null;\n    const itemsDesc = String($fromAI('items_description', 'Itens', 'string') || 'Acai').trim();\n\n    return JSON.stringify({\n      customer_name: name,\n      customer_phone: phone,\n      order_type: orderType,\n      payment_method: payment,\n      total_amount: total,\n      delivery_address: address,\n      delivery_zone: zone,\n      notes: itemsDesc,\n      items: [\n        {\n          name: itemsDesc,\n          quantity: 1,\n          priceCalculated: total\n        }\n      ]\n    });\n  })()\n}}",
+          "specifyHeaders": "keypair",
+          "placeholderDefinitions": {
+            "values": [
+              {
+                "name": "customer_name",
+                "description": "Nome do cliente",
+                "type": "string"
+              },
+              {
+                "name": "order_type",
+                "description": "Delivery ou Retirada",
+                "type": "string"
+              },
+              {
+                "name": "payment_method",
+                "description": "PIX, Cartao ou Dinheiro",
+                "type": "string"
+              },
+              {
+                "name": "total_amount",
+                "description": "Valor total numerico em reais somando entrega (ex: 28.00)",
+                "type": "number"
+              },
+              {
+                "name": "delivery_address",
+                "description": "Rua e numero da entrega ou vazio se Retirada",
+                "type": "string"
+              },
+              {
+                "name": "delivery_zone",
+                "description": "Bairro em Sao Jose dos Pinhais ou vazio se Retirada",
+                "type": "string"
+              },
+              {
+                "name": "items_description",
+                "description": "Descricao dos itens pedidos com tamanho. Ex: 1x Combo Favorito 330ml",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+        "typeVersion": 1.1,
+        "position": [
+          6000,
+          1392
+        ],
+        "id": "0a3d7cd8-8be8-4b59-b6f4-8dfd5bb9a414",
+        "name": "finalizar_pedido"
+      },
+      {
+        "parameters": {
+          "fieldToSplitOut": "item",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.itemLists",
+        "typeVersion": 3.1,
+        "position": [
+          6192,
+          1120
+        ],
+        "id": "905fbfe4-5628-4a3f-bdd0-3711ad715dd4",
+        "name": "Divide Mensagens"
+      },
+      {
+        "parameters": {
+          "url": "=https://wpxujeieopgoxodttjqp.supabase.co/rest/v1/business_hours?day_of_week=eq.{{ $now.setZone('America/Sao_Paulo').weekday % 7 }}&select=*",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "apikey",
+                "value": "sb_publishable_JoS0KkaP2raT82CeuIdokw_xHa1N63X"
+              },
+              {
+                "name": "Authorization",
+                "value": "Bearer sb_publishable_JoS0KkaP2raT82CeuIdokw_xHa1N63X"
+              }
+            ]
+          },
+          "options": {
+            "timeout": 5000
+          }
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          5376,
+          496
+        ],
+        "id": "cd29d4a6-c1c7-4bdc-b9cd-67c5de4be1e1",
+        "name": "Busca Horario Hoje",
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 2000,
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "url": "https://wpxujeieopgoxodttjqp.supabase.co/rest/v1/settings?key=eq.store_status&select=value",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "apikey",
+                "value": "sb_publishable_JoS0KkaP2raT82CeuIdokw_xHa1N63X"
+              },
+              {
+                "name": "Authorization",
+                "value": "Bearer sb_publishable_JoS0KkaP2raT82CeuIdokw_xHa1N63X"
+              }
+            ]
+          },
+          "options": {
+            "timeout": 5000
+          }
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          5392,
+          704
+        ],
+        "id": "6bd80f74-5165-46f5-84a1-5e8094024821",
+        "name": "Busca Status Loja",
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 2000,
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "toolDescription": "Consulta em tempo real o status do pedido no gestor do Mais Açaí SJP usando o número do pedido, o código de rastreamento ou o telefone do cliente.",
+          "url": "={{\n  (function() {\n    const raw = String('{termo_busca}' || $('Coleta').first()?.json?.telefone || '').replace(/[#\\s]/g, '');\n    const isNum = /^\\d+$/.test(raw);\n    const phone = String($('Coleta').first()?.json?.telefone || '').replace(/\\D/g, '');\n    let filter = '';\n    if (isNum && raw.length <= 6) {\n      filter = 'or=(id.eq.' + raw + ',customer_phone.ilike.*' + phone + '*)';\n    } else if (raw.length > 6 && !isNaN(raw)) {\n      filter = 'customer_phone.ilike.*' + raw + '*';\n    } else if (raw) {\n      filter = 'or=(tracking_code.ilike.*' + raw + '*,customer_phone.ilike.*' + phone + '*)';\n    } else {\n      filter = 'customer_phone.ilike.*' + phone + '*';\n    }\n    return 'https://wpxujeieopgoxodttjqp.supabase.co/rest/v1/orders?' + filter + '&select=id,status,customer_name,order_type,total_amount,items,created_at,tracking_code,delivery_address,delivery_zone&order=created_at.desc&limit=1';\n  })()\n}}",
+          "sendHeaders": true,
+          "parametersHeaders": {
+            "values": [
+              {
+                "name": "apikey",
+                "valueProvider": "fieldValue",
+                "value": "sb_publishable_JoS0KkaP2raT82CeuIdokw_xHa1N63X"
+              },
+              {
+                "name": "Authorization",
+                "valueProvider": "fieldValue",
+                "value": "Bearer sb_publishable_JoS0KkaP2raT82CeuIdokw_xHa1N63X"
+              }
+            ]
+          },
+          "placeholderDefinitions": {
+            "values": [
+              {
+                "name": "termo_busca",
+                "description": "Número do pedido (ex: 6), código de rastreamento (ex: 23b3471dfbf8) ou telefone do cliente. Se o cliente não informar, envie o telefone dele.",
+                "type": "string"
+              }
+            ]
+          },
+          "specifyHeaders": "keypair"
+        },
+        "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+        "typeVersion": 1.1,
+        "position": [
+          5840,
+          1424
+        ],
+        "id": "7266a1e4-6fc3-42b6-b754-959617731885",
+        "name": "consultar_status_pedido"
+      },
+      {
+        "parameters": {
+          "amount": 2
+        },
+        "type": "n8n-nodes-base.wait",
+        "typeVersion": 1.1,
+        "position": [
+          5808,
+          1088
+        ],
+        "id": "db41c2d4-329c-43b5-97aa-c53fe5eb9f84",
+        "name": "Delay Humano",
+        "webhookId": "ea86bd74-6810-4225-a429-a392ffd4b0b7"
+      },
+      {
+        "parameters": {
+          "url": "https://wpxujeieopgoxodttjqp.supabase.co/rest/v1/rpc/cardapio_agente",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "apikey",
+                "value": "sb_publishable_JoS0KkaP2raT82CeuIdokw_xHa1N63X"
+              },
+              {
+                "name": "Authorization",
+                "value": "Bearer sb_publishable_JoS0KkaP2raT82CeuIdokw_xHa1N63X"
+              }
+            ]
+          },
+          "options": {
+            "timeout": 8000
+          }
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          5392,
+          912
+        ],
+        "id": "287dc146-73d2-4b95-a377-b0df617bf99c",
+        "name": "Busca Cardapio",
+        "alwaysOutputData": true,
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "jsCode": "// ================= CONFIGURAÇÃO DOS SÓCIOS (MAIS AÇAÍ SJP) =================\nconst item = $input.first().json;\nconst phone = String($('Coleta').first()?.json?.telefone || '').replace(/\\D/g, '');\n\nconst DONOS_JUNIOR = ['5541996560080', '41996560080', '996560080', '554196560080', '4196560080', '96560080'];\nconst DONOS_MICHELE = ['5541997349076', '41997349076', '997349076', '554197349076', '4197349076', '97349076'];\nconst TODOS_DONOS = [...DONOS_JUNIOR, ...DONOS_MICHELE];\n\nif (!TODOS_DONOS.some(d => phone.endsWith(d) || d.endsWith(phone))) {\n  return [{ json: { ...item, rota: 'cliente' } }];\n}\n\nconst isJunior = DONOS_JUNIOR.some(d => phone.endsWith(d) || d.endsWith(phone));\nconst nomeDono = isJunior ? 'Junior' : 'Michele';\n\nconst sd = $getWorkflowStaticData('global');\nconst agoraSp = DateTime.now().setZone('America/Sao_Paulo');\nconst hoje = agoraSp.toFormat('yyyyMMdd');\nconst chaveModo = 'modoDono_' + (isJunior ? 'junior' : 'michele');\nlet modo = (sd[chaveModo] && sd[chaveModo].dia === hoje) ? sd[chaveModo].modo : 'assistente';\n\nlet texto = String(item.text || '');\nconst re = /#?\\bmodo\\s+(cliente|assistente|gestor|dono|dona|socio|sócio)\\b[.!\\s]*/i;\nconst m = texto.match(re);\nlet aviso = '';\nif (m) {\n  modo = m[1].toLowerCase() === 'cliente' ? 'cliente' : 'assistente';\n  sd[chaveModo] = { modo, dia: hoje };\n  texto = texto.replace(re, '').trim();\n  if (!texto) {\n    aviso = modo === 'cliente'\n      ? '👤 Modo cliente ativado. A partir de agora a Maya te atende como cliente normal da açaiteria. Para voltar, envie: *modo assistente*'\n      : '👑 Modo assistente ativado, ' + nomeDono + '! Estou pronta para te passar relatórios de vendas, copos mais vendidos, faturamento, bairros com mais entregas ou status da loja. Para testar como cliente, envie: *modo cliente*';\n  }\n}\n\nconst base = { ...item, text: texto, nomeDono };\nif (aviso) return [{ json: { ...base, rota: 'aviso', resposta: aviso } }];\nreturn [{ json: { ...base, rota: modo } }];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          4896,
+          1984
+        ],
+        "id": "node-modo-gestor",
+        "name": "Modo Gestor"
+      },
+      {
+        "parameters": {
+          "rules": {
+            "values": [
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "loose",
+                    "version": 2
+                  },
+                  "conditions": [
+                    {
+                      "id": "rota-cli",
+                      "leftValue": "={{ $json.rota }}",
+                      "rightValue": "cliente",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals",
+                        "name": "filter.operator.equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "cliente"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "loose",
+                    "version": 2
+                  },
+                  "conditions": [
+                    {
+                      "id": "rota-ass",
+                      "leftValue": "={{ $json.rota }}",
+                      "rightValue": "assistente",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals",
+                        "name": "filter.operator.equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "assistente"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "loose",
+                    "version": 2
+                  },
+                  "conditions": [
+                    {
+                      "id": "rota-avi",
+                      "leftValue": "={{ $json.rota }}",
+                      "rightValue": "aviso",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals",
+                        "name": "filter.operator.equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "aviso"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.switch",
+        "typeVersion": 3.3,
+        "position": [
+          5072,
+          1968
+        ],
+        "id": "node-rota-gestor",
+        "name": "Rota Gestor"
+      },
+      {
+        "parameters": {
+          "promptType": "define",
+          "text": "={{ $json.text }}",
+          "options": {
+            "systemMessage": "=Você é a Maya, assistente executiva, financeira e de inteligência da Mais Açaí SJP.\nVocê está conversando agora diretamente pelo WhatsApp com a diretoria: {{ $('Modo Gestor').first().json.nomeDono || 'proprietário(a)' }}.\nSempre trate a pessoa pelo nome dela (Junior ou Michele).\n\nAgora em São José dos Pinhais (Horário de Brasília): {{ $now.setZone('America/Sao_Paulo').setLocale('pt-BR').toFormat(\"cccc, dd/MM/yyyy HH:mm\") }}\nHoje (ISO): {{ $now.setZone('America/Sao_Paulo').toFormat('yyyy-MM-dd') }}\n\nO QUE VOCÊ FAZ (DIRETORIA, OPERAÇÃO & FINANCEIRO COMPLETO)\n1. MOVIMENTO & VENDAS:\n   - Número de pedidos, faturamento bruto, ticket médio, canais (Entrega vs Retirada) e formas de pagamento (PIX, Cartão, Dinheiro).\n   - Copos vendidos por tamanho: 330ml, 440ml, 550ml, 770ml, 1 Litro, 2 Litros.\n   - Combos mais pedidos, bases mais consumidas e adicionais/extras mais vendidos.\n   - Bairros de São José dos Pinhais com mais entregas (Parque da Fonte, Afonso Pena, Centro, etc.).\n   - Pedidos em aberto no momento, cancelados e detalhes de um pedido.\n\n2. ENGENHARIA DE CARDÁPIO & FICHAS TÉCNICAS (CMV E CUSTOS):\n   - Custo real de produção de qualquer copo, combo ou produto do cardápio (use relatorio_gestor com tipo 'ficha' e passe o nome em 'termo', ex: termo='nevado').\n   - Quebra exata de custos: Custo da Base (copo descartável + tampa + colher + açaí/polpa) + Custo dos Recheios (gramas de cada ingrediente).\n   - Custo Total de Mercadoria Vendida (CMV em R$ e em %).\n   - Margem de Contribuição Bruta (quanto sobra no bolso em R$ e em %).\n   - Produtos mais lucrativos (use relatorio_gestor com tipo 'ranking_margens').\n   - Produtos com maior CMV / custo mais alto (use relatorio_gestor com tipo 'maior_cmv').\n\n3. INSUMOS, COMPRAS & MATÉRIA-PRIMA:\n   - Preços de compra, tamanho das embalagens e custo por quilo/unidade de insumos (use relatorio_gestor com tipo 'insumo' e passe o nome em 'termo', ex: termo='nutella', termo='leite em pó', termo='açaí natural').\n\n4. CUSTOS FIXOS & ESTRUTURA:\n   - Custos fixos mensais cadastrados (use relatorio_gestor com tipo 'custos_fixos').\n\n5. SITUAÇÃO DA LOJA & CLIENTES:\n   - Status da loja (aberta/fechada, bot de clientes, horários da semana) -> tipo 'loja'.\n   - Histórico e valor total gasto por um cliente (use tipo 'cliente' com telefone).\n   - Ranking dos melhores clientes -> tipo 'ranking_clientes'.\n\nCOMO CHAMAR A FERRAMENTA relatorio_gestor:\n- tipo: 'resumo', 'ficha', 'insumo', 'ranking_margens', 'maior_cmv', 'custos_fixos', 'pedido', 'cliente', 'ranking_clientes', 'loja'.\n- termo: nome do produto, insumo ou identificador quando aplicável (ex: 'nevado', 'morango', 'nutella').\n- data_inicio e data_fim: formato AAAA-MM-DD (para 'hoje', use {{ $now.setZone('America/Sao_Paulo').toFormat('yyyy-MM-dd') }}).\n\nREGRAS DE RESPOSTA\n- Tom: Parceira, ágil, direta, executiva e precisa.\n- Valores monetários sempre em reais formatados (ex: R$ 14,17).\n- NUNCA invente números, custos ou gramaturas. Se a ferramenta não retornar o dado, diga exatamente o que falta."
+          }
+        },
+        "type": "@n8n/n8n-nodes-langchain.agent",
+        "typeVersion": 1.7,
+        "position": [
+          5648,
+          1872
+        ],
+        "id": "node-assistente-gestor",
+        "name": "ASSISTENTE DOS SÓCIOS (MAYA GESTORA)"
+      },
+      {
+        "parameters": {
+          "model": "google/gemini-2.5-flash",
+          "options": {}
+        },
+        "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+        "typeVersion": 1,
+        "position": [
+          5568,
+          2112
+        ],
+        "id": "node-openrouter-gestor",
+        "name": "OpenRouter Gestor",
+        "credentials": {
+          "openRouterApi": {
+            "id": "vXW3HihqakLMEzrJ",
+            "name": "openrouter_cloudfy"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "sessionIdType": "customKey",
+          "sessionKey": "={{ $('Coleta').first().json.telefone.replace(/\\D/g, '') }}_gestor_{{ $now.toFormat('yyyyMMdd') }}",
+          "contextWindowLength": 20,
+          "tableName": "maisacai_chat_historico"
+        },
+        "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+        "typeVersion": 1.4,
+        "position": [
+          5728,
+          2112
+        ],
+        "id": "node-memoria-gestor",
+        "name": "Memória Gestor",
+        "credentials": {
+          "postgres": {
+            "id": "LlNWKTJHq8YCSCZX",
+            "name": "postgres_cloudfy"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "toolDescription": "Cardápio completo do Mais Açaí SJP com preços, combos, adicionais e receitas atualizadas ao vivo.",
+          "url": "https://cardapiomaisacaisjp.netlify.app/.netlify/functions/agent-menu",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequestTool",
+        "typeVersion": 4.4,
+        "position": [
+          6048,
+          2112
+        ],
+        "id": "node-tool-cardapio-gestor",
+        "name": "cardapio_mais_acai_gestor"
+      },
+      {
+        "parameters": {
+          "description": "Consulta os dados REAIS de vendas, financeiro e fichas técnicas do Mais Açaí SJP. Campos:\n- tipo:\n  'resumo' = movimento geral do período (pedidos, faturamento, ticket médio, copos vendidos por tamanho, mais pedidos, bases, adicionais, bairros)\n  'ficha' = ficha técnica detalhada com custo de base, recheio, CMV R$ e %, margem bruta e receita em gramas (passe nome do produto em termo)\n  'insumo' = custo de compra, embalagem, perda e fornecedor de matéria-prima (passe nome do insumo em termo)\n  'ranking_margens' = top 10 produtos mais lucrativos da loja\n  'maior_cmv' = produtos com custo relativo mais alto\n  'custos_fixos' = despesas fixas mensais\n  'pedido' = detalhe de um pedido por número\n  'cliente' = histórico e total gasto de um cliente\n  'ranking_clientes' = top clientes\n  'loja' = status da loja, horários e bot\n- termo: nome do combo, insumo ou termo de busca\n- data_inicio e data_fim: AAAA-MM-DD",
+          "workflowId": {
+            "__rl": true,
+            "value": "9yGHwRbZDao1PKgb",
+            "mode": "list",
+            "cachedResultUrl": "/workflow/9yGHwRbZDao1PKgb",
+            "cachedResultName": "Relatório Assistente Mais Açaí SJP"
+          },
+          "workflowInputs": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "tipo": "={{ $fromAI('tipo', 'resumo, ficha, insumo, ranking_margens, maior_cmv, custos_fixos, pedido, cliente, ranking_clientes ou loja', 'string') }}",
+              "termo": "={{ $fromAI('termo', 'Nome do produto, combo ou insumo pesquisado', 'string') }}",
+              "data_inicio": "={{ $fromAI('data_inicio', 'Data inicial AAAA-MM-DD ou string vazia', 'string') }}",
+              "data_fim": "={{ $fromAI('data_fim', 'Data final AAAA-MM-DD ou string vazia', 'string') }}",
+              "telefone": "={{ $fromAI('telefone', 'Telefone do cliente ou string vazia', 'string') }}",
+              "order_id": "={{ $fromAI('order_id', 'Número do pedido ou string vazia', 'string') }}"
+            },
+            "matchingColumns": [],
+            "schema": [
+              {
+                "id": "tipo",
+                "displayName": "tipo",
+                "type": "string"
+              },
+              {
+                "id": "termo",
+                "displayName": "termo",
+                "type": "string"
+              },
+              {
+                "id": "data_inicio",
+                "displayName": "data_inicio",
+                "type": "string"
+              },
+              {
+                "id": "data_fim",
+                "displayName": "data_fim",
+                "type": "string"
+              },
+              {
+                "id": "telefone",
+                "displayName": "telefone",
+                "type": "string"
+              },
+              {
+                "id": "order_id",
+                "displayName": "order_id",
+                "type": "string"
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          }
+        },
+        "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+        "typeVersion": 2.2,
+        "position": [
+          5888,
+          2112
+        ],
+        "id": "node-tool-relatorio-gestor",
+        "name": "relatorio_gestor"
+      },
+      {
+        "parameters": {
+          "jsCode": "const j = $input.first().json;\nconst txt = String(j.output ?? j.resposta ?? '').replace(/\\[\\s*SIL[EÊ]NCIO\\s*\\]/gi, '').trim();\nconst partes = txt.split('|||').map(s => s.trim()).filter(Boolean);\nreturn partes.map(p => ({ json: { item: p } }));\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          5424,
+          2272
+        ],
+        "id": "node-prepara-envio-gestor",
+        "name": "Prepara Envio Gestor"
+      },
+      {
+        "parameters": {
+          "resource": "messages-api",
+          "instanceName": "Maisacaisjp",
+          "remoteJid": "={{ $('Coleta').first().json.telefone.replace(/^=+/, '') }}",
+          "messageText": "={{ $json.item }}",
+          "options_message": {
+            "delay": 900
+          }
+        },
+        "type": "n8n-nodes-evolution-api.evolutionApi",
+        "typeVersion": 1,
+        "position": [
+          5664,
+          2272
+        ],
+        "id": "node-envia-resposta-gestor",
+        "name": "Envia Resposta Gestor",
+        "credentials": {
+          "evolutionApi": {
+            "id": "SvkoJsMtlGFyG93s",
+            "name": "evolution_cloudfy"
+          }
+        },
+        "continueOnFail": true
+      },
+      {
+        "parameters": {
+          "jsCode": "const inp = $input.first()?.json || {};\nconst agrupa = String($('AGRUPA MENSAGENS').first()?.json?.concatenated_content || '').replace(/^=+/, '').trim();\nconst coleta = String($('Coleta').first()?.json?.mensagem || '').trim();\nconst raw = String($('Recebe mensagem').first()?.json?.body?.data?.message?.conversation || $('Recebe mensagem').first()?.json?.body?.data?.message?.extendedTextMessage?.text || '').trim();\nconst txt = String(inp.text || agrupa || (coleta !== '[Arquivo/Midia]' ? coleta : '') || raw || 'Olá').trim();\nreturn [{ json: { text: txt || 'Olá' } }];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          5460,
+          1860
+        ],
+        "id": "node-prepara-entrada-gestor",
+        "name": "Prepara Entrada Gestor"
+      }
+    ],
+    "connections": {
+      "Merge": {
+        "main": [
+          [
+            {
+              "node": "Busca Horario Hoje",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Loop Over Items1": {
+        "main": [
+          [],
+          [
+            {
+              "node": "Envia mensagem para o WhatsApp",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "SEPARA MENSAGENS2": {
+        "main": [
+          [
+            {
+              "node": "Divide Mensagens",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "PAUSA DE 7 SEGUNDOS": {
+        "main": [
+          [
+            {
+              "node": "BUSCA MENSAGENS DO USUÁRIO",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "DELAY 1 SEGUNDO": {
+        "main": [
+          [
+            {
+              "node": "Loop Over Items1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "BUSCA MENSAGENS DO USUÁRIO": {
+        "main": [
+          [
+            {
+              "node": "AGRUPA MENSAGENS",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "AGRUPA MENSAGENS": {
+        "main": [
+          [
+            {
+              "node": "DELETA MENSAGENS",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "DELETA MENSAGENS": {
+        "main": [
+          [
+            {
+              "node": "output mensagem",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Verifica tipo de arquivo": {
+        "main": [
+          [
+            {
+              "node": "REGISTRA MENSAGEM2",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Envia mensagem para o WhatsApp": {
+        "main": [
+          [
+            {
+              "node": "DELAY 1 SEGUNDO",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "REGISTRA MENSAGEM2": {
+        "main": [
+          [
+            {
+              "node": "PAUSA DE 7 SEGUNDOS",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Coleta": {
+        "main": [
+          [
+            {
+              "node": "Verifica tipo de arquivo",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "AGENTE DE I.A.": {
+        "main": [
+          [
+            {
+              "node": "Delay Humano",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Enviar texto",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "output mensagem": {
+        "main": [
+          [
+            {
+              "node": "Merge",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Recebe mensagem": {
+        "main": [
+          [
+            {
+              "node": "If",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "OpenRouter Chat Model": {
+        "ai_languageModel": [
+          [
+            {
+              "node": "AGENTE DE I.A.",
+              "type": "ai_languageModel",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "If": {
+        "main": [
+          [
+            {
+              "node": "Verifica Status Bot",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Code in JavaScript": {
+        "main": [
+          [
+            {
+              "node": "Modo Gestor",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Postgres Chat Memory": {
+        "ai_memory": [
+          [
+            {
+              "node": "AGENTE DE I.A.",
+              "type": "ai_memory",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Verifica Status Bot": {
+        "main": [
+          [
+            {
+              "node": "Bot Ativo?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Bot Ativo?": {
+        "main": [
+          [
+            {
+              "node": "Coleta",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "finalizar_pedido": {
+        "ai_tool": [
+          [
+            {
+              "node": "AGENTE DE I.A.",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Divide Mensagens": {
+        "main": [
+          [
+            {
+              "node": "Loop Over Items1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Busca Horario Hoje": {
+        "main": [
+          [
+            {
+              "node": "Busca Status Loja",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Busca Status Loja": {
+        "main": [
+          [
+            {
+              "node": "Busca Cardapio",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Delay Humano": {
+        "main": [
+          [
+            {
+              "node": "SEPARA MENSAGENS2",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "consultar_status_pedido": {
+        "ai_tool": [
+          [
+            {
+              "node": "AGENTE DE I.A.",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Busca Cardapio": {
+        "main": [
+          [
+            {
+              "node": "Code in JavaScript",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Modo Gestor": {
+        "main": [
+          [
+            {
+              "node": "Rota Gestor",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Rota Gestor": {
+        "main": [
+          [
+            {
+              "node": "AGENTE DE I.A.",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepara Entrada Gestor",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepara Envio Gestor",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "OpenRouter Gestor": {
+        "ai_languageModel": [
+          [
+            {
+              "node": "ASSISTENTE DOS SÓCIOS (MAYA GESTORA)",
+              "type": "ai_languageModel",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Memória Gestor": {
+        "ai_memory": [
+          [
+            {
+              "node": "ASSISTENTE DOS SÓCIOS (MAYA GESTORA)",
+              "type": "ai_memory",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "relatorio_gestor": {
+        "ai_tool": [
+          [
+            {
+              "node": "ASSISTENTE DOS SÓCIOS (MAYA GESTORA)",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "cardapio_mais_acai_gestor": {
+        "ai_tool": [
+          [
+            {
+              "node": "ASSISTENTE DOS SÓCIOS (MAYA GESTORA)",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "ASSISTENTE DOS SÓCIOS (MAYA GESTORA)": {
+        "main": [
+          [
+            {
+              "node": "Prepara Envio Gestor",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepara Envio Gestor": {
+        "main": [
+          [
+            {
+              "node": "Envia Resposta Gestor",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepara Entrada Gestor": {
+        "main": [
+          [
+            {
+              "node": "ASSISTENTE DOS SÓCIOS (MAYA GESTORA)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "NÉRITON JR",
+    "name": null,
+    "description": null,
+    "autosaved": false
   }
 }

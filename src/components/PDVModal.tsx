@@ -984,13 +984,6 @@ export default function PDVModal({
                             product={product}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
-
-                          {/* Badge de tamanhos oficiais em ml (sem P, M, G ou pizzaria) */}
-                          {hasMultipleSizes && (
-                            <span className="absolute top-1.5 right-1.5 bg-[#4d0471]/90 text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-full shadow-2xs backdrop-blur-2xs">
-                              {sizes.map(s => s.label).join(' · ')}
-                            </span>
-                          )}
                         </div>
 
                         {/* Nome & Ingredientes */}

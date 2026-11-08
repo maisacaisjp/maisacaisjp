@@ -2,17 +2,19 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
-import { ArrowLeft, Check, MessageCircle, Receipt } from 'lucide-react';
+import { ArrowLeft, Check, MessageCircle, Receipt, Star } from 'lucide-react';
 import { formatItemNameForPrint } from '../utils/printHelpers';
 import { brl } from '../utils/formatacao';
 import { etapasDoPedido, rotuloStatus, textoDoStatus } from '../utils/contaCliente';
 import { RESTAURANT_WHATSAPP_PHONE } from '../data/menu';
+import OrderReviewModal from '../components/OrderReviewModal';
 
 export default function OrderTracking() {
   const { code } = useParams();
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [isReviewOpen, setIsReviewOpen] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -114,6 +116,42 @@ export default function OrderTracking() {
             <p className="mt-4 text-[12px] text-white/50">Esta página atualiza sozinha.</p>
           )}
         </section>
+
+        {/* Avaliação do Pedido (estilo Multipedidos) */}
+        {finalizado && (
+          <section className="mt-4 bg-gradient-to-br from-amber-50 to-purple-50 rounded-3xl p-5 ring-1 ring-amber-200/70 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-amber-400 text-stone-900 flex items-center justify-center shadow-xs shrink-0">
+                <Star className="w-6 h-6 fill-stone-900" />
+              </div>
+              <div>
+                <h3 className="font-display text-[16px] font-bold text-stone-900 leading-tight">
+                  Como estava o seu açaí?
+                </h3>
+                <p className="text-[13px] text-stone-600 mt-0.5">
+                  Sua avaliação ajuda a Mais Açaí e outros clientes!
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsReviewOpen(true)}
+              className="mt-3.5 w-full h-11 rounded-2xl bg-[#4d0471] hover:bg-[#6a2092] text-white font-bold text-[13.5px] flex items-center justify-center gap-2 transition shadow-md cursor-pointer active:scale-[0.99]"
+            >
+              <Star className="w-4 h-4 fill-amber-300 text-amber-300" />
+              <span>Avaliar este pedido agora</span>
+            </button>
+          </section>
+        )}
+
+        <OrderReviewModal
+          isOpen={isReviewOpen}
+          onClose={() => setIsReviewOpen(false)}
+          orderId={order.id}
+          trackingCode={code}
+          customerName={order.customerName}
+        />
 
         {/* Resumo */}
         <section className="mt-4 bg-white rounded-3xl ring-1 ring-stone-200/80 p-5">

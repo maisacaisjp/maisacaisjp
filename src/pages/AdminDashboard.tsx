@@ -45,7 +45,9 @@ import {
   LayoutGrid,
   Columns3,
   List,
-  CheckCircle2
+  CheckCircle2,
+  Star,
+  ChefHat
 } from "lucide-react";
 import {
   AreaChart,
@@ -83,7 +85,10 @@ import CustomersManager from '../components/CustomersManager';
 import CaixaManager from '../components/CaixaManager';
 import UsersManager from '../components/UsersManager';
 import BannerManager from '../components/BannerManager';
+import ReviewsManager from '../components/ReviewsManager';
 import AgentManager from '../components/AgentManager';
+import MotoboyManager from '../components/MotoboyManager';
+import KitchenDisplay from '../components/KitchenDisplay';
 import HistoricalSalesModal from '../components/HistoricalSalesModal';
 
 import { startOfDay, endOfDay } from 'date-fns';
@@ -179,12 +184,15 @@ export default function AdminDashboard() {
   const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
     'visao-geral': { title: 'Visão Geral', subtitle: 'Acompanhe o desempenho do seu negócio em tempo real.' },
     'pedidos': { title: 'Pedidos', subtitle: 'Gerencie e acompanhe os pedidos em tempo real.' },
+    'cozinha-kds': { title: 'Cozinha & KDS', subtitle: 'Tela de bancada com contagem de tempo e montagem de açaí.' },
+    'motoboys': { title: 'Logística & Entregadores', subtitle: 'Gestão de motoboys sob demanda e acerto diário de corridas.' },
     'caixa': { title: 'Caixa', subtitle: 'Abertura, fechamento e conferência do turno.' },
     'gestao-cardapio': { title: 'Produtos', subtitle: 'Gerencie o cardápio, preços e fotos.' },
     'categorias': { title: 'Categorias', subtitle: 'Organize as categorias do cardápio.' },
     'fichas-tecnicas': { title: 'Ficha Técnica & CMV', subtitle: 'Gestão de insumos, custo de produção e margem real por produto.' },
     'relatorios': { title: 'Relatórios', subtitle: 'Vendas, ticket médio e produtos mais vendidos.' },
     'clientes': { title: 'Clientes', subtitle: 'Histórico e cadastro de clientes.' },
+    'avaliacoes': { title: 'Avaliações de Clientes', subtitle: 'Gestão de notas, comentários, elogios e respostas públicas.' },
     'financeiro': { title: 'Financeiro', subtitle: 'Fichas técnicas, custos, despesas e resultado do mês.' },
     'configuracoes': { title: 'Configurações', subtitle: 'Horário, impressão, logo e dados da empresa.' },
     'banner-promocional': { title: 'Banner Promocional', subtitle: 'Configure o pop-up de aviso ou promoção exibido no cardápio.' },
@@ -968,6 +976,7 @@ export default function AdminDashboard() {
       'fichas-tecnicas': 'gerenciar_produtos',
       'relatorios': 'ver_relatorios',
       'clientes': 'ver_clientes',
+      'avaliacoes': 'ver_clientes',
       'financeiro': 'acesso_financeiro_dono',
       'configuracoes': 'gerenciar_configuracoes',
       'usuarios': 'gerenciar_usuarios',
@@ -1208,6 +1217,8 @@ export default function AdminDashboard() {
       itens: [
         { id: 'visao-geral', rotulo: 'Visão geral', Icone: LayoutDashboard, mostrar: hasPermission('ver_relatorios'), palavras: 'inicio dashboard resumo' },
         { id: 'pedidos', rotulo: 'Pedidos', Icone: ShoppingBag, mostrar: hasPermission('ver_pedidos'), badge: pedidosNovos, palavras: 'comandas delivery' },
+        { id: 'cozinha-kds', rotulo: 'Cozinha (KDS)', Icone: ChefHat, mostrar: hasPermission('ver_pedidos'), palavras: 'kds bancada producao preparo montagem tempo' },
+        { id: 'motoboys', rotulo: 'Motoboys & Entregas', Icone: Bike, mostrar: hasPermission('ver_pedidos'), palavras: 'entregador motoboy acerto corrida rota frete' },
         { id: 'caixa', rotulo: 'Caixa', Icone: CreditCard, mostrar: hasPermission('gerenciar_caixa'), palavras: 'abrir fechar turno sangria' },
         { id: 'despesas', rotulo: 'Despesas', Icone: TrendingDown, mostrar: hasPermission('gerenciar_caixa'), palavras: 'gastos contas' },
       ],
@@ -1216,6 +1227,7 @@ export default function AdminDashboard() {
       titulo: 'Clientes e vendas',
       itens: [
         { id: 'clientes', rotulo: 'Clientes', Icone: Users, mostrar: hasPermission('ver_clientes'), palavras: 'cashback fidelidade' },
+        { id: 'avaliacoes', rotulo: 'Avaliações', Icone: Star, mostrar: hasPermission('ver_clientes'), palavras: 'estrelas notas comentarios nps feedback' },
         { id: 'relatorios', rotulo: 'Relatórios', Icone: BarChart3, mostrar: hasPermission('ver_relatorios'), palavras: 'vendas faturamento' },
         { id: 'funil', rotulo: 'Funil de vendas', Icone: Filter, mostrar: hasPermission('ver_relatorios'), palavras: 'acessos conversao' },
       ],
@@ -1469,6 +1481,8 @@ export default function AdminDashboard() {
             <span className="text-[10px] text-white/60 font-mono uppercase tracking-wider">
               {activeTab === 'visao-geral' && 'Visão Geral'}
               {activeTab === 'pedidos' && 'Pedidos'}
+              {activeTab === 'cozinha-kds' && 'Cozinha (KDS)'}
+              {activeTab === 'motoboys' && 'Motoboys & Entregas'}
               {activeTab === 'caixa' && 'Caixa'}
               {activeTab === 'despesas' && 'Despesas'}
               {activeTab === 'relatorios' && 'Relatórios'}
@@ -1539,6 +1553,18 @@ export default function AdminDashboard() {
                   className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'pedidos' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
                 >
                   Pedidos
+                </button>
+                <button 
+                  onClick={() => { setActiveTab("cozinha-kds"); setIsMobileMenuOpen(false); }} 
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'cozinha-kds' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
+                >
+                  Cozinha (KDS)
+                </button>
+                <button 
+                  onClick={() => { setActiveTab("motoboys"); setIsMobileMenuOpen(false); }} 
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'motoboys' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
+                >
+                  Motoboys & Entregas
                 </button>
                 <button 
                   onClick={() => { setActiveTab("caixa"); setIsMobileMenuOpen(false); }} 
@@ -1873,10 +1899,30 @@ export default function AdminDashboard() {
           </div>
         )}
 
+        {activeTab === "avaliacoes" && hasPermission('ver_clientes') && (
+          <div className="mt-1">
+            <ReviewsManager />
+          </div>
+        )}
+
         {/* FUNIL DE VENDAS */}
         {activeTab === "funil" && (
           <div className="mt-1">
             <SalesFunnelManager onNavigateToTab={(t) => setActiveTab(t)} />
+          </div>
+        )}
+
+        {/* COZINHA KDS */}
+        {activeTab === "cozinha-kds" && hasPermission('ver_pedidos') && (
+          <div className="mt-1">
+            <KitchenDisplay />
+          </div>
+        )}
+
+        {/* MOTOBOYS & ENTREGAS */}
+        {activeTab === "motoboys" && hasPermission('ver_pedidos') && (
+          <div className="mt-1">
+            <MotoboyManager />
           </div>
         )}
 
@@ -2976,6 +3022,12 @@ export default function AdminDashboard() {
                                     {order.deliveryZone && (
                                       <span className="block text-[11px] font-bold text-sky-800 mt-0.5">
                                         Zona: {order.deliveryZone}
+                                      </span>
+                                    )}
+                                    {(order as any).motoboy_name && (
+                                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-900 bg-purple-100/80 px-2 py-0.5 rounded border border-purple-200 mt-1">
+                                        <Bike size={12} className="text-purple-700" />
+                                        Entregador: {(order as any).motoboy_name}
                                       </span>
                                     )}
                                   </div>

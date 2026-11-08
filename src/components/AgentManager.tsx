@@ -5,7 +5,8 @@ import {
   Send, User, Search, PauseCircle, PlayCircle, X,
   Image as ImageIcon, FileText, Music, ZoomIn, Download, ExternalLink, ShieldCheck, CheckCheck,
   Users, Clock, TrendingUp, Sparkles, ChevronDown, ChevronUp, RefreshCw, Trash2,
-  CreditCard, Coins, CheckCircle2, ArrowUpRight, Copy, Check, ArrowLeft
+  CreditCard, Coins, CheckCircle2, ArrowUpRight, Copy, Check, ArrowLeft,
+  Crown, BarChart3, Zap, Layers, HelpCircle
 } from 'lucide-react';
 
 export interface ChatMessage {
@@ -37,7 +38,12 @@ export interface ParsedMessage {
   isReceipt: boolean;
 }
 
-export function parseMessageContent(text: string, mediaUrlProp?: string | null, mediaTypeProp?: string | null, captionProp?: string | null): ParsedMessage {
+export function parseMessageContent(
+  text: string, 
+  mediaUrlProp?: string | null, 
+  mediaTypeProp?: string | null, 
+  captionProp?: string | null
+): ParsedMessage {
   const isReceiptPattern = /(?:comprovante|pix|transfer[eê]ncia|paguei|pago|recibo)/i;
 
   if (mediaUrlProp) {
@@ -157,11 +163,11 @@ export function parseMessageContent(text: string, mediaUrlProp?: string | null, 
 
 // Atalhos de Respostas Rápidas para o Operador
 const QUICK_RESPONSES = [
-  { label: '🍧 Em Preparo', text: 'Seu pedido já está sendo preparado e logo sai para entrega!' },
-  { label: '🛵 Saiu p/ Entrega', text: 'Seu pedido acabou de sair com o entregador para entrega!' },
-  { label: '🪙 Precisa de Troco?', text: 'Com certeza! Você tem o valor exato ou precisa de troco para alguma nota (ex: R$ 20, R$ 50)?' },
-  { label: '✅ PIX Confirmado', text: 'Confirmamos o recebimento do seu PIX com sucesso! Muito obrigado!' },
-  { label: '💳 Chave PIX', text: 'Você pode pagar via PIX! Já te envio a nossa chave por aqui.' }
+  { label: '🍧 Em Preparo', text: 'Seu açaí já está sendo preparado com muito carinho e logo sai para entrega! 🍇' },
+  { label: '🛵 Saiu p/ Entrega', text: 'Seu pedido acabou de sair com o entregador! Fique de olho no portão 🛵✨' },
+  { label: '🪙 Precisa de Troco?', text: 'Com certeza! Você tem o valor exato ou precisa de troco para quanto (ex: R$ 50, R$ 100)?' },
+  { label: '✅ PIX Confirmado', text: 'Confirmamos o recebimento do seu PIX com sucesso! Muito obrigado pela preferência 💜' },
+  { label: '💳 Chave PIX', text: 'Nossa chave PIX oficial é o celular: 41997349076 (Michele Alvarez - Mais Açaí).' }
 ];
 
 export default function AgentManager() {
@@ -170,7 +176,8 @@ export default function AgentManager() {
   const [updating, setUpdating] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string>('');
   const [copiedPhone, setCopiedPhone] = useState(false);
-  const [conversationFilter, setConversationFilter] = useState<'all' | 'ai' | 'manual'>('all');
+  const [conversationFilter, setConversationFilter] = useState<'all' | 'ai' | 'manual' | 'directors'>('all');
+  const [viewMode, setViewMode] = useState<'cockpit' | 'gestor_info'>('cockpit');
 
   const handleCopyPhone = useCallback((phone: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -179,13 +186,13 @@ export default function AgentManager() {
     setTimeout(() => setCopiedPhone(false), 2000);
   }, []);
 
-  // Estado das Conversas (Espelho WhatsApp Relacional)
+  // Estado das Conversas
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [loadingConversations, setLoadingConversations] = useState(false);
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
   const selectedPhoneRef = useRef<string | null>(null);
 
-  // Mensagens da conversa atualmente aberta (limite de 20)
+  // Mensagens da conversa atualmente aberta
   const [activeMessages, setActiveMessages] = useState<ChatMessage[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
 
@@ -198,7 +205,7 @@ export default function AgentManager() {
 
   // Métricas do Dia (Cockpit de Atendimento)
   const [showMetricsDashboard, setShowMetricsDashboard] = useState(true);
-  const [showLearningDrawer, setShowLearningDrawer] = useState(false);
+  const [showRulesModal, setShowRulesModal] = useState(false);
   const [loadingMetrics, setLoadingMetrics] = useState(false);
   const [metrics, setMetrics] = useState({
     totalConversationsToday: 0,
@@ -269,7 +276,7 @@ export default function AgentManager() {
 
       const avgSec = responseTimes.length > 0
         ? Math.round(responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length)
-        : (botMsgs > 0 ? 4 : 0);
+        : (botMsgs > 0 ? 3 : 0);
 
       setMetrics({
         totalConversationsToday: activePhones.size || conversations.length,
@@ -298,7 +305,6 @@ export default function AgentManager() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Mantém a ref sincronizada com o estado para o listener do Realtime
   useEffect(() => {
     selectedPhoneRef.current = selectedPhone;
   }, [selectedPhone]);
@@ -308,14 +314,13 @@ export default function AgentManager() {
     loadConversations();
     fetchDailyMetrics();
     
-    // Inscrever-se para atualizações em tempo real (Settings, Conversas e Mensagens)
+    // Realtime listener
     const subscription = supabase
-      .channel('chat_agent_realtime_v2')
+      .channel('chat_agent_realtime_v3')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, (payload) => {
         const item = (payload.new || payload.old) as any;
         if (!item || !item.key) return;
 
-        // Status geral do bot
         if (item.key === 'bot_active') {
           setIsActive(Boolean(item.value));
           if (item.updated_at) {
@@ -323,7 +328,6 @@ export default function AgentManager() {
           }
         }
 
-        // Espelho de conversas via settings (fallback)
         if (typeof item.key === 'string' && item.key.startsWith('chat_conversation_')) {
           if (payload.eventType === 'DELETE') {
             const rawPhone = item.key.replace('chat_conversation_', '');
@@ -345,7 +349,6 @@ export default function AgentManager() {
           }
         }
       })
-      // Ouvinte na tabela relacional de conversas
       .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_conversations' }, (payload) => {
         if (payload.eventType === 'DELETE') {
           const deletedPhone = (payload.old as any)?.phone;
@@ -384,12 +387,10 @@ export default function AgentManager() {
           });
         }
       })
-      // Ouvinte na tabela relacional de mensagens (Histórico contínuo sem sobrescrever)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, (payload) => {
         const newMsg = payload.new as any;
         if (!newMsg) return;
 
-        // Se for da conversa aberta na tela, adiciona imediatamente
         if (selectedPhoneRef.current === newMsg.phone) {
           setActiveMessages(prev => {
             if (prev.some(m => m.id === newMsg.id)) return prev;
@@ -405,7 +406,6 @@ export default function AgentManager() {
           });
         }
 
-        // Atualiza prévia e sobe a conversa para o topo da barra lateral
         setConversations(prev => {
           return prev.map(c => c.phone === newMsg.phone ? {
             ...c,
@@ -422,7 +422,6 @@ export default function AgentManager() {
     };
   }, []);
 
-  // Carrega as últimas 20 mensagens quando uma conversa é selecionada
   useEffect(() => {
     if (selectedPhone) {
       loadMessagesForPhone(selectedPhone);
@@ -433,7 +432,6 @@ export default function AgentManager() {
 
   const prevPhoneRef = useRef<string | null>(null);
 
-  // Auto-scroll ao receber nova mensagem ou trocar de conversa
   useEffect(() => {
     if (selectedPhone && messagesEndRef.current) {
       const isSwitchingPhone = prevPhoneRef.current !== selectedPhone;
@@ -451,12 +449,10 @@ export default function AgentManager() {
         .from('settings')
         .select('value, updated_at')
         .eq('key', 'bot_active')
-        .maybeSingle();
-      
-      if (error) {
-        console.error('Erro ao buscar status do bot:', error);
-        setIsActive(true);
-      } else if (data) {
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      if (data) {
         setIsActive(Boolean(data.value));
         if (data.updated_at) {
           setLastUpdated(new Date(data.updated_at).toLocaleTimeString('pt-BR'));
@@ -465,7 +461,7 @@ export default function AgentManager() {
         setIsActive(true);
       }
     } catch (err) {
-      console.error('Exceção ao buscar status:', err);
+      console.error('Erro ao buscar status do bot:', err);
       setIsActive(true);
     } finally {
       setLoading(false);
@@ -475,154 +471,155 @@ export default function AgentManager() {
   const loadConversations = async () => {
     setLoadingConversations(true);
     try {
-      // 1. Tenta carregar da tabela relacional chat_conversations
-      const { data: convData, error: convErr } = await supabase
-        .from('chat_conversations')
-        .select('*')
-        .order('updated_at', { ascending: false });
+      let loadedFromRelational = false;
+      try {
+        const { data: convRows, error: convError } = await supabase
+          .from('chat_conversations')
+          .select('*')
+          .order('updated_at', { ascending: false });
 
-      if (!convErr && convData && convData.length > 0) {
-        const parsed: ChatConversation[] = convData.map(c => ({
-          phone: c.phone,
-          name: c.name || 'Cliente',
-          paused: Boolean(c.paused),
-          paused_at: c.paused_at,
-          last_message: c.last_message,
-          last_sender: c.last_sender,
-          updated_at: c.updated_at,
-          messages: []
-        }));
-
-        setConversations(parsed);
-        if (!selectedPhone && parsed.length > 0) {
-          setSelectedPhone(parsed[0].phone);
+        if (!convError && Array.isArray(convRows) && convRows.length > 0) {
+          loadedFromRelational = true;
+          const convList: ChatConversation[] = convRows.map(r => ({
+            phone: r.phone,
+            name: r.name || 'Cliente',
+            paused: Boolean(r.paused),
+            paused_at: r.paused_at,
+            last_message: r.last_message || '',
+            last_sender: r.last_sender || 'client',
+            updated_at: r.updated_at || new Date().toISOString(),
+            messages: []
+          }));
+          setConversations(convList);
         }
-        return;
+      } catch (relErr) {
+        console.warn('Aviso tabela relacional conversas:', relErr);
       }
 
-      // 2. Fallback: carregar da tabela settings
-      const { data: settingsData, error: settingsErr } = await supabase
-        .from('settings')
-        .select('key, value, updated_at')
-        .like('key', 'chat_conversation_%');
+      if (!loadedFromRelational) {
+        const { data, error } = await supabase
+          .from('settings')
+          .select('key, value, updated_at')
+          .like('key', 'chat_conversation_%');
 
-      if (settingsErr) throw settingsErr;
-
-      if (settingsData) {
-        const parsed: ChatConversation[] = settingsData
-          .map(d => d.value)
-          .filter(Boolean)
-          .sort((a, b) => new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime());
-
-        setConversations(parsed);
-        if (parsed.length > 0 && !selectedPhone) {
-          setSelectedPhone(parsed[0].phone);
+        if (error) throw error;
+        if (data) {
+          const list: ChatConversation[] = [];
+          for (const item of data) {
+            try {
+              if (item.value && typeof item.value === 'object') {
+                const c = item.value as ChatConversation;
+                if (c.phone) list.push(c);
+              }
+            } catch (e) {
+              console.warn('Conversa corrompida:', item.key);
+            }
+          }
+          list.sort((a, b) => new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime());
+          setConversations(list);
         }
       }
     } catch (err) {
-      console.error('Erro ao carregar conversas do espelho:', err);
+      console.error('Erro ao carregar conversas:', err);
     } finally {
       setLoadingConversations(false);
     }
   };
 
   const loadMessagesForPhone = async (phone: string) => {
-    if (!phone) return;
     setLoadingMessages(true);
     try {
-      // 1. Carrega histórico da tabela relacional chat_messages (até 100 mensagens)
-      const { data: msgData, error: msgErr } = await supabase
-        .from('chat_messages')
-        .select('id, sender, text, created_at')
-        .eq('phone', phone)
-        .order('created_at', { ascending: false })
-        .limit(100);
+      let loaded = false;
+      try {
+        const { data: msgRows, error: msgError } = await supabase
+          .from('chat_messages')
+          .select('*')
+          .eq('phone', phone)
+          .order('created_at', { ascending: true })
+          .limit(100);
 
-      if (!msgErr && msgData && msgData.length > 0) {
-        // Inverter para ordem cronológica (mais antiga -> mais nova)
-        const chronMsgs: ChatMessage[] = msgData.reverse().map((m: any) => ({
-          id: m.id,
-          sender: m.sender as 'client' | 'bot' | 'human',
-          text: m.text,
-          media_url: m.media_url || null,
-          media_type: m.media_type || null,
-          caption: m.caption || null,
-          timestamp: m.created_at
-        }));
-        setActiveMessages(chronMsgs);
-        return;
+        if (!msgError && Array.isArray(msgRows) && msgRows.length > 0) {
+          loaded = true;
+          const parsedMsgs: ChatMessage[] = msgRows.map(r => ({
+            id: r.id,
+            sender: r.sender as 'client' | 'bot' | 'human',
+            text: r.text,
+            media_url: r.media_url || null,
+            media_type: r.media_type || null,
+            caption: r.caption || null,
+            timestamp: r.created_at || new Date().toISOString()
+          }));
+          setActiveMessages(parsedMsgs);
+        }
+      } catch (relErr) {
+        console.warn('Aviso relacional chat_messages:', relErr);
       }
 
-      // 2. Fallback: carregar do array salvo no settings
-      const conv = conversations.find(c => c.phone === phone);
-      if (conv && Array.isArray(conv.messages) && conv.messages.length > 0) {
-        setActiveMessages(conv.messages.slice(-100));
-      } else {
-        setActiveMessages([]);
+      if (!loaded) {
+        const conv = conversations.find(c => c.phone === phone);
+        if (conv && Array.isArray(conv.messages)) {
+          setActiveMessages(conv.messages.slice(-100));
+        } else {
+          setActiveMessages([]);
+        }
       }
     } catch (err) {
       console.error('Erro ao carregar mensagens:', err);
+      setActiveMessages([]);
     } finally {
       setLoadingMessages(false);
     }
   };
 
   const toggleBot = async () => {
-    if (isActive === null) return;
-    
+    const nextState = !isActive;
     setUpdating(true);
-    const newStatus = !isActive;
-    const nowIso = new Date().toISOString();
-    
     try {
+      const nowIso = new Date().toISOString();
       const { error } = await supabase
         .from('settings')
-        .upsert({ 
-          key: 'bot_active', 
-          value: newStatus, 
+        .upsert({
+          key: 'bot_active',
+          value: nextState,
           updated_at: nowIso
         }, { onConflict: 'key' });
-        
+
       if (error) throw error;
-      
-      setIsActive(newStatus);
-      setLastUpdated(new Date(nowIso).toLocaleTimeString('pt-BR'));
+      setIsActive(nextState);
+      setLastUpdated(new Date().toLocaleTimeString('pt-BR'));
     } catch (err) {
-      console.error('Erro ao alternar bot:', err);
-      alert('Não foi possível alterar o status do agente no banco de dados.');
+      console.error('Erro ao alternar status do bot:', err);
+      alert('Falha ao atualizar o status do Agente no banco.');
     } finally {
       setUpdating(false);
     }
   };
 
   const toggleChatPause = async (phone: string, currentPaused: boolean) => {
+    const nextPaused = !currentPaused;
     setTogglingChatPause(true);
-    const newPaused = !currentPaused;
     const nowIso = new Date().toISOString();
-
     try {
-      // 1. Tenta atualizar na tabela relacional chat_conversations
       try {
         await supabase
           .from('chat_conversations')
           .update({
-            paused: newPaused,
-            paused_at: newPaused ? nowIso : null,
+            paused: nextPaused,
+            paused_at: nextPaused ? nowIso : null,
             updated_at: nowIso
           })
           .eq('phone', phone);
-      } catch (e) {
-        console.warn('Aviso relacional toggle:', e);
+      } catch (relErr) {
+        console.warn('Aviso update relacional pausa:', relErr);
       }
 
-      // 2. Atualiza settings (fallback)
       const convKey = `chat_conversation_${phone}`;
       const conv = conversations.find(c => c.phone === phone);
       if (conv) {
-        const updatedValue: ChatConversation = {
+        const updatedConv: ChatConversation = {
           ...conv,
-          paused: newPaused,
-          paused_at: newPaused ? nowIso : null,
+          paused: nextPaused,
+          paused_at: nextPaused ? nowIso : null,
           updated_at: nowIso
         };
 
@@ -630,22 +627,22 @@ export default function AgentManager() {
           .from('settings')
           .upsert({
             key: convKey,
-            value: updatedValue,
+            value: updatedConv,
             updated_at: nowIso
           }, { onConflict: 'key' });
 
-        setConversations(prev => prev.map(c => c.phone === phone ? updatedValue : c));
+        setConversations(prev => prev.map(c => c.phone === phone ? updatedConv : c));
       }
     } catch (err) {
       console.error('Erro ao alternar pausa do chat:', err);
-      alert('Erro ao atualizar pausa deste chat.');
+      alert('Não foi possível alterar o status de atendimento deste chat.');
     } finally {
       setTogglingChatPause(false);
     }
   };
 
-  const sendManualMessage = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  const sendManualMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!selectedPhone || !manualMessage.trim() || sendingManual) return;
 
     const messageText = manualMessage.trim();
@@ -660,11 +657,9 @@ export default function AgentManager() {
       timestamp: nowIso
     };
 
-    // Atualização otimista na tela (mantendo limite de 100)
     setActiveMessages(prev => [...prev, optimisticMsg].slice(-100));
 
     try {
-      // 1. Grava na tabela relacional chat_messages e chat_conversations
       try {
         await supabase
           .from('chat_messages')
@@ -688,7 +683,6 @@ export default function AgentManager() {
         console.warn('Aviso gravação relacional manual:', relErr);
       }
 
-      // 2. Grava no settings (fallback de compatibilidade)
       const conv = conversations.find(c => c.phone === selectedPhone);
       const convKey = `chat_conversation_${selectedPhone}`;
       const updatedMessages = [...(conv?.messages || []), optimisticMsg].slice(-100);
@@ -715,7 +709,6 @@ export default function AgentManager() {
       setConversations(prev => prev.map(c => c.phone === selectedPhone ? updatedConv : c)
         .sort((a, b) => new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime()));
 
-      // 3. Dispara envio real para o WhatsApp via Netlify Function
       fetch('/.netlify/functions/whatsapp-send-manual', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -735,11 +728,9 @@ export default function AgentManager() {
 
   const deleteConversation = async (e: React.MouseEvent, phone: string) => {
     e.stopPropagation();
-    
-    if (!window.confirm('Tem certeza que deseja excluir esta conversa?')) return;
+    if (!window.confirm('Tem certeza que deseja excluir esta conversa do histórico?')) return;
 
     try {
-      // 1. Exclui de chat_conversations e chat_messages
       try {
         await supabase.from('chat_conversations').delete().eq('phone', phone);
         await supabase.from('chat_messages').delete().eq('phone', phone);
@@ -747,66 +738,41 @@ export default function AgentManager() {
         console.warn('Aviso delete relacional:', relErr);
       }
 
-      // 2. Exclui de settings (fallback)
-      const convKey = `chat_conversation_${phone}`;
-      await supabase
-        .from('settings')
-        .delete()
-        .eq('key', convKey);
+      await supabase.from('settings').delete().eq('key', `chat_conversation_${phone}`);
 
       setConversations(prev => prev.filter(c => c.phone !== phone));
-      
       if (selectedPhone === phone) {
         setSelectedPhone(null);
         setActiveMessages([]);
       }
+      fetchDailyMetrics();
     } catch (err) {
       console.error('Erro ao excluir conversa:', err);
-      alert('Erro ao excluir a conversa.');
+      alert('Erro ao excluir conversa.');
     }
   };
 
   const deleteAllConversations = async () => {
-    if (conversations.length === 0) return;
-
-    const confirmed = window.confirm(
-      `ATENÇÃO: Deseja realmente excluir TODAS as ${conversations.length} conversas e o histórico de mensagens?\n\nEsta ação apagará todo o histórico e não poderá ser desfeita.`
-    );
-    if (!confirmed) return;
+    if (!window.confirm('ATENÇÃO: Deseja apagar TODO o histórico de conversas do espelho?')) return;
 
     setDeletingAll(true);
     try {
-      const phones = conversations.map(c => c.phone).filter(Boolean);
-
-      // 1. Exclui de chat_conversations e chat_messages (relacional)
       try {
-        if (phones.length > 0) {
-          await supabase.from('chat_conversations').delete().in('phone', phones);
-          await supabase.from('chat_messages').delete().in('phone', phones);
-        }
+        await supabase.from('chat_messages').delete().neq('id', '00000000-0000-0000-0000-000000000000');
         await supabase.from('chat_conversations').delete().neq('phone', '');
-        await supabase.from('chat_messages').delete().neq('phone', '');
       } catch (relErr) {
         console.warn('Aviso delete all relacional:', relErr);
       }
 
-      // 2. Exclui de settings (fallback)
       try {
-        if (phones.length > 0) {
-          const settingsKeys = phones.map(p => `chat_conversation_${p}`);
-          await supabase.from('settings').delete().in('key', settingsKeys);
-        }
         await supabase.from('settings').delete().like('key', 'chat_conversation_%');
       } catch (setErr) {
         console.warn('Aviso delete all settings:', setErr);
       }
 
-      // 3. Limpa estados locais
       setConversations([]);
       setSelectedPhone(null);
       setActiveMessages([]);
-
-      // 4. Recalcula métricas
       fetchDailyMetrics();
     } catch (err) {
       console.error('Erro ao excluir todas as conversas:', err);
@@ -827,290 +793,350 @@ export default function AgentManager() {
       if (!matchesSearch) return false;
       if (conversationFilter === 'manual') return c.paused;
       if (conversationFilter === 'ai') return !c.paused;
+      if (conversationFilter === 'directors') {
+        return ['996560080', '96560080', '997349076', '97349076'].some(d => c.phone.endsWith(d));
+      }
       return true;
     });
   }, [conversations, searchTerm, conversationFilter]);
 
+  const formatMessageTime = (isoString?: string) => {
+    if (!isoString) return '';
+    try {
+      const d = new Date(isoString);
+      if (isNaN(d.getTime())) return '';
+      return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return '';
+    }
+  };
+
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 gap-3">
-        <Loader2 className="w-7 h-7 animate-spin text-amber-500" />
-        <span className="text-xs font-mono text-stone-500">Sincronizando com a Bia...</span>
+      <div className="flex flex-col items-center justify-center py-20 gap-3">
+        <div className="w-12 h-12 rounded-2xl bg-[#4d0471]/10 text-[#4d0471] flex items-center justify-center border border-[#4d0471]/20 shadow-xs">
+          <Loader2 className="w-6 h-6 animate-spin text-[#4d0471]" />
+        </div>
+        <div className="text-center">
+          <p className="text-sm font-bold text-stone-800">Conectando com Maya Intelligence</p>
+          <p className="text-xs text-stone-400 mt-0.5">Sincronizando estado do WhatsApp & n8n...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-2.5 max-w-7xl">
-      {/* Topo / Painel de Comando da Atendente Virtual */}
-      <div className="bg-white rounded-xl border border-stone-200/90 shadow-2xs px-4 py-2.5 sm:px-5 sm:py-3 flex flex-wrap items-center justify-between gap-3">
-        {/* Identificação de Alto Impacto da IA */}
-        <div className="flex items-center gap-3">
-          <div className={`relative w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shrink-0 transition-all ${
-            isActive 
-              ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/30 ring-2 ring-emerald-500/10' 
-              : 'bg-amber-500/10 text-amber-600 border border-amber-500/30 ring-2 ring-amber-500/10'
-          }`}>
-            <Bot size={22} className={updating ? "animate-pulse" : ""} />
-            <span 
-              className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full ring-2 ring-white flex items-center justify-center ${
-                isActive ? 'bg-emerald-500' : 'bg-amber-500'
-              }`} 
-              title={isActive ? "IA Conectada e Operando" : "IA Pausada"}
-            >
-              {isActive && (
-                <span className="w-full h-full rounded-full bg-emerald-400 animate-ping opacity-75" />
-              )}
-            </span>
-          </div>
+    <div className="space-y-3.5 max-w-7xl mx-auto">
+      {/* =========================================================================
+          1. HEADER COMPACTO, CLEAN & MINIMALISTA (MAIS AÇAÍ SJP)
+      ========================================================================= */}
+      <header className="relative overflow-hidden bg-white rounded-2xl border border-stone-200/80 shadow-xs p-4 sm:p-5 transition-all">
+        {/* Hairline de assinatura das cores oficiais Mais Açaí */}
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#4d0471] via-[#7d129a] to-[#fdde58]" />
 
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-base sm:text-lg font-black text-stone-900 tracking-tight leading-none font-sans">
-                Bia
-              </h2>
-              <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full border transition-all ${
-                isActive 
-                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300' 
-                  : 'bg-amber-50 text-amber-900 border-amber-300'
-              }`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
-                {isActive ? 'Operação Ativa' : 'Pausada • Modo Manual'}
-              </span>
-            </div>
-            <p className="text-[11px] text-stone-500 mt-1 flex flex-wrap items-center gap-1.5 font-sans">
-              <span>Atendente Virtual Oficial do WhatsApp</span>
-              <span className="text-stone-300">•</span>
-              <span className="font-mono text-stone-600 font-medium">{conversations.length} {conversations.length === 1 ? 'conversa' : 'conversas'}</span>
-              {lastUpdated && (
-                <>
-                  <span className="text-stone-300">•</span>
-                  <span className="text-stone-400 font-mono text-[10px]">Sincronizado às {lastUpdated}</span>
-                </>
-              )}
-            </p>
-          </div>
-        </div>
-
-        {/* Controles de Autoridade */}
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-          <button
-            type="button"
-            onClick={() => setShowMetricsDashboard(prev => !prev)}
-            className={`min-h-[34px] px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border ${
-              showMetricsDashboard
-                ? 'bg-[#6a2092] text-white border-[#6a2092] shadow-2xs'
-                : 'bg-stone-50 hover:bg-stone-100 text-stone-700 border-stone-200'
-            }`}
-            title="Exibir ou ocultar telemetria de atendimento"
-          >
-            <TrendingUp size={14} className={showMetricsDashboard ? "text-amber-400" : "text-stone-500"} />
-            <span>Telemetria</span>
-            {showMetricsDashboard ? <ChevronUp size={13} className="text-stone-400" /> : <ChevronDown size={13} className="text-stone-400" />}
-          </button>
-
-          <button
-            type="button"
-            onClick={toggleBot}
-            disabled={updating}
-            className={`min-h-[34px] px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs disabled:opacity-60 ${
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          {/* Identidade da Maya & Status */}
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className={`relative w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 transition-all ${
               isActive 
-                ? 'bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200/90 hover:border-rose-300' 
-                : 'bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-600 text-white shadow-emerald-600/25 shadow-xs ring-2 ring-emerald-500/20'
-            }`}
-          >
-            <Power size={14} className={updating ? "animate-spin" : ""} />
-            {updating 
-              ? 'Gravando...' 
-              : (isActive ? 'Pausar Atendimento' : 'Ativar Atendimento')}
-          </button>
-        </div>
-      </div>
-
-      {/* Telemetria de Atendimento e Desempenho Hoje */}
-      {showMetricsDashboard && (
-        <div className="bg-white rounded-xl border border-stone-200/90 shadow-2xs p-3 sm:p-3.5 space-y-2.5 animate-in fade-in duration-200">
-          <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-stone-100">
-            <div className="flex items-center gap-1.5">
-              <Sparkles size={14} className="text-amber-500 shrink-0" />
-              <h3 className="font-bold text-[11px] uppercase tracking-wider text-stone-800 font-sans">
-                Telemetria de Atendimento no WhatsApp
-              </h3>
-              <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300/80">
-                Hoje
+                ? 'bg-gradient-to-br from-[#4d0471] to-[#6a2092] text-white ring-4 ring-[#4d0471]/10 shadow-xs' 
+                : 'bg-stone-100 text-stone-500 ring-4 ring-stone-200/50'
+            }`}>
+              <Bot size={22} className={updating ? "animate-spin" : ""} />
+              {/* Badge pulsante de status */}
+              <span 
+                className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full ring-2 ring-white flex items-center justify-center ${
+                  isActive ? 'bg-emerald-500' : 'bg-amber-500'
+                }`}
+                title={isActive ? "Maya Ativa no WhatsApp" : "Maya Pausada (Atendimento Manual)"}
+              >
+                {isActive && (
+                  <span className="w-full h-full rounded-full bg-emerald-400 animate-ping opacity-75" />
+                )}
               </span>
             </div>
 
-            <div className="flex items-center gap-1.5">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-lg font-black text-stone-900 tracking-tight font-sans">
+                  Maya AI
+                </h1>
+
+                {/* Status Pill */}
+                <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-0.5 rounded-full border transition-all ${
+                  isActive 
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
+                    : 'bg-amber-50 text-amber-900 border-amber-200'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+                  {isActive ? 'Atendimento no Ar' : 'Modo Manual Ativo'}
+                </span>
+
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-purple-900 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200/60 hidden sm:inline">
+                  Dual Core • Clientes + Sócios
+                </span>
+              </div>
+
+              <p className="text-xs text-stone-400 mt-0.5 flex items-center gap-2 truncate">
+                <span>Atendente Oficial</span>
+                <span className="text-stone-300">•</span>
+                <span>{conversations.length} conversas sincronizadas</span>
+                {lastUpdated && (
+                  <>
+                    <span className="text-stone-300">•</span>
+                    <span className="font-mono text-[11px] text-stone-400">Sync às {lastUpdated}</span>
+                  </>
+                )}
+              </p>
+            </div>
+          </div>
+
+          {/* Controles de Navegação & Ações Rápidas */}
+          <div className="flex flex-wrap items-center gap-2 self-start md:self-center shrink-0">
+            {/* Seletor Segmentado de Visualização */}
+            <div className="flex items-center p-1 bg-stone-100/80 rounded-xl border border-stone-200/70">
               <button
                 type="button"
-                onClick={() => setShowLearningDrawer(prev => !prev)}
-                className={`text-[11px] font-semibold flex items-center gap-1 px-2.5 py-1 rounded-md border transition-all cursor-pointer ${
-                  showLearningDrawer
-                    ? 'bg-amber-500 text-stone-950 border-amber-500 shadow-2xs font-bold'
-                    : 'bg-stone-50 hover:bg-amber-50/80 text-stone-700 hover:text-amber-900 border-stone-200'
+                onClick={() => setViewMode('cockpit')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  viewMode === 'cockpit'
+                    ? 'bg-white text-stone-900 shadow-2xs'
+                    : 'text-stone-500 hover:text-stone-800'
                 }`}
               >
-                <span>💡 Regras ({showLearningDrawer ? 'Ocultar' : 'Ver'})</span>
+                <MessageSquare size={13} className={viewMode === 'cockpit' ? 'text-[#4d0471]' : ''} />
+                <span>Conversas</span>
               </button>
               <button
                 type="button"
-                onClick={fetchDailyMetrics}
-                disabled={loadingMetrics}
-                className="text-[11px] font-medium text-stone-600 hover:text-stone-900 flex items-center gap-1 px-2 py-1 rounded-md border border-stone-200 hover:bg-stone-50 transition-colors cursor-pointer"
-                title="Recalcular métricas de hoje"
+                onClick={() => setViewMode('gestor_info')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  viewMode === 'gestor_info'
+                    ? 'bg-white text-[#4d0471] shadow-2xs'
+                    : 'text-stone-500 hover:text-stone-800'
+                }`}
               >
-                <RefreshCw size={11} className={loadingMetrics ? "animate-spin text-amber-600" : "text-stone-500"} />
-                <span>Atualizar</span>
+                <Crown size={13} className="text-amber-500" />
+                <span>Maya Gestora</span>
               </button>
             </div>
-          </div>
 
-          {/* Grid de 3 Métricas Bolder de Alto Contraste */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 divide-y sm:divide-y-0 sm:divide-x divide-stone-100">
-            {/* Métrica 1: Clientes Hoje */}
-            <div className="pt-0.5 sm:pt-0 sm:px-2.5 first:pl-0">
-              <div className="flex items-center justify-between text-stone-500 text-xs mb-0.5">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-stone-500 font-sans">Clientes Atendidos</span>
-                <Users size={14} className="text-stone-400" />
-              </div>
-              <div className="text-lg sm:text-xl font-bold font-sans text-stone-900 tracking-tight leading-none mt-0.5">
+            {/* Botão de Diretrizes / Regras da Maya */}
+            <button
+              type="button"
+              onClick={() => setShowRulesModal(true)}
+              className="min-h-[38px] px-3 py-1.5 rounded-xl text-xs font-semibold bg-white hover:bg-stone-50 text-stone-700 border border-stone-200 transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
+              title="Ver regras de sabores, casadinho e diretrizes oficiais"
+            >
+              <Sparkles size={13} className="text-[#4d0471]" />
+              <span className="hidden sm:inline">Diretrizes</span>
+            </button>
+
+            {/* Botão Power (Ativar / Pausar Atendimento Global) */}
+            <button
+              type="button"
+              onClick={toggleBot}
+              disabled={updating}
+              className={`min-h-[38px] px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs disabled:opacity-60 ${
+                isActive 
+                  ? 'bg-stone-50 hover:bg-rose-50 text-stone-700 hover:text-rose-700 border border-stone-200 hover:border-rose-200' 
+                  : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
+              }`}
+            >
+              <Power size={13} className={updating ? "animate-spin" : (isActive ? "text-rose-500" : "text-white")} />
+              <span>{updating ? 'Atualizando...' : (isActive ? 'Pausar Atendente' : 'Ativar Atendente')}</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* =========================================================================
+          2. STRIP DE TELEMETRIA ULTRA-COMPACTA & ELEGANTE (4 KPI CARDS EM 1 LINHA)
+      ========================================================================= */}
+      {viewMode === 'cockpit' && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+          <div className="bg-white rounded-xl border border-stone-200/80 p-3 shadow-2xs flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-stone-400">Clientes Hoje</p>
+              <p className="text-xl font-black text-stone-900 font-sans mt-0.5">
                 {metrics.totalConversationsToday}
-              </div>
-              <div className="text-xs text-stone-500 mt-1 flex flex-wrap items-center gap-1 font-sans">
-                <span className="inline-flex items-center gap-0.5 font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-1.5 py-0.5 rounded text-[10px]">
-                  <Bot size={10} className="text-emerald-600" /> {metrics.aiHandledConversations} pela IA
-                </span>
-                <span className="inline-flex items-center gap-0.5 font-semibold text-amber-800 bg-amber-50 border border-amber-200/80 px-1.5 py-0.5 rounded text-[10px]">
-                  <User size={10} className="text-amber-600" /> {metrics.humanHandledConversations} manual
-                </span>
-              </div>
+              </p>
+              <p className="text-[10px] text-stone-400 font-medium">atendimentos únicos</p>
             </div>
-
-            {/* Métrica 2: Mensagens Trocadas */}
-            <div className="pt-2 sm:pt-0 sm:px-2.5">
-              <div className="flex items-center justify-between text-stone-500 text-xs mb-0.5">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-stone-500 font-sans">Volume de Mensagens</span>
-                <MessageSquare size={14} className="text-stone-400" />
-              </div>
-              <div className="text-lg sm:text-xl font-bold font-sans text-stone-900 tracking-tight leading-none mt-0.5">
-                {metrics.totalClientMessages + metrics.totalBotMessages + metrics.totalHumanMessages}
-              </div>
-              <div className="text-xs text-stone-500 mt-1 flex flex-wrap items-center gap-1 font-sans">
-                <span className="inline-flex items-center gap-0.5 font-semibold text-sky-800 bg-sky-50 border border-sky-200/80 px-1.5 py-0.5 rounded text-[10px]">
-                  {metrics.totalClientMessages} de clientes
-                </span>
-                <span className="inline-flex items-center gap-0.5 font-semibold text-stone-700 bg-stone-100 border border-stone-200/80 px-1.5 py-0.5 rounded text-[10px]">
-                  {metrics.totalBotMessages + metrics.totalHumanMessages} da loja
-                </span>
-              </div>
-            </div>
-
-            {/* Métrica 3: Agilidade */}
-            <div className="pt-2 sm:pt-0 sm:px-2.5">
-              <div className="flex items-center justify-between text-stone-500 text-xs mb-0.5">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-stone-500 font-sans">Agilidade da Resposta</span>
-                <Clock size={14} className="text-emerald-500" />
-              </div>
-              <div className="text-lg sm:text-xl font-bold font-sans text-emerald-600 tracking-tight leading-none mt-0.5">
-                {metrics.avgResponseTimeSec > 0 ? `${metrics.avgResponseTimeSec}s` : '< 5s'}
-              </div>
-              <div className="text-xs text-stone-500 mt-1 flex items-center gap-1 font-sans">
-                <span className="inline-flex items-center gap-0.5 font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-1.5 py-0.5 rounded text-[10px]">
-                  ⚡ Resposta Instantânea
-                </span>
-              </div>
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+              <Users size={16} />
             </div>
           </div>
 
-          {/* Drawer de Diretrizes Oficiais (Cromaticamente Estruturado) */}
-          {showLearningDrawer && (
-            <div className="bg-amber-500/5 rounded-xl p-3 border border-amber-500/20 space-y-2 animate-in fade-in duration-150 max-h-48 overflow-y-auto">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900 uppercase tracking-wide">
-                <Sparkles size={13} className="text-amber-600" />
-                <span>Diretrizes e Regras Operacionais da Bia</span>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-stone-700">
-                <div className="p-2.5 rounded-lg bg-emerald-50/70 border border-emerald-200/90 shadow-2xs flex gap-2.5 text-stone-700">
-                  <div className="w-7 h-7 rounded-md bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
-                    <CreditCard size={14} />
-                  </div>
-                  <div>
-                    <span className="font-bold text-emerald-950 block mb-0.5 text-[11px]">Pagamento Oficial</span>
-                    <p className="text-[11px] leading-snug">Aceitar <strong>PIX</strong>, <strong>Cartão</strong> ou <strong>Dinheiro</strong>.</p>
-                  </div>
-                </div>
-
-                <div className="p-2.5 rounded-lg bg-amber-50/70 border border-amber-200/90 shadow-2xs flex gap-2.5 text-stone-700">
-                  <div className="w-7 h-7 rounded-md bg-amber-500 text-stone-950 flex items-center justify-center shrink-0 shadow-2xs font-bold">
-                    <Coins size={14} />
-                  </div>
-                  <div>
-                    <span className="font-bold text-amber-950 block mb-0.5 text-[11px]">Troco Inteligente em Dinheiro</span>
-                    <p className="text-[11px] leading-snug">Ao optar por dinheiro, a IA sempre questiona se o cliente tem o valor exato ou precisa de troco para nota específica (ex: R$ 20, R$ 50).</p>
-                  </div>
-                </div>
-
-                <div className="p-2.5 rounded-lg bg-sky-50/70 border border-sky-200/90 shadow-2xs flex gap-2.5 text-stone-700">
-                  <div className="w-7 h-7 rounded-md bg-sky-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
-                    <CheckCircle2 size={14} />
-                  </div>
-                  <div>
-                    <span className="font-bold text-sky-950 block mb-0.5 text-[11px]">Cardápio em Tempo Real</span>
-                    <p className="text-[11px] leading-snug">A cada mensagem a IA lê os produtos, preços, adicionais e taxas por bairro direto do sistema. Item pausado aqui some na hora para ela.</p>
-                  </div>
-                </div>
-
-                <div className="p-2.5 rounded-lg bg-purple-50/70 border border-purple-200/90 shadow-2xs flex gap-2.5 text-stone-700">
-                  <div className="w-7 h-7 rounded-md bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
-                    <Clock size={14} />
-                  </div>
-                  <div>
-                    <span className="font-bold text-purple-950 block mb-0.5 text-[11px]">Prazos de Entrega</span>
-                    <p className="text-[11px] leading-snug">Avisar prontamente o cliente assim que o pedido entrar em preparo ou sair para entrega (prazo conforme definido nas Configurações).</p>
-                  </div>
-                </div>
-              </div>
+          <div className="bg-white rounded-xl border border-stone-200/80 p-3 shadow-2xs flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-stone-400">Mensagens Trocadas</p>
+              <p className="text-xl font-black text-stone-900 font-sans mt-0.5">
+                {metrics.totalClientMessages + metrics.totalBotMessages + metrics.totalHumanMessages}
+              </p>
+              <p className="text-[10px] text-purple-700 font-medium">{metrics.totalBotMessages} pela Maya</p>
             </div>
-          )}
+            <div className="w-8 h-8 rounded-lg bg-purple-50 text-[#4d0471] flex items-center justify-center font-bold">
+              <MessageSquare size={16} />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border border-stone-200/80 p-3 shadow-2xs flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-stone-400">Intervenções</p>
+              <p className="text-xl font-black text-stone-900 font-sans mt-0.5">
+                {metrics.humanHandledConversations}
+                <span className="text-xs text-stone-400 font-normal ml-1">manuais</span>
+              </p>
+              <p className="text-[10px] text-amber-700 font-medium">{metrics.aiHandledConversations} com IA ativa</p>
+            </div>
+            <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+              <User size={16} />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border border-stone-200/80 p-3 shadow-2xs flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-stone-400">Velocidade da IA</p>
+              <p className="text-xl font-black text-emerald-600 font-sans mt-0.5">
+                {metrics.avgResponseTimeSec > 0 ? `${metrics.avgResponseTimeSec}s` : '< 3s'}
+              </p>
+              <p className="text-[10px] text-emerald-700 font-medium">resposta em tempo real</p>
+            </div>
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+              <Zap size={16} />
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Espelho de Conversas estilo WhatsApp Command Center */}
-      <div className="bg-white rounded-xl border border-stone-200 shadow-2xs overflow-hidden flex flex-col md:flex-row h-[520px] lg:h-[calc(100dvh-318px)] min-h-[300px] [@media(max-height:780px)]:lg:h-[calc(100dvh-324px)]">
-        {/* Coluna Esquerda: Lista de Conversas (Em mobile, oculta quando conversa está aberta) */}
-        <div className={`w-full md:w-60 lg:w-64 xl:w-72 shrink-0 border-r border-stone-200 flex-col h-full bg-stone-50/40 ${selectedPhone ? 'hidden md:flex' : 'flex'}`}>
-          {/* Busca & Filtros com Layout Estruturado */}
-          <div className="p-2.5 border-b border-stone-200 bg-white shrink-0 space-y-1.5">
+      {/* =========================================================================
+          3. SEÇÃO ESPECIAL: MAYA GESTORA (EXECUTIVE BRIEFING DECK)
+      ========================================================================= */}
+      {viewMode === 'gestor_info' && (
+        <section className="bg-white rounded-2xl border border-stone-200/80 p-5 sm:p-6 shadow-xs space-y-5 animate-in fade-in duration-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-stone-100">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#4d0471] to-[#3b0257] text-amber-400 flex items-center justify-center font-black shadow-xs shrink-0">
+                <Crown size={20} />
+              </div>
+              <div>
+                <h2 className="text-base font-black text-stone-900 font-sans flex items-center gap-2">
+                  Maya Gestora • Modo Diretoria Executiva
+                  <span className="text-[10px] font-mono font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full border border-amber-300/60">
+                    Exclusivo Sócios
+                  </span>
+                </h2>
+                <p className="text-xs text-stone-500">
+                  Relatórios em tempo real de vendas, CMV, fichas técnicas e custos direto no WhatsApp dos proprietários
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5 self-start sm:self-center">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-purple-50 text-[#4d0471] border border-purple-200/70">
+                <ShieldCheck size={14} className="text-[#4d0471]" />
+                Junior & Michele Reconhecidos
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+            <div className="p-4 rounded-xl bg-purple-50/50 border border-purple-100 space-y-1.5">
+              <div className="flex items-center gap-2 text-xs font-bold text-purple-950 uppercase tracking-wider font-mono">
+                <BarChart3 size={15} className="text-[#4d0471]" />
+                <span>Vendas & Faturamento</span>
+              </div>
+              <p className="text-xs text-stone-600 leading-relaxed">
+                Consulte o faturamento do dia, quantidade de pedidos abertos, cancelados e formas de pagamento (PIX, Cartão, Dinheiro).
+              </p>
+              <div className="pt-1 flex flex-wrap gap-1.5">
+                <span className="text-[11px] bg-white px-2 py-0.5 rounded border border-purple-200 text-purple-900 font-mono">
+                  "Quanto vendemos hoje?"
+                </span>
+                <span className="text-[11px] bg-white px-2 py-0.5 rounded border border-purple-200 text-purple-900 font-mono">
+                  "Resumo do dia"
+                </span>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-xl bg-amber-50/50 border border-amber-100 space-y-1.5">
+              <div className="flex items-center gap-2 text-xs font-bold text-amber-950 uppercase tracking-wider font-mono">
+                <Layers size={15} className="text-amber-700" />
+                <span>Ficha Técnica & CMV</span>
+              </div>
+              <p className="text-xs text-stone-600 leading-relaxed">
+                Custo de produção por copo, margem de contribuição bruta, insumos cadastrados e produtos mais lucrativos.
+              </p>
+              <div className="pt-1 flex flex-wrap gap-1.5">
+                <span className="text-[11px] bg-white px-2 py-0.5 rounded border border-amber-200 text-amber-900 font-mono">
+                  "Ficha do nevado"
+                </span>
+                <span className="text-[11px] bg-white px-2 py-0.5 rounded border border-amber-200 text-amber-900 font-mono">
+                  "Ranking margens"
+                </span>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-100 space-y-1.5">
+              <div className="flex items-center gap-2 text-xs font-bold text-emerald-950 uppercase tracking-wider font-mono">
+                <CheckCircle2 size={15} className="text-emerald-700" />
+                <span>Alternar Modos no WhatsApp</span>
+              </div>
+              <p className="text-xs text-stone-600 leading-relaxed">
+                Os sócios podem alternar instantaneamente entre conversar com a assistente ou testar como cliente comum.
+              </p>
+              <div className="pt-1 flex flex-wrap gap-1.5">
+                <span className="text-[11px] bg-white px-2 py-0.5 rounded border border-emerald-200 text-emerald-900 font-mono">
+                  "modo cliente"
+                </span>
+                <span className="text-[11px] bg-white px-2 py-0.5 rounded border border-emerald-200 text-emerald-900 font-mono">
+                  "modo assistente"
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* =========================================================================
+          4. ESPELHO WHATSAPP COMMAND CENTER (DUAL PANE RESPONSIVO & MINIMALISTA)
+      ========================================================================= */}
+      <div className="bg-white rounded-2xl border border-stone-200/80 shadow-xs overflow-hidden flex flex-col md:flex-row h-[600px] lg:h-[calc(100dvh-270px)] min-h-[460px]">
+        {/* =======================================================================
+            COLUNA ESQUERDA: LISTA DE CONVERSAS (AIRY & CLEAN)
+        ======================================================================= */}
+        <aside className={`w-full md:w-80 lg:w-88 shrink-0 border-r border-stone-200/80 flex flex-col h-full bg-white ${selectedPhone ? 'hidden md:flex' : 'flex'}`}>
+          {/* Header da Coluna com Campo de Busca */}
+          <div className="p-3.5 border-b border-stone-100 space-y-2.5 shrink-0 bg-white">
             <div className="relative">
-              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400" />
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
               <input
                 type="text"
-                placeholder="Buscar cliente ou telefone..."
+                placeholder="Buscar por nome ou telefone..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="w-full pl-7 pr-7 py-1.5 text-xs bg-stone-100/80 rounded-lg border border-transparent focus:border-[#6a2092] focus:ring-2 focus:ring-[#6a2092]/20 focus:bg-white focus:outline-none transition-all placeholder:text-stone-400 font-sans"
+                className="w-full pl-9 pr-7 py-2 text-xs bg-stone-50 rounded-xl border border-stone-200/80 focus:border-[#4d0471] focus:ring-2 focus:ring-[#4d0471]/10 focus:bg-white focus:outline-none transition-all placeholder:text-stone-400 font-sans"
               />
               {searchTerm && (
                 <button
                   type="button"
                   onClick={() => setSearchTerm('')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700 p-0.5 rounded-full hover:bg-stone-200 transition-colors cursor-pointer"
-                  title="Limpar busca"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700 p-0.5 rounded-full hover:bg-stone-200 transition-colors"
                 >
                   <X size={12} />
                 </button>
               )}
             </div>
 
-            {/* Filtros Segmentados de Conversas */}
-            <div className="flex items-center gap-0.5 p-0.5 bg-stone-100/80 rounded-lg">
+            {/* Segmented Filter Pills */}
+            <div className="flex items-center gap-1 p-0.5 bg-stone-100 rounded-lg">
               <button
                 type="button"
                 onClick={() => setConversationFilter('all')}
-                className={`flex-1 py-0.5 px-1 rounded text-[10px] sm:text-[11px] font-semibold transition-all cursor-pointer ${
+                className={`flex-1 py-1 px-1 rounded-md text-[11px] font-bold transition-all cursor-pointer text-center ${
                   conversationFilter === 'all'
-                    ? 'bg-white text-stone-900 shadow-2xs font-bold'
+                    ? 'bg-white text-stone-900 shadow-2xs'
                     : 'text-stone-500 hover:text-stone-800'
                 }`}
               >
@@ -1119,9 +1145,9 @@ export default function AgentManager() {
               <button
                 type="button"
                 onClick={() => setConversationFilter('ai')}
-                className={`flex-1 py-0.5 px-1 rounded text-[10px] sm:text-[11px] font-semibold transition-all cursor-pointer ${
+                className={`flex-1 py-1 px-1 rounded-md text-[11px] font-bold transition-all cursor-pointer text-center ${
                   conversationFilter === 'ai'
-                    ? 'bg-white text-emerald-800 shadow-2xs font-bold'
+                    ? 'bg-white text-emerald-800 shadow-2xs'
                     : 'text-stone-500 hover:text-stone-800'
                 }`}
               >
@@ -1130,18 +1156,29 @@ export default function AgentManager() {
               <button
                 type="button"
                 onClick={() => setConversationFilter('manual')}
-                className={`flex-1 py-0.5 px-1 rounded text-[10px] sm:text-[11px] font-semibold transition-all cursor-pointer ${
+                className={`flex-1 py-1 px-1 rounded-md text-[11px] font-bold transition-all cursor-pointer text-center ${
                   conversationFilter === 'manual'
-                    ? 'bg-white text-amber-900 shadow-2xs font-bold'
+                    ? 'bg-white text-amber-900 shadow-2xs'
                     : 'text-stone-500 hover:text-stone-800'
                 }`}
               >
                 Manual ({conversations.filter(c => c.paused).length})
               </button>
+              <button
+                type="button"
+                onClick={() => setConversationFilter('directors')}
+                className={`flex-1 py-1 px-1 rounded-md text-[11px] font-bold transition-all cursor-pointer text-center ${
+                  conversationFilter === 'directors'
+                    ? 'bg-white text-[#4d0471] shadow-2xs'
+                    : 'text-stone-500 hover:text-stone-800'
+                }`}
+              >
+                Sócios
+              </button>
             </div>
 
-            <div className="flex items-center justify-between px-0.5">
-              <span className="text-[10px] font-medium text-stone-500">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[10px] font-mono text-stone-400 uppercase tracking-wider">
                 {filteredConversations.length} {filteredConversations.length === 1 ? 'conversa' : 'conversas'}
               </span>
               {conversations.length > 0 && (
@@ -1149,100 +1186,96 @@ export default function AgentManager() {
                   type="button"
                   onClick={deleteAllConversations}
                   disabled={deletingAll}
-                  className="text-[10px] font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 px-1.5 py-0.5 rounded flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
-                  title="Excluir todas as conversas do histórico"
+                  className="text-[10px] font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 px-2 py-0.5 rounded transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                  title="Limpar histórico do espelho"
                 >
                   <Trash2 size={10} className={deletingAll ? "animate-spin" : ""} />
-                  <span>{deletingAll ? 'Excluindo...' : 'Limpar'}</span>
+                  <span>{deletingAll ? 'Limpando...' : 'Limpar Tudo'}</span>
                 </button>
               )}
             </div>
           </div>
 
-          {/* Lista de Contatos com Destaque de Estados */}
+          {/* Lista de Contatos */}
           <div className="flex-1 overflow-y-auto divide-y divide-stone-100">
             {loadingConversations ? (
               <div className="p-8 text-center text-xs font-mono text-stone-400 flex flex-col items-center gap-2">
-                <Loader2 size={18} className="animate-spin text-amber-500" />
+                <Loader2 size={20} className="animate-spin text-[#4d0471]" />
                 Sincronizando conversas...
               </div>
             ) : filteredConversations.length === 0 ? (
-              <div className="p-8 text-center text-xs text-stone-400">
-                Nenhuma conversa encontrada.
+              <div className="p-8 text-center text-xs text-stone-400 space-y-1">
+                <MessageSquare size={24} className="mx-auto text-stone-300 mb-1" />
+                <p className="font-semibold text-stone-600">Nenhuma conversa encontrada</p>
+                <p className="text-[11px] text-stone-400">As novas mensagens no WhatsApp aparecem aqui em tempo real.</p>
               </div>
             ) : (
               filteredConversations.map(c => {
                 const isSelected = selectedPhone === c.phone;
                 const isPizzeriaName = c.name && c.name.toLowerCase().includes("mais açaí");
                 const displayName = (!c.name || isPizzeriaName) ? (c.phone || 'Cliente') : c.name;
+                const isManagerNumber = ['996560080', '96560080', '997349076', '97349076'].some(d => c.phone.endsWith(d));
+
                 return (
                   <button
                     key={c.phone}
                     onClick={() => setSelectedPhone(c.phone)}
-                    className={`w-full text-left p-2.5 transition-all flex items-start gap-2.5 cursor-pointer ${
+                    className={`w-full text-left p-3.5 transition-all flex items-start gap-3 cursor-pointer relative ${
                       isSelected 
-                        ? 'bg-amber-500/10 border-l-4 border-amber-500 shadow-2xs' 
-                        : 'hover:bg-stone-100/60 bg-white'
+                        ? 'bg-purple-50/70 border-l-[3px] border-[#4d0471]' 
+                        : 'hover:bg-stone-50 bg-white'
                     }`}
                   >
-                    <div className="relative w-8 h-8 rounded-full bg-stone-100 text-stone-700 flex items-center justify-center font-bold text-xs shrink-0 border border-stone-200 mt-0.5">
-                      {displayName ? displayName.charAt(0).toUpperCase() : <User size={13} />}
+                    {/* Avatar com inicial e anel de status */}
+                    <div className="relative shrink-0">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs uppercase shadow-2xs ${
+                        isManagerNumber
+                          ? 'bg-gradient-to-br from-amber-400 to-amber-500 text-stone-900 ring-2 ring-amber-300'
+                          : (isSelected 
+                              ? 'bg-[#4d0471] text-white' 
+                              : 'bg-stone-100 text-stone-600')
+                      }`}>
+                        {displayName.charAt(0)}
+                      </div>
                       <span 
-                        className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white ${c.paused ? 'bg-amber-500' : 'bg-emerald-500'}`} 
-                        title={c.paused ? "IA Pausada neste chat (Intervenção Manual)" : "IA Respondendo"}
+                        className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full ring-2 ring-white ${
+                          c.paused ? 'bg-amber-500' : 'bg-emerald-500'
+                        }`}
+                        title={c.paused ? "Atendimento Humano (Maya pausada)" : "Maya no Controle"}
                       />
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-1 mb-1">
-                        <span className="font-bold text-xs text-stone-900 truncate">
-                          {displayName}
-                        </span>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <span className="text-[10px] font-mono text-stone-400">
-                            {c.updated_at ? new Date(c.updated_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}
+                      <div className="flex items-center justify-between gap-1 mb-0.5">
+                        <div className="flex items-center gap-1.5 truncate">
+                          <span className={`text-xs truncate font-sans ${isSelected ? 'font-black text-[#4d0471]' : 'font-bold text-stone-900'}`}>
+                            {displayName}
                           </span>
-                          <button
-                            type="button"
-                            onClick={(e) => deleteConversation(e, c.phone)}
-                            className="text-stone-300 hover:text-rose-500 hover:bg-rose-50 p-1 rounded transition-colors"
-                            title="Excluir conversa"
-                          >
-                            <X size={12} />
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="text-xs text-stone-500 truncate leading-snug flex items-center gap-1 min-w-0">
-                          {c.last_sender === 'bot' && <span className="text-emerald-700 font-bold shrink-0">IA: </span>}
-                          {c.last_sender === 'human' && <span className="text-sky-700 font-bold shrink-0">Você: </span>}
-                          {c.last_message && (c.last_message.startsWith('📷') || c.last_message.includes('[FOTO:') || c.last_message.includes('[Foto')) ? (
-                            <span className="inline-flex items-center gap-1 text-emerald-800 bg-emerald-50/80 px-1.5 py-0.5 rounded border border-emerald-200/50 text-[11px] font-medium truncate">
-                              <ImageIcon size={11} className="shrink-0 text-emerald-600" />
-                              <span className="truncate">{c.last_message.replace(/^\[(?:FOTO:[^\]]+\]\s*|Foto\/Comprovante[^\]]*\]\s*)/i, '').trim() || 'Foto / Comprovante'}</span>
+                          {isManagerNumber && (
+                            <span className="inline-flex items-center gap-0.5 text-[9px] font-black uppercase tracking-wider text-amber-800 bg-amber-100 px-1.5 py-0.2 rounded font-mono">
+                              <Crown size={9} className="inline text-amber-700" /> Sócio
                             </span>
-                          ) : c.last_message && (c.last_message.startsWith('🎵') || c.last_message.includes('[AUDIO:') || c.last_message.includes('voz]')) ? (
-                            <span className="inline-flex items-center gap-1 text-amber-800 bg-amber-50/80 px-1.5 py-0.5 rounded border border-amber-200/50 text-[11px] font-medium truncate">
-                              <Music size={11} className="shrink-0 text-amber-600" />
-                              <span className="truncate">Mensagem de voz</span>
-                            </span>
-                          ) : c.last_message && (c.last_message.startsWith('🎭') || c.last_message.startsWith('🏷️') || c.last_message.includes('[FIGURINHA:') || c.last_message.includes('Figurinha')) ? (
-                            <span className="inline-flex items-center gap-1 text-purple-800 bg-purple-50/80 px-1.5 py-0.5 rounded border border-purple-200/50 text-[11px] font-medium truncate">
-                              <span className="text-xs shrink-0">🎭</span>
-                              <span className="truncate">Figurinha</span>
-                            </span>
-                          ) : c.last_message && (c.last_message.startsWith('📄') || c.last_message.includes('[DOC:')) ? (
-                            <span className="inline-flex items-center gap-1 text-sky-800 bg-sky-50/80 px-1.5 py-0.5 rounded border border-sky-200/50 text-[11px] font-medium truncate">
-                              <FileText size={11} className="shrink-0 text-sky-600" />
-                              <span className="truncate">Documento</span>
-                            </span>
-                          ) : (
-                            <span className="truncate">{c.last_message || 'Iniciou conversa'}</span>
                           )}
                         </div>
+                        {c.updated_at && (
+                          <span className="text-[10px] font-mono text-stone-400 shrink-0">
+                            {formatMessageTime(c.updated_at)}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between gap-1">
+                        <p className="text-[11px] text-stone-500 truncate leading-snug">
+                          {c.last_sender === 'bot' && (
+                            <span className="text-[#4d0471] font-bold mr-1">🍇 Maya:</span>
+                          )}
+                          {c.last_sender === 'human' && (
+                            <span className="text-sky-700 font-bold mr-1">Operador:</span>
+                          )}
+                          {c.last_message || 'Nenhuma mensagem recente'}
+                        </p>
                         {c.paused && (
-                          <span className="shrink-0 text-[10px] font-sans font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-900 border border-amber-400/40">
+                          <span className="text-[9px] font-mono font-bold uppercase text-amber-800 bg-amber-100 px-1 py-0.2 rounded shrink-0">
                             Manual
                           </span>
                         )}
@@ -1253,109 +1286,108 @@ export default function AgentManager() {
               })
             )}
           </div>
-        </div>
+        </aside>
 
-        {/* Coluna Direita: Painel do Chat ou Empty State Produtivo */}
+        {/* =======================================================================
+            COLUNA DIREITA: PAINEL DO CHAT ABERTO OU EMPTY STATE
+        ======================================================================= */}
         {selectedConversation ? (
-          <div className={`flex-1 flex-col h-full min-w-0 bg-[#efeae2] ${selectedPhone ? 'flex' : 'hidden md:flex'}`}>
-            {/* Topo do Chat Selecionado com Controle Imediato */}
+          <main className={`flex-1 flex-col h-full min-w-0 bg-[#f8f6f9] ${selectedPhone ? 'flex' : 'hidden md:flex'}`}>
+            {/* Topbar do Chat Selecionado */}
             {(() => {
               const isHeaderPizzeriaName = selectedConversation.name && selectedConversation.name.toLowerCase().includes("mais açaí");
               const headerDisplayName = (!selectedConversation.name || isHeaderPizzeriaName) ? (selectedConversation.phone || 'Cliente') : selectedConversation.name;
+              const isManagerNumber = ['996560080', '96560080', '997349076', '97349076'].some(d => selectedConversation.phone.endsWith(d));
+
               return (
-                <div className="px-3 sm:px-4 py-3 bg-white border-b border-stone-200 flex items-center justify-between gap-2 sm:gap-3 shrink-0">
-                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                    {/* Botão de Retorno Mobile */}
+                <div className="p-3.5 border-b border-stone-200/80 bg-white shrink-0 flex items-center justify-between gap-3 shadow-2xs">
+                  <div className="flex items-center gap-3 min-w-0">
                     <button
                       type="button"
                       onClick={() => setSelectedPhone(null)}
-                      className="md:hidden p-2 -ml-1 text-stone-600 hover:text-stone-900 hover:bg-stone-100 rounded-xl transition-colors cursor-pointer shrink-0 active:scale-95"
-                      title="Voltar para a lista de conversas"
+                      className="md:hidden p-1.5 rounded-lg text-stone-500 hover:text-stone-800 hover:bg-stone-100"
                     >
                       <ArrowLeft size={18} />
                     </button>
-                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-stone-100 text-stone-700 flex items-center justify-center font-bold text-xs shrink-0 border border-stone-200">
-                      {headerDisplayName ? headerDisplayName.charAt(0).toUpperCase() : <User size={14} />}
+
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs uppercase shadow-2xs shrink-0 ${
+                      isManagerNumber
+                        ? 'bg-gradient-to-br from-amber-400 to-amber-500 text-stone-900 ring-2 ring-amber-300'
+                        : 'bg-[#4d0471] text-white'
+                    }`}>
+                      {headerDisplayName.charAt(0)}
                     </div>
+
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <h3 className="font-bold text-sm text-stone-900 truncate">
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-sm font-black text-stone-900 truncate font-sans">
                           {headerDisplayName}
-                        </h3>
-                        <div className="flex items-center gap-1.5">
-                          <a
-                            href={`https://wa.me/${selectedConversation.phone.replace(/\D/g, '')}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-xs font-mono font-medium text-emerald-800 hover:text-emerald-950 bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200/80 px-2 py-0.5 rounded-md flex items-center gap-1 transition-colors"
-                            title="Abrir no WhatsApp Web"
-                          >
-                            <span>{selectedConversation.phone}</span>
-                            <ArrowUpRight size={11} />
-                          </a>
-                          <button
-                            type="button"
-                            onClick={(e) => handleCopyPhone(selectedConversation.phone, e)}
-                            className="text-xs font-mono font-medium text-stone-600 hover:text-stone-900 bg-stone-100 hover:bg-stone-200/80 border border-stone-200 px-2 py-0.5 rounded-md flex items-center gap-1 transition-colors cursor-pointer"
-                            title="Copiar número de telefone"
-                          >
-                            {copiedPhone ? (
-                              <>
-                                <Check size={11} className="text-emerald-600" />
-                                <span className="text-emerald-700 font-semibold">Copiado!</span>
-                              </>
-                            ) : (
-                              <>
-                                <Copy size={11} className="text-stone-500" />
-                                <span>Copiar</span>
-                              </>
-                            )}
-                          </button>
-                        </div>
+                        </h2>
+                        {isManagerNumber && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold bg-amber-100 text-amber-900 px-2 py-0.2 rounded-full">
+                            <Crown size={10} className="text-amber-700" /> Sócio
+                          </span>
+                        )}
+                        <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                          selectedConversation.paused 
+                            ? 'bg-amber-50 text-amber-900 border-amber-300' 
+                            : 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${selectedConversation.paused ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse'}`} />
+                          {selectedConversation.paused ? 'Atendimento Manual' : 'Maya no Controle'}
+                        </span>
                       </div>
-                      {selectedConversation.paused && (
-                        <div className="flex items-center gap-1.5 text-xs text-amber-800">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                          <span className="font-semibold text-[11px]">Atendimento Manual Ativo</span>
-                        </div>
-                      )}
+
+                      <div className="flex items-center gap-2 text-xs text-stone-400 font-mono mt-0.5">
+                        <span>{selectedConversation.phone}</span>
+                        <button
+                          type="button"
+                          onClick={(e) => handleCopyPhone(selectedConversation.phone, e)}
+                          className="hover:text-stone-700 cursor-pointer"
+                          title="Copiar número"
+                        >
+                          {copiedPhone ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
+                        </button>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Botão de Alternância de Pausa com Convencimento */}
-                  <button
-                    type="button"
-                    onClick={() => toggleChatPause(selectedConversation.phone, Boolean(selectedConversation.paused))}
-                    disabled={togglingChatPause}
-                    className={`min-h-[36px] px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs ${
-                      selectedConversation.paused
-                        ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-600 text-white shadow-emerald-600/20'
-                        : 'bg-stone-100 hover:bg-amber-50 text-stone-700 hover:text-amber-900 border border-stone-200 hover:border-amber-300'
-                    }`}
-                    title={selectedConversation.paused ? "Retomar respostas automáticas da IA neste chat" : "Pausar IA neste chat para intervir manualmente"}
-                  >
-                    {selectedConversation.paused ? (
-                      <>
-                        <PlayCircle size={15} className="text-white shrink-0" />
-                        <span>Retomar IA</span>
-                      </>
-                    ) : (
-                      <>
-                        <PauseCircle size={15} className="text-stone-500 shrink-0" />
-                        <span>Pausar IA (Intervir)</span>
-                      </>
-                    )}
-                  </button>
+                  {/* Controle de Pausa Individual (Intervir Manualmente) */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => toggleChatPause(selectedConversation.phone, Boolean(selectedConversation.paused))}
+                      disabled={togglingChatPause}
+                      className={`min-h-[36px] px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs ${
+                        selectedConversation.paused
+                          ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-600 text-white shadow-emerald-600/20'
+                          : 'bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300'
+                      }`}
+                      title={selectedConversation.paused ? "Retomar respostas automáticas da Maya neste chat" : "Pausar Maya neste chat para atendimento humano"}
+                    >
+                      {selectedConversation.paused ? (
+                        <>
+                          <PlayCircle size={15} />
+                          <span>Retomar Maya</span>
+                        </>
+                      ) : (
+                        <>
+                          <PauseCircle size={15} />
+                          <span>Intervir no Chat</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               );
             })()}
 
-            {/* Mensagens com Balões Padrão WhatsApp (Compacto & Legível) */}
-            <div className="flex-1 p-3.5 sm:p-4 overflow-y-auto space-y-2 relative" style={{ backgroundImage: 'url("https://web.whatsapp.com/img/bg-chat-tile-dark_a4be512e7195b6b733d9110b408f075d.png")', opacity: 0.95 }}>
+            {/* Balões de Mensagem (Tipografia Refinada & Limpa) */}
+            <div className="flex-1 p-4 overflow-y-auto space-y-2.5 relative bg-[#f8f6f9]">
               {loadingMessages ? (
-                <div className="h-full flex flex-col items-center justify-center gap-2 text-stone-400 relative z-10">
-                  <Loader2 size={20} className="animate-spin text-amber-500" />
-                  <span className="text-xs font-mono">Carregando mensagens...</span>
+                <div className="h-full flex flex-col items-center justify-center gap-2 text-stone-400">
+                  <Loader2 size={22} className="animate-spin text-[#4d0471]" />
+                  <span className="text-xs font-mono">Carregando histórico...</span>
                 </div>
               ) : activeMessages && activeMessages.length > 0 ? (
                 activeMessages.map((m, idx) => {
@@ -1371,26 +1403,39 @@ export default function AgentManager() {
                       className={`flex flex-col ${isClient ? 'items-start' : 'items-end'}`}
                     >
                       <div
-                        className={`relative max-w-[88%] sm:max-w-[72%] lg:max-w-[65%] ${
+                        className={`relative max-w-[88%] sm:max-w-[75%] lg:max-w-[65%] ${
                           isSticker
                             ? 'bg-transparent shadow-none p-0'
-                            : `rounded-xl px-3.5 pt-2 pb-1.5 text-xs sm:text-[13px] leading-relaxed shadow-xs ${
+                            : `rounded-2xl px-4 py-2.5 text-xs sm:text-[13px] leading-relaxed shadow-xs transition-all ${
                                 isClient
-                                  ? 'bg-white text-stone-900 rounded-tl-xs border border-stone-200/60 shadow-xs'
+                                  ? 'bg-white text-stone-900 rounded-tl-xs border border-stone-200/80'
                                   : (isHuman 
-                                      ? 'bg-[#e0f2fe] text-stone-950 rounded-tr-xs border border-sky-200/70 shadow-xs'
-                                      : 'bg-[#dcf8c6] text-stone-950 rounded-tr-xs border border-emerald-200/60 shadow-xs')
+                                      ? 'bg-sky-50 text-sky-950 rounded-tr-xs border border-sky-200'
+                                      : 'bg-[#4d0471] text-white rounded-tr-xs shadow-sm')
                               }`
                         }`}
                       >
-                        {/* Nome do remetente interno */}
+                        {/* Header do Balão com identificação */}
                         {!isClient && !isSticker && (
-                          <div className={`text-[11px] font-bold mb-1 leading-none ${isBot ? 'text-emerald-700' : 'text-sky-700'}`}>
-                            {isBot ? 'Bia' : 'Você (Atendente)'}
+                          <div className={`text-[10px] font-mono font-bold uppercase tracking-wider mb-1 flex items-center gap-1 ${
+                            isBot ? 'text-amber-300' : 'text-sky-700'
+                          }`}>
+                            {isBot ? (
+                              <>
+                                <Bot size={11} className="inline text-amber-300" />
+                                <span>Maya • IA Oficial</span>
+                              </>
+                            ) : (
+                              <>
+                                <User size={11} className="inline text-sky-700" />
+                                <span>Atendente Humano</span>
+                              </>
+                            )}
                           </div>
                         )}
+
                         {isClient && !isSticker && selectedConversation.name && (
-                          <div className="text-[11px] font-bold mb-1 leading-none text-[#a80076]">
+                          <div className="text-[10px] font-mono font-bold uppercase tracking-wider mb-1 text-stone-500">
                             {selectedConversation.name}
                           </div>
                         )}
@@ -1403,238 +1448,284 @@ export default function AgentManager() {
                           </div>
                         )}
 
-                        {/* Renderização de Imagem / Foto / Comprovante */}
-                        {parsed.mediaType === 'image' && (
-                          <div className="my-1">
-                            {parsed.mediaUrl ? (
+                        {/* Mídia Incorporada */}
+                        {parsed.mediaUrl && (
+                          <div className="mb-2 rounded-xl overflow-hidden bg-black/10 border border-black/10">
+                            {parsed.mediaType === 'image' || parsed.mediaType === 'sticker' ? (
                               <div 
+                                className="relative group cursor-pointer"
                                 onClick={() => setSelectedImage({
                                   url: parsed.mediaUrl!,
-                                  caption: parsed.caption || undefined,
-                                  sender: isClient ? (selectedConversation.name || 'Cliente') : (isBot ? 'Bia' : 'Você'),
+                                  caption: parsed.caption || parsed.displayText || undefined,
+                                  sender: isClient ? (selectedConversation.name || 'Cliente') : (isBot ? 'Maya (IA)' : 'Atendente'),
                                   timestamp: m.timestamp
                                 })}
-                                className="group relative rounded-lg overflow-hidden cursor-pointer border border-stone-200 bg-stone-100 hover:shadow-md transition-all max-w-[280px]"
                               >
                                 <img
                                   src={parsed.mediaUrl}
-                                  alt={parsed.caption || "Foto recebida"}
-                                  className="w-full max-h-60 object-cover select-none group-hover:scale-[1.02] transition-transform duration-200"
+                                  alt="Foto enviada no WhatsApp"
+                                  className={`w-full object-cover rounded-lg max-h-72 ${isSticker ? 'max-w-[140px] max-h-[140px] bg-transparent' : ''}`}
                                   loading="lazy"
-                                  decoding="async"
                                 />
-                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                                  <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-black/75 text-white text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-sm backdrop-blur-xs">
-                                    <ZoomIn size={12} />
-                                    Ver comprovante
-                                  </span>
+                                {!isSticker && (
+                                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white gap-1.5 text-xs font-bold backdrop-blur-2xs">
+                                    <ZoomIn size={16} />
+                                    <span>Visualizar em Tela Cheia</span>
+                                  </div>
+                                )}
+                              </div>
+                            ) : parsed.mediaType === 'audio' ? (
+                              <div className="p-2.5 flex items-center gap-2">
+                                <Music size={18} className={isBot ? "text-amber-300" : "text-stone-600"} />
+                                <audio controls src={parsed.mediaUrl} className="w-full max-w-xs h-8" />
+                              </div>
+                            ) : (
+                              <div className="p-3 flex items-center justify-between gap-3 bg-white/10 rounded-lg">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <FileText size={18} />
+                                  <span className="text-xs truncate font-mono">Documento / Anexo</span>
                                 </div>
-                              </div>
-                            ) : (
-                              <div className="p-3 rounded-lg bg-stone-50 border border-stone-200 flex items-center gap-2.5 text-stone-600 text-xs">
-                                <ImageIcon size={20} className="text-stone-400 shrink-0" />
-                                <div>
-                                  <div className="font-bold text-xs text-stone-700">Foto / Comprovante</div>
-                                  <div className="text-[11px] text-stone-400">Recebido via WhatsApp</div>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Legenda da imagem se houver */}
-                            {parsed.caption && (
-                              <div className="mt-1.5 text-xs whitespace-pre-wrap leading-relaxed text-stone-800">
-                                {parsed.caption}
+                                <a 
+                                  href={parsed.mediaUrl} 
+                                  target="_blank" 
+                                  rel="noreferrer"
+                                  className="text-xs font-bold underline shrink-0 flex items-center gap-1"
+                                >
+                                  <Download size={13} />
+                                  <span>Baixar</span>
+                                </a>
                               </div>
                             )}
                           </div>
                         )}
 
-                        {/* Renderização de Áudio / Mensagem de Voz */}
-                        {parsed.mediaType === 'audio' && (
-                          <div className="my-1 p-2.5 rounded-xl bg-emerald-50 border border-emerald-200/80 flex flex-col gap-1.5 min-w-[240px] max-w-full shadow-2xs">
-                            <div className="flex items-center gap-2">
-                              <div className="w-7 h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
-                                <Music size={14} />
-                              </div>
-                              <span className="text-xs font-bold text-emerald-900">Mensagem de voz</span>
-                            </div>
-                            {parsed.mediaUrl ? (
-                              <audio controls preload="metadata" className="w-full h-8 mt-1 accent-emerald-600" src={parsed.mediaUrl} />
-                            ) : (
-                              <span className="text-xs text-stone-500 italic">Áudio recebido via WhatsApp</span>
-                            )}
+                        {/* Texto da Mensagem */}
+                        {parsed.displayText && (
+                          <div className="whitespace-pre-wrap break-words font-sans">
+                            {parsed.displayText}
                           </div>
                         )}
 
-                        {/* Renderização de Documento / PDF */}
-                        {parsed.mediaType === 'document' && (
-                          <div className="my-1 p-2.5 rounded-lg bg-stone-50 border border-stone-200 flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <FileText size={20} className="text-sky-600 shrink-0" />
-                              <span className="text-xs font-medium text-stone-800 truncate">{parsed.displayText}</span>
-                            </div>
-                            {parsed.mediaUrl && (
-                              <a
-                                href={parsed.mediaUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-sky-700 hover:text-sky-900 p-1.5 hover:bg-sky-50 rounded-lg transition-colors"
-                                title="Baixar documento"
-                              >
-                                <Download size={14} />
-                              </a>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Renderização de Figurinha (Sticker) */}
-                        {parsed.mediaType === 'sticker' && (
-                          <div className="relative group my-0.5">
-                            {parsed.mediaUrl ? (
-                              <img 
-                                src={parsed.mediaUrl} 
-                                alt="Figurinha" 
-                                className="w-28 h-28 sm:w-32 sm:h-32 object-contain select-none drop-shadow-md hover:scale-105 transition-transform" 
-                                loading="lazy"
-                              />
-                            ) : (
-                              <div className="p-3 rounded-xl bg-white border border-stone-200 flex items-center gap-2 shadow-xs">
-                                <span className="text-base">🎭</span>
-                                <span className="text-xs font-medium text-stone-700">Figurinha WhatsApp</span>
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Renderização de Texto Simples */}
-                        {parsed.mediaType === 'text' && (
-                          <div className="whitespace-pre-wrap">{parsed.displayText}</div>
-                        )}
-
-                        {/* Horário e Confirmação de Leitura */}
-                        <div className={`text-[10px] text-stone-500 text-right mt-1 -mb-0.5 flex items-center justify-end gap-1 ${
-                          isSticker
-                            ? 'bg-white/90 backdrop-blur-xs px-2 py-0.5 rounded-full shadow-2xs font-mono ml-auto'
-                            : (parsed.displayText.length < 24 && parsed.mediaType === 'text' ? 'inline-block ml-3 translate-y-0.5' : 'block')
+                        {/* Horário e Check de Leitura */}
+                        <div className={`flex items-center justify-end gap-1 mt-1 text-[10px] font-mono ${
+                          isBot ? 'text-purple-200' : (isHuman ? 'text-sky-700' : 'text-stone-400')
                         }`}>
-                          <span>{m.timestamp ? new Date(m.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
-                          {!isClient && (
-                            <CheckCheck size={13} className="text-emerald-600 inline shrink-0 -translate-y-0.2" />
-                          )}
+                          <span>{formatMessageTime(m.timestamp)}</span>
+                          {!isClient && <CheckCheck size={12} className={isBot ? "text-amber-300" : "text-sky-600"} />}
                         </div>
                       </div>
                     </div>
                   );
                 })
               ) : (
-                <div className="h-full flex items-center justify-center relative z-10">
-                  <div className="bg-white/95 text-stone-700 border border-stone-200 px-4 py-3 rounded-xl text-xs shadow-xs max-w-sm text-center">
-                    Nenhuma mensagem registrada. As mensagens enviadas ou recebidas para este contato aparecerão aqui em tempo real.
-                  </div>
+                <div className="h-full flex flex-col items-center justify-center text-stone-400 text-xs gap-1">
+                  <MessageSquare size={26} className="text-stone-300 mb-1" />
+                  <p className="font-semibold text-stone-600">Nenhuma mensagem nesta conversa ainda</p>
+                  <p className="text-[11px] text-stone-400">As mensagens aparecerão aqui assim que o cliente enviar.</p>
                 </div>
               )}
-              <div ref={messagesEndRef} />
             </div>
 
-            {/* Barra de Respostas Rápidas de 1 Clique (Compacta sem rolagem lateral) */}
-            <div className="px-3 py-1.5 bg-stone-50 border-t border-stone-200 flex items-center gap-1 sm:gap-1.5 flex-wrap shrink-0">
-              <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider shrink-0 mr-0.5 flex items-center gap-1 font-sans">
-                <Sparkles size={11} className="text-amber-500" /> Rápidas:
+            {/* Chips de Resposta Rápida (1-Click) */}
+            <div className="p-2 border-t border-stone-200/80 bg-white/90 shrink-0 flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+              <span className="text-[10px] font-mono font-bold text-stone-400 uppercase tracking-wider shrink-0 pl-1">
+                Atalhos:
               </span>
-              {QUICK_RESPONSES.map((qr, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => setManualMessage(qr.text)}
-                  className="px-2 py-0.5 rounded-md text-[10.5px] font-medium bg-white hover:bg-amber-50 hover:text-amber-900 hover:border-amber-300 text-stone-700 border border-stone-200 transition-all cursor-pointer active:scale-95 shadow-2xs font-sans whitespace-nowrap"
-                  title={`Inserir no campo: "${qr.text}"`}
-                >
-                  {qr.label}
-                </button>
-              ))}
+              <button
+                type="button"
+                onClick={() => setManualMessage("Olá! Acompanhe nosso cardápio completo pelo link: https://maisacaisjpbr.netlify.app 🍇")}
+                className="text-[11px] font-semibold text-stone-700 bg-stone-100 hover:bg-stone-200 px-2.5 py-1 rounded-lg shrink-0 transition-colors cursor-pointer"
+              >
+                📋 Cardápio
+              </button>
+              <button
+                type="button"
+                onClick={() => setManualMessage("Nossa chave PIX oficial é o celular: 41 997349076 (Michele Alvarez - Mais Açaí) 💳")}
+                className="text-[11px] font-semibold text-stone-700 bg-stone-100 hover:bg-stone-200 px-2.5 py-1 rounded-lg shrink-0 transition-colors cursor-pointer"
+              >
+                💳 Chave PIX
+              </button>
+              <button
+                type="button"
+                onClick={() => setManualMessage("Nosso prazo médio de entrega hoje é de 15 a 40 minutos em São José dos Pinhais 🛵")}
+                className="text-[11px] font-semibold text-stone-700 bg-stone-100 hover:bg-stone-200 px-2.5 py-1 rounded-lg shrink-0 transition-colors cursor-pointer"
+              >
+                ⏱️ Prazo de Entrega
+              </button>
+              <button
+                type="button"
+                onClick={() => setManualMessage("Ficamos na Rua Almirante Alexandrino, 909, sala 02 – Parque da Fonte, São José dos Pinhais - PR 🏪")}
+                className="text-[11px] font-semibold text-stone-700 bg-stone-100 hover:bg-stone-200 px-2.5 py-1 rounded-lg shrink-0 transition-colors cursor-pointer"
+              >
+                📍 Endereço da Loja
+              </button>
             </div>
 
-            {/* Input de Envio de Mensagem Manual */}
-            <form onSubmit={sendManualMessage} className="p-3 bg-white border-t border-stone-100 flex items-center gap-2 sm:gap-2.5 shrink-0">
+            {/* Campo de Envio de Mensagem Manual */}
+            <form onSubmit={sendManualMessage} className="p-3 border-t border-stone-200 bg-white shrink-0 flex items-center gap-2">
               <input
                 type="text"
-                placeholder={selectedConversation.paused 
-                  ? "Digite uma resposta manual para o cliente..." 
-                  : "Digite uma resposta (isso pausará a IA)..."}
+                placeholder={selectedConversation.paused ? "Digite sua mensagem como atendente humano..." : "Digite uma mensagem (a Maya continuará ativa após o envio)..."}
                 value={manualMessage}
                 onChange={e => setManualMessage(e.target.value)}
-                className="flex-1 px-3.5 sm:px-4 py-2.5 text-base sm:text-xs md:text-sm bg-stone-50 rounded-xl border border-stone-200 focus:border-[#6a2092] focus:ring-2 focus:ring-[#6a2092]/20 focus:bg-white focus:outline-none transition-all font-sans placeholder:text-stone-400"
+                className="flex-1 px-3.5 py-2.5 text-xs bg-stone-50 rounded-xl border border-stone-200 focus:border-[#4d0471] focus:ring-2 focus:ring-[#4d0471]/15 focus:bg-white focus:outline-none transition-all placeholder:text-stone-400 font-sans"
               />
               <button
                 type="submit"
                 disabled={!manualMessage.trim() || sendingManual}
-                className="min-h-[42px] px-3.5 sm:px-5 py-2.5 bg-[#6a2092] hover:bg-[#521872] text-white rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 transition-all disabled:opacity-40 cursor-pointer shadow-xs shrink-0 active:scale-95"
+                className="min-h-[38px] px-4 py-2 rounded-xl text-xs font-bold bg-[#4d0471] hover:bg-[#3b0257] text-white flex items-center gap-1.5 transition-all cursor-pointer shadow-xs disabled:opacity-50"
               >
                 {sendingManual ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
                 <span>Enviar</span>
               </button>
             </form>
-          </div>
+          </main>
         ) : (
-          <div className={`flex-1 flex-col items-center justify-center p-6 sm:p-8 text-center bg-stone-50/40 ${selectedPhone ? 'hidden md:flex' : 'flex'}`}>
-            <div className="max-w-md p-8 rounded-2xl bg-white border border-stone-200/90 shadow-xs flex flex-col items-center text-center">
-              <div className="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-600 border border-amber-500/20 flex items-center justify-center mb-4 ring-4 ring-amber-500/5">
-                <Bot size={28} />
-              </div>
-              <h3 className="text-base font-bold text-stone-900 tracking-tight mb-1.5 font-sans">
-                Central de Atendimento no WhatsApp
-              </h3>
-              <p className="text-xs text-stone-500 leading-relaxed mb-5">
-                A Bia atende clientes, tira dúvidas sobre o cardápio e lança pedidos diretamente no sistema. Selecione qualquer conversa na lista lateral para acompanhar o diálogo em tempo real ou intervir com atendimento manual.
-              </p>
-              <div className="w-full grid grid-cols-2 gap-2 text-left mb-4">
-                <div className="p-3 rounded-xl bg-stone-50 border border-stone-200/80">
-                  <span className="text-[10px] font-semibold uppercase text-stone-400 block font-sans">Status Geral</span>
-                  <span className="text-xs font-bold text-stone-800 flex items-center gap-1.5 mt-0.5 font-sans">
-                    <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
-                    {isActive ? 'Operação Ativa' : 'Pausada'}
-                  </span>
-                </div>
-                <div className="p-3 rounded-xl bg-stone-50 border border-stone-200/80">
-                  <span className="text-[10px] font-semibold uppercase text-stone-400 block font-sans">Conversas</span>
-                  <span className="text-xs font-bold text-stone-800 mt-0.5 block font-sans">
-                    {conversations.length} registradas
-                  </span>
-                </div>
-              </div>
-
-              {/* Dicas de Operação para Picos de Atendimento */}
-              <div className="w-full text-left p-3.5 rounded-xl bg-amber-50/50 border border-amber-200/60 text-xs text-stone-600 space-y-1.5">
-                <div className="font-bold text-amber-950 flex items-center gap-1.5 text-[11px] uppercase tracking-wide">
-                  <Sparkles size={12} className="text-amber-600" />
-                  <span>Dicas para o Horário de Pico</span>
-                </div>
-                <ul className="space-y-1 text-[11px] leading-relaxed text-stone-600 list-disc list-inside">
-                  <li><strong>Intervenção rápida:</strong> Digitar e enviar uma mensagem pausa a IA automaticamente.</li>
-                  <li><strong>Respostas em 1 clique:</strong> Use os atalhos rápidos de preparo, entrega e troco.</li>
-                  <li><strong>Comprovantes:</strong> Fotos e PDFs com menção a PIX ganham selo verde destacado.</li>
-                </ul>
-              </div>
+          <div className="flex-1 hidden md:flex flex-col items-center justify-center p-8 text-center bg-stone-50/50">
+            <div className="w-14 h-14 rounded-2xl bg-purple-50 text-[#4d0471] flex items-center justify-center mb-3 shadow-2xs border border-purple-100">
+              <MessageSquare size={26} />
             </div>
+            <h3 className="font-black text-base text-stone-800 font-sans">
+              Central de Atendimento Maya
+            </h3>
+            <p className="text-xs text-stone-400 max-w-sm mt-1 leading-relaxed">
+              Selecione uma conversa na lista ao lado para acompanhar as mensagens em tempo real ou assumir o atendimento manualmente.
+            </p>
           </div>
         )}
       </div>
 
-      {/* Modal Lightbox de Imagem / Comprovante em Tela Cheia */}
+      {/* =========================================================================
+          MODAL DE DIRETRIZES OPERACIONAIS DA MAYA
+      ========================================================================= */}
+      {showRulesModal && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+          onClick={() => setShowRulesModal(false)}
+        >
+          <div 
+            className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-stone-200 space-y-4 max-h-[85vh] overflow-y-auto"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-stone-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-[#4d0471] text-white flex items-center justify-center font-bold">
+                  <Sparkles size={16} />
+                </div>
+                <div>
+                  <h3 className="font-black text-base text-stone-900 font-sans">
+                    Diretrizes & Comportamento da Maya
+                  </h3>
+                  <p className="text-xs text-stone-400">Regras oficiais de atendimento configuradas no n8n</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowRulesModal(false)}
+                className="p-1.5 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div className="p-3.5 rounded-2xl bg-purple-50/80 border border-purple-200/90 space-y-1.5 sm:col-span-2">
+                <div className="flex items-center justify-between font-bold text-purple-950">
+                  <div className="flex items-center gap-1.5">
+                    <Layers size={15} className="text-[#4d0471]" />
+                    <span className="font-sans font-black text-xs uppercase tracking-wider text-[#4d0471]">Dicionário de Sabores & Casadinho</span>
+                  </div>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#4d0471] text-white font-semibold">Regra de Ouro</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-stone-700 pt-1">
+                  <div className="p-2 rounded-xl bg-white/80 border border-purple-100">
+                    <strong className="text-purple-900 block font-semibold">🥥 Tapioca com Coco:</strong>
+                    "Caldo de tapioca", "tapioca" ou "tapioca com coco" é reconhecido imediatamente como o sabor de base <em>Tapioca com Coco</em>.
+                  </div>
+                  <div className="p-2 rounded-xl bg-white/80 border border-purple-100">
+                    <strong className="text-purple-900 block font-semibold">🥜 Paçoca (Base vs Adicional):</strong>
+                    Distingue <em>Creme de Paçoca</em> (base grátis) do <em>Adicional de Paçoca</em> (topping cobrado). Se dúbio, pergunta se quer na base ou por cima.
+                  </div>
+                  <div className="p-2 rounded-xl bg-white/80 border border-purple-100">
+                    <strong className="text-purple-900 block font-semibold">🍧 Casadinho (2 Sabores):</strong>
+                    Significa 2 sabores de creme no mesmo copo sem custo extra. A Maya pergunta diretamente: <em>"Quais os 2 sabores de creme no seu casadinho?"</em>.
+                  </div>
+                  <div className="p-2 rounded-xl bg-white/80 border border-purple-100">
+                    <strong className="text-purple-900 block font-semibold">🥛 Mousse de Ninho:</strong>
+                    Não temos creme de Ninho na base. Se pedirem "creme de ninho", entende como <em>Mousse de Leite Ninho</em> e confirma com o cliente.
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/90 space-y-1">
+                <div className="flex items-center gap-1.5 font-bold text-amber-900">
+                  <Zap size={15} className="text-amber-700" />
+                  <span>Fechamento Direto & Objetivo</span>
+                </div>
+                <p className="text-[11px] text-stone-600 leading-relaxed">
+                  Mensagens de 1 a 2 linhas sem enrolação. Foco estrito nas perguntas essenciais: tamanho, sabores, adicionais, entrega/retirada e forma de pagamento.
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200/90 space-y-1">
+                <div className="flex items-center gap-1.5 font-bold text-emerald-900">
+                  <CreditCard size={15} className="text-emerald-700" />
+                  <span>Formas de Pagamento</span>
+                </div>
+                <p className="text-[11px] text-stone-600 leading-relaxed">
+                  Aceita PIX oficial (chave celular 41997349076 - Michele Alvarez), Cartão na maquininha levada pelo entregador e Dinheiro.
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-purple-50/70 border border-purple-200/90 space-y-1">
+                <div className="flex items-center gap-1.5 font-bold text-purple-900">
+                  <CheckCircle2 size={15} className="text-purple-700" />
+                  <span>Cardápio em Tempo Real</span>
+                </div>
+                <p className="text-[11px] text-stone-600 leading-relaxed">
+                  A cada mensagem a Maya lê o cardápio oficial ao vivo. Tamanhos, receitas de combos, cremes (casadinho até 2 cremes sem custo) e adicionais.
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-sky-50/70 border border-sky-200/90 space-y-1">
+                <div className="flex items-center gap-1.5 font-bold text-sky-900">
+                  <Clock size={15} className="text-sky-700" />
+                  <span>Prazos & Taxas de Entrega</span>
+                </div>
+                <p className="text-[11px] text-stone-600 leading-relaxed">
+                  Calcula a taxa oficial de cada bairro de São José dos Pinhais (Parque da Fonte grátis, Afonso Pena R$ 5, etc.) e informa os prazos exatos.
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowRulesModal(false)}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-[#4d0471] hover:bg-[#3b0257] text-white transition-colors cursor-pointer"
+              >
+                Entendido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL LIGHTBOX DE COMPROVANTE / FOTO EM TELA CHEIA
+      ========================================================================= */}
       {selectedImage && (
         <div 
           className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xs flex flex-col items-center justify-center p-4 transition-all"
           onClick={() => setSelectedImage(null)}
         >
-          {/* Barra Superior do Modal */}
           <div 
             className="w-full max-w-4xl flex items-center justify-between text-white pb-3 px-2 shrink-0"
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center gap-2 min-w-0">
               <ImageIcon size={18} className="text-emerald-400 shrink-0" />
-              <span className="text-sm font-semibold truncate">
-                {selectedImage.caption || 'Foto / Comprovante do WhatsApp'}
+              <span className="text-sm font-bold truncate">
+                {selectedImage.caption || 'Comprovante / Foto do WhatsApp'}
               </span>
               <span className="text-xs text-stone-400 font-mono shrink-0">
                 ({selectedImage.sender} • {selectedImage.timestamp ? new Date(selectedImage.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''})
@@ -1647,7 +1738,7 @@ export default function AgentManager() {
                   href={selectedImage.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-1.5 rounded-md bg-stone-800 hover:bg-stone-700 text-stone-200 hover:text-white transition-colors flex items-center gap-1 text-xs"
+                  className="p-2 rounded-lg bg-stone-800 hover:bg-stone-700 text-stone-200 hover:text-white transition-colors flex items-center gap-1.5 text-xs font-semibold"
                   title="Abrir em nova aba"
                 >
                   <ExternalLink size={14} />
@@ -1658,7 +1749,7 @@ export default function AgentManager() {
                 <a
                   href={selectedImage.url}
                   download={`comprovante_${Date.now()}.jpg`}
-                  className="p-1.5 rounded-md bg-stone-800 hover:bg-stone-700 text-stone-200 hover:text-white transition-colors flex items-center gap-1 text-xs"
+                  className="p-2 rounded-lg bg-stone-800 hover:bg-stone-700 text-stone-200 hover:text-white transition-colors flex items-center gap-1.5 text-xs font-semibold"
                   title="Baixar imagem"
                 >
                   <Download size={14} />
@@ -1667,7 +1758,7 @@ export default function AgentManager() {
               )}
               <button
                 onClick={() => setSelectedImage(null)}
-                className="p-1.5 rounded-md bg-stone-800 hover:bg-red-900/80 text-stone-300 hover:text-white transition-colors cursor-pointer"
+                className="p-2 rounded-lg bg-stone-800 hover:bg-red-900/80 text-stone-300 hover:text-white transition-colors cursor-pointer"
                 title="Fechar (Esc)"
               >
                 <X size={18} />
@@ -1675,19 +1766,17 @@ export default function AgentManager() {
             </div>
           </div>
 
-          {/* Imagem Ampliada */}
           <div 
-            className="relative max-w-4xl max-h-[80vh] flex items-center justify-center overflow-hidden rounded-lg bg-stone-950/60 p-1 border border-stone-800 shadow-2xl"
+            className="relative max-w-4xl max-h-[80vh] flex items-center justify-center overflow-hidden rounded-2xl bg-stone-950/80 p-1 border border-stone-800 shadow-2xl"
             onClick={e => e.stopPropagation()}
           >
             <img
               src={selectedImage.url}
               alt={selectedImage.caption || "Imagem em tela cheia"}
-              className="max-h-[78vh] max-w-full object-contain rounded select-none"
+              className="max-h-[78vh] max-w-full object-contain rounded-xl select-none"
             />
           </div>
 
-          {/* Legenda Inferior */}
           {selectedImage.caption && (
             <div 
               className="mt-3 px-4 py-1.5 bg-stone-900/90 text-stone-200 text-xs rounded-full max-w-xl text-center truncate border border-stone-800"
