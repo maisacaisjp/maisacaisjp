@@ -1705,7 +1705,7 @@
         1920
       ],
       "parameters": {
-        "jsonBody": "={{\n  JSON.stringify({\n    p_telefone: String($('Coleta').first()?.json?.telefone || ''),\n    p_dia: $fromAI('dia_semana', 'Número do dia (0=Domingo, 1=Segunda, 2=Terça, 3=Quarta, 4=Quinta, 5=Sexta, 6=Sábado) ou null para hoje', 'number'),\n    p_abre: String($fromAI('horario_abertura', 'Horário de abertura ex: 14:00 ou vazio', 'string') || '').trim() || null,\n    p_fecha: String($fromAI('horario_fechamento', 'Horário de fechamento ex: 23:00 ou vazio', 'string') || '').trim() || null,\n    p_fechado: $fromAI('fechado', 'true se a loja não vai abrir no dia ou false se vai abrir', 'boolean'),\n    p_status_loja: String($fromAI('status_loja', 'open para abrir agora forçado, closed para fechar agora forçado ou auto para normal', 'string') || '').trim() || null\n  })\n}}",
+        "jsonBody": "={{\n  JSON.stringify({\n    p_telefone: String($fromAI('telefone_solicitante', 'Telefone do solicitante ex: 41996560080 ou 41997349076', 'string') || '41996560080'),\n    p_dia: $fromAI('dia_semana', 'Número do dia (0=Domingo, 1=Segunda, 2=Terça, 3=Quarta, 4=Quinta, 5=Sexta, 6=Sábado) ou null para hoje', 'number'),\n    p_abre: String($fromAI('horario_abertura', 'Horário de abertura ex: 14:00 ou vazio', 'string') || '').trim() || null,\n    p_fecha: String($fromAI('horario_fechamento', 'Horário de fechamento ex: 23:00 ou vazio', 'string') || '').trim() || null,\n    p_fechado: $fromAI('fechado', 'true se a loja não vai abrir no dia ou false se vai abrir', 'boolean'),\n    p_status_loja: String($fromAI('status_loja', 'open para abrir agora forçado, closed para fechar agora forçado ou auto para normal', 'string') || '').trim() || null\n  })\n}}",
         "method": "POST",
         "parametersHeaders": {
           "values": [
@@ -1728,6 +1728,11 @@
         },
         "placeholderDefinitions": {
           "values": [
+            {
+              "name": "telefone_solicitante",
+              "type": "string",
+              "description": "Telefone de quem solicitou a alteração (Michele ou Junior) ex: 41996560080 ou 41997349076."
+            },
             {
               "description": "Número do dia da semana: 0=Domingo, 1=Segunda, 2=Terça, 3=Quarta, 4=Quinta, 5=Sexta, 6=Sábado. Se for hoje, deixe null.",
               "name": "dia_semana",
