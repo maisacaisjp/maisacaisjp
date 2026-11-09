@@ -518,7 +518,7 @@ export default function Cart({
       text += `• Chave (Celular): *${PIX_CONFIG_PADRAO.telefoneFormatado}*\n`;
       text += `• Titular: *${PIX_CONFIG_PADRAO.beneficiario} (Mais Açaí)*\n`;
       text += `• Valor: *R$ ${total.toFixed(2)}*\n\n`;
-      text += `📋 *Código Copia e Cola (toque para copiar):*\n${pixCodigo}\n`;
+      text += `📋 *Código Copia e Cola:*\n${pixCodigo}\n`;
     }
     text += `-----------------------------------`;
     if (trackingUrl) {
@@ -1002,9 +1002,9 @@ export default function Cart({
                   </div>
 
                   {pagamento === "PIX" && (
-                    <div className="mt-3">
-                      <PixPaymentCard valor={total} mostrarQrCode={false} />
-                    </div>
+                    <p className="mt-2 text-[13px] text-brand-700 bg-brand-50 rounded-xl px-3 py-2">
+                      O código PIX com o valor final aparece assim que você enviar o pedido.
+                    </p>
                   )}
 
                   {(pagamento === "Cartão de Crédito" || pagamento === "Cartão de Débito") && (

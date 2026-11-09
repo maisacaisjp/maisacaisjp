@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Copy, Check, QrCode, ShieldCheck, Sparkles } from 'lucide-react';
-import { gerarPixCopiaECola, gerarQrCodePixUrl, PIX_CONFIG_PADRAO } from '../utils/pix';
+import { gerarPixCopiaECola, gerarQrCodePixUrl, PIX_CONFIG_PADRAO, copiarTexto } from '../utils/pix';
 import { brl } from '../utils/formatacao';
 import { hapticLight } from '../utils/haptics';
 
@@ -19,6 +19,7 @@ export default function PixPaymentCard({
 }: PixPaymentCardProps) {
   const [copiadoCodigo, setCopiadoCodigo] = useState(false);
   const [copiadoChave, setCopiadoChave] = useState(false);
+  const [falhouCopia, setFalhouCopia] = useState(false);
 
   const pixPayload = gerarPixCopiaECola({
     valor,
@@ -29,24 +30,30 @@ export default function PixPaymentCard({
 
   const copiarCodigo = async () => {
     hapticLight();
-    try {
-      await navigator.clipboard.writeText(pixPayload);
+    if (await copiarTexto(pixPayload)) {
+      setFalhouCopia(false);
       setCopiadoCodigo(true);
       setTimeout(() => setCopiadoCodigo(false), 2500);
-    } catch {
-      // fallback
+    } else {
+      setFalhouCopia(true);
     }
   };
 
   const copiarChave = async () => {
     hapticLight();
-    try {
-      await navigator.clipboard.writeText(PIX_CONFIG_PADRAO.chave);
+    if (await copiarTexto(PIX_CONFIG_PADRAO.chave)) {
       setCopiadoChave(true);
       setTimeout(() => setCopiadoChave(false), 2500);
-    } catch {
-      // fallback
+    } else {
+      setFalhouCopia(true);
     }
+  };
+
+  // Toque no código seleciona tudo (para copiar na mão se o navegador bloquear)
+  const selecionarCodigo = (e: React.MouseEvent<HTMLTextAreaElement> | React.FocusEvent<HTMLTextAreaElement>) => {
+    const el = e.currentTarget;
+    el.focus();
+    el.setSelectionRange(0, el.value.length);
   };
 
   return (
@@ -58,7 +65,7 @@ export default function PixPaymentCard({
           </div>
           <div>
             <h3 className="font-display text-[15px] font-bold text-stone-900 leading-tight">Pagamento via PIX</h3>
-            <p className="text-[12px] text-stone-500">Aprovação rápida e automática</p>
+            <p className="text-[12px] text-stone-500">Pague no app do seu banco e envie o comprovante</p>
           </div>
         </div>
         <div className="text-right">
@@ -106,6 +113,22 @@ export default function PixPaymentCard({
             </>
           )}
         </button>
+
+        {/* Código visível: se o navegador bloquear a cópia, o cliente seleciona e copia na mão */}
+        {falhouCopia && (
+          <p role="alert" className="text-[12px] font-medium text-amber-800 bg-amber-50 ring-1 ring-amber-200 rounded-xl px-3 py-2">
+            Seu navegador bloqueou a cópia automática. Toque no código abaixo, segure e escolha <strong>Copiar</strong>.
+          </p>
+        )}
+        <textarea
+          readOnly
+          value={pixPayload}
+          onClick={selecionarCodigo}
+          onFocus={selecionarCodigo}
+          rows={3}
+          aria-label="Código PIX copia e cola"
+          className="w-full resize-none rounded-xl bg-stone-50 ring-1 ring-stone-200 px-3 py-2 font-mono text-[12px] leading-snug text-stone-700 break-all outline-none focus:ring-2 focus:ring-brand-600"
+        />
 
         {/* Chave de celular alternativa */}
         <div className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-stone-50 border border-stone-200/80 text-[12px]">

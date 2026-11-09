@@ -99,6 +99,41 @@ export function gerarPixCopiaECola(opcoes: OpcoesPix = {}): string {
 }
 
 /**
+ * Copia um texto para a área de transferência.
+ * Tenta o jeito moderno e, se o navegador bloquear (navegador interno do WhatsApp/Instagram,
+ * iPhone antigo), usa o jeito antigo. Retorna se conseguiu copiar.
+ */
+export async function copiarTexto(texto: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(texto);
+      return true;
+    }
+  } catch {
+    // bloqueado: tenta o jeito antigo abaixo
+  }
+  try {
+    const campo = document.createElement('textarea');
+    campo.value = texto;
+    campo.setAttribute('readonly', '');
+    campo.style.position = 'fixed';
+    campo.style.top = '0';
+    campo.style.left = '0';
+    campo.style.opacity = '0';
+    campo.style.fontSize = '16px'; // evita zoom no iPhone
+    document.body.appendChild(campo);
+    campo.focus();
+    campo.select();
+    campo.setSelectionRange(0, texto.length);
+    const ok = document.execCommand('copy');
+    document.body.removeChild(campo);
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Gera a URL da imagem do QR Code para renderização imediata.
  */
 export function gerarQrCodePixUrl(pixCopiaECola: string, tamanho = 280): string {
