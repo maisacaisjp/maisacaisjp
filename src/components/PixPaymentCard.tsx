@@ -135,7 +135,7 @@ export default function PixPaymentCard({
           <div className="min-w-0">
             <span className="block text-stone-500 text-[11px]">Chave Telefone:</span>
             <span className="font-bold text-stone-900 tabular-nums">{PIX_CONFIG_PADRAO.telefoneFormatado}</span>
-            <span className="block text-[11px] text-stone-500 truncate">{PIX_CONFIG_PADRAO.beneficiario} · Mais Açaí</span>
+            <span className="block text-[11px] text-stone-500 truncate">Conta Mais Açaí · {PIX_CONFIG_PADRAO.banco}</span>
           </div>
           <button
             type="button"
@@ -148,9 +148,12 @@ export default function PixPaymentCard({
         </div>
       </div>
 
-      <div className="mt-3 flex items-center gap-1.5 text-[11px] text-stone-400 justify-center">
-        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-        <span>Pagamento seguro direto para {PIX_CONFIG_PADRAO.beneficiario}</span>
+      <div className="mt-3 flex items-start gap-2 text-[12px] text-stone-500 bg-emerald-50/60 rounded-xl px-3 py-2">
+        <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-px" />
+        <span>
+          Na confirmação do seu banco pode aparecer <strong className="text-stone-700">{PIX_CONFIG_PADRAO.nomesNaConfirmacao}</strong>.
+          É a mesma conta da loja, pode pagar tranquilo.
+        </span>
       </div>
     </div>
   );

@@ -1,12 +1,16 @@
 // ==============================================================================
 // GERADOR OFICIAL DE PIX (EMV QRCPS / BR CODE - BANCO CENTRAL DO BRASIL)
-// Chave: 41 997349076 (Michele Alvarez - Mais Açaí)
+// Chave: celular 41 99734-9076 -> conta PJ da Mais Açaí no Nubank
+// O nome que aparece na confirmação depende do banco de quem paga: uns mostram o
+// nome fantasia (Mais Açaí), outros a razão social (Michele Alvarez Ribeiro).
 // ==============================================================================
 
 export const PIX_CONFIG_PADRAO = {
   chave: '41997349076',
   telefoneFormatado: '(41) 99734-9076',
-  beneficiario: 'Michele Alvarez',
+  beneficiario: 'Mais Acai', // nome gravado dentro do código (sem acento, padrão do Banco Central)
+  nomesNaConfirmacao: 'Mais Açaí ou Michele Alvarez Ribeiro',
+  banco: 'Nubank',
   cidade: 'Sao Jose dos Pinhais',
   empresa: 'Mais Açaí'
 };
@@ -60,7 +64,7 @@ export function gerarPixCopiaECola(opcoes: OpcoesPix = {}): string {
       .toUpperCase()
       .slice(0, max);
 
-  const nomeBeneficiario = limpaTexto(opcoes.beneficiario || PIX_CONFIG_PADRAO.beneficiario, 25) || 'MICHELE ALVAREZ';
+  const nomeBeneficiario = limpaTexto(opcoes.beneficiario || PIX_CONFIG_PADRAO.beneficiario, 25) || 'MAIS ACAI';
   const nomeCidade = limpaTexto(opcoes.cidade || PIX_CONFIG_PADRAO.cidade, 15) || 'S JOSE PINHAIS';
   const txid = limpaTexto(opcoes.identificador || '***', 25) || '***';
 

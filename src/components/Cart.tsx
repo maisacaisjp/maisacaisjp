@@ -516,7 +516,8 @@ export default function Cart({
       });
       text += `\n🔑 *DADOS PARA PAGAMENTO PIX:*\n`;
       text += `• Chave (Celular): *${PIX_CONFIG_PADRAO.telefoneFormatado}*\n`;
-      text += `• Titular: *${PIX_CONFIG_PADRAO.beneficiario} (Mais Açaí)*\n`;
+      text += `• Conta: *Mais Açaí* (${PIX_CONFIG_PADRAO.banco})\n`;
+      text += `• Na confirmação pode aparecer *${PIX_CONFIG_PADRAO.nomesNaConfirmacao}*: é a mesma conta da loja\n`;
       text += `• Valor: *R$ ${total.toFixed(2)}*\n\n`;
       text += `📋 *Código Copia e Cola:*\n${pixCodigo}\n`;
     }
