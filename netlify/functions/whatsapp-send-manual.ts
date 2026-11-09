@@ -1,3 +1,35 @@
+import { createClient } from '@supabase/supabase-js';
+
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
+const SUPABASE_ANON = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
+
+/**
+ * Só envia para quem está logado no gestor e pode usar o Agente IA
+ * (dono, ou funcionário com a permissão "gerenciar_configuracoes").
+ * Mesma regra do gestor: conta sem perfil cadastrado = dono.
+ */
+async function podeEnviar(req: Request): Promise<boolean> {
+  const auth = req.headers.get('authorization') || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
+  if (!token || !SUPABASE_URL || !SUPABASE_ANON) return false;
+
+  const sb = createClient(SUPABASE_URL, SUPABASE_ANON, {
+    auth: { persistSession: false },
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
+  const { data: usuario, error } = await sb.auth.getUser(token);
+  if (error || !usuario?.user) return false;
+
+  const { data: perfil, error: erroPerfil } = await sb
+    .from('profiles')
+    .select('role, permissions')
+    .eq('id', usuario.user.id)
+    .maybeSingle();
+  if (erroPerfil) return false;
+  if (!perfil || !perfil.role || perfil.role === 'owner') return true;
+  return perfil.permissions?.gerenciar_configuracoes === true;
+}
+
 export default async (req: Request) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -12,6 +44,10 @@ export default async (req: Request) => {
 
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ success: false, message: 'Method Not Allowed' }), { status: 405, headers });
+  }
+
+  if (!(await podeEnviar(req))) {
+    return new Response(JSON.stringify({ success: false, message: 'Não autorizado. Entre no gestor para enviar mensagens.' }), { status: 401, headers });
   }
 
   try {

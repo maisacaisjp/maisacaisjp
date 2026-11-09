@@ -709,9 +709,14 @@ export default function AgentManager() {
       setConversations(prev => prev.map(c => c.phone === selectedPhone ? updatedConv : c)
         .sort((a, b) => new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime()));
 
+      // A função só envia para quem está logado no gestor: manda o login junto
+      const { data: sessao } = await supabase.auth.getSession();
       fetch('/.netlify/functions/whatsapp-send-manual', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${sessao.session?.access_token || ''}`
+        },
         body: JSON.stringify({
           phone: selectedPhone,
           message: messageText
