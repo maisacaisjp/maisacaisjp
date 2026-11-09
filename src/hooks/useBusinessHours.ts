@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { getStoreDate } from '../utils/date';
 
 export interface BusinessHoursStatus {
   isOpen: boolean;
@@ -47,7 +48,7 @@ export function useBusinessHours(): BusinessHoursStatus {
       if (storeStatus === 'paused' && pausedUntil) {
         const pauseEnd = new Date(pausedUntil);
         if (new Date() < pauseEnd) {
-           const timeStr = pauseEnd.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+           const timeStr = pauseEnd.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
            setStatus({ isOpen: false, loading: false, todayLabel: `Volta às ${timeStr}`, reason: 'paused', subscriptionStatus });
            return;
         } else {
@@ -62,12 +63,8 @@ export function useBusinessHours(): BusinessHoursStatus {
         return;
       }
 
-      let now = new Date();
-      try {
-        const lisbonString = now.toLocaleString('en-US', { timeZone: 'Europe/Lisbon' });
-        const parsed = new Date(lisbonString);
-        if (!isNaN(parsed.getTime())) now = parsed;
-      } catch (e) {}
+      // Dia e hora oficiais da loja (São José dos Pinhais / PR), não importa o fuso do aparelho
+      const now = getStoreDate();
 
       const dayOfWeek = isNaN(now.getDay()) ? 0 : now.getDay();
       const today = data.find((d: any) => d.day_of_week === dayOfWeek);
@@ -92,9 +89,13 @@ export function useBusinessHours(): BusinessHoursStatus {
 
       const nowMinutes = now.getHours() * 60 + now.getMinutes();
       const openMinutes = openH * 60 + openM;
-      const closeMinutes = closeH * 60 + closeM;
+      // Fechar às 00:00 = fim do dia (24:00)
+      const closeMinutes = closeH * 60 + closeM === 0 ? 24 * 60 : closeH * 60 + closeM;
 
-      const isOpen = nowMinutes >= openMinutes && nowMinutes < closeMinutes;
+      // Horário que passa da meia-noite (ex.: 18:00 às 02:00): aberto depois de abrir OU antes de fechar
+      const isOpen = closeMinutes > openMinutes
+        ? nowMinutes >= openMinutes && nowMinutes < closeMinutes
+        : nowMinutes >= openMinutes || nowMinutes < closeMinutes;
 
       setStatus({
         isOpen,
