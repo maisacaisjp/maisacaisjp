@@ -112,8 +112,29 @@ export function useBusinessHours(): BusinessHoursStatus {
 
   useEffect(() => {
     checkStatus();
-    const interval = setInterval(checkStatus, 30000);
-    return () => clearInterval(interval);
+
+    // 1) Na hora: escuta mudanças de horário e de abrir/fechar/pausar a loja feitas no gestor
+    const canal = supabase
+      .channel(`public:horario-loja-${Math.random().toString(36).slice(2, 9)}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'business_hours' }, () => checkStatus())
+      // só as chaves de status da loja (a tabela settings também guarda o cashback de cada cliente)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'settings', filter: 'key=eq.store_status' }, () => checkStatus())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'settings', filter: 'key=eq.manual_store_closed' }, () => checkStatus())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'settings', filter: 'key=eq.paused_until' }, () => checkStatus())
+      .subscribe();
+
+    // 2) Reserva: confere a cada 10 s e assim que o cliente volta para a aba do cardápio
+    const interval = setInterval(checkStatus, 10000);
+    const aoVoltar = () => {
+      if (document.visibilityState === 'visible') checkStatus();
+    };
+    document.addEventListener('visibilitychange', aoVoltar);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', aoVoltar);
+      supabase.removeChannel(canal);
+    };
   }, []);
 
   return status;
