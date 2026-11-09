@@ -29,7 +29,11 @@ import {
   FileText,
   Sparkles,
   Bike,
-  Store
+  Store,
+  CheckCircle2,
+  MessageCircle,
+  CreditCard,
+  Banknote
 } from "lucide-react";
 import { useAnalytics } from '../hooks/useAnalytics';
 import { getCashbackConfig, getCustomerCashbackInfo, applyOrderCashback, dataCurta, DEFAULT_CASHBACK_PERCENT } from '../utils/cashback';
@@ -95,6 +99,7 @@ export default function Cart({
   const [whatsappUrl, setWhatsappUrl] = useState("");
   const [savedOrderId, setSavedOrderId] = useState<number | null>(null);
   const [savedTrackingCode, setSavedTrackingCode] = useState<string | null>(null);
+  const [hasClickedWhatsapp, setHasClickedWhatsapp] = useState(false);
 
   const [zonesFees, setZonesFees] = useState<Record<string, number>>(NEIGHBORHOOD_DELIVERY_FEES || {});
   const [minDeliveryOrder, setMinDeliveryOrder] = useState(30);
@@ -531,61 +536,49 @@ export default function Cart({
     const wappUrl = `https://wa.me/${RESTAURANT_WHATSAPP_PHONE}?text=${encoded}`;
 
     trackEvent('purchase', { total_value: total, order_id: newOrderId || orderNumber });
-    window.open(wappUrl, "_blank");
+    
+    // Dispara comemoração e haptic feedback
+    try {
+      confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
+    } catch (_) {}
+    hapticSuccess();
 
     setWhatsappUrl(wappUrl);
     setValorPedido(total); // guarda antes de esvaziar a sacola (senão o PIX sai com R$ 0,00)
+    setHasClickedWhatsapp(false);
     setIsSuccess(true);
     onClearCart();
   };
 
   // SUCCESS SCREEN
   if (isSuccess) {
-    const successActionButtons = (
-      <div className="w-full max-w-xs mx-auto flex flex-col gap-2.5 mt-5">
-        {savedOrderId && (
-          <a
-            href="/conta"
-            className="w-full h-12 bg-brand-700 hover:bg-brand-800 text-white font-semibold text-[15px] rounded-2xl flex items-center justify-center gap-2 transition cursor-pointer"
-          >
-            Acompanhar em Meus Pedidos
-          </a>
-        )}
-        <a
-          href={whatsappUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={() => {
-            onClearCart();
-            setIsSuccess(false);
-            onClose();
-          }}
-          className="w-full h-12 bg-[#25D366] hover:bg-[#1EBE5D] text-white font-semibold text-[15px] rounded-2xl flex items-center justify-center gap-2 transition cursor-pointer"
-        >
-          Abrir WhatsApp do pedido
-        </a>
-        <button
-          onClick={() => {
-            setIsSuccess(false);
-            setCurrentStep('items');
-            onClose();
-          }}
-          className="h-11 text-[14px] text-stone-500 hover:text-stone-900 font-medium cursor-pointer"
-        >
-          Voltar ao cardápio
-        </button>
-      </div>
-    );
+    const isPix = pagamento === "PIX";
 
     const sucesso = (
-      <div className="flex flex-col items-center text-center px-6 py-8">
-        <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mb-4 ring-8 ring-emerald-50/50">
-          <Check className="w-8 h-8 text-leaf" strokeWidth={3} />
+      <div className="flex flex-col items-center text-center px-5 py-7 sm:px-6 sm:py-8">
+        <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mb-3 ring-8 ring-emerald-50/50">
+          <CheckCircle2 className="w-8 h-8 text-leaf" strokeWidth={2.5} />
         </div>
-        <h2 className="font-display text-[22px] font-extrabold text-stone-900">Pedido enviado!</h2>
-        <p className="text-stone-500 text-[14px] mt-1">Recebemos seu pedido. Confirme pelo WhatsApp.</p>
-        {pagamento === 'PIX' && (
-          <div className="w-full text-left mt-4">
+
+        {savedOrderId && (
+          <span className="inline-block px-3 py-1 rounded-full text-[12px] font-bold bg-brand-50 text-brand-800 border border-brand-200/80 mb-2">
+            Pedido #{savedOrderId}
+          </span>
+        )}
+
+        <h2 className="font-display text-[22px] font-extrabold text-stone-900 leading-tight">
+          Pedido Finalizado!
+        </h2>
+
+        <p className="text-stone-500 text-[14px] mt-1.5 max-w-sm">
+          {isPix
+            ? "Efetue o pagamento via PIX abaixo e clique no botão verde para enviar o pedido para o nosso WhatsApp."
+            : "Seu pedido foi registrado! Agora clique no botão verde abaixo para enviar os dados para a loja pelo WhatsApp."}
+        </p>
+
+        {/* Quando for PIX: Mostra Card Completo com QR Code e Copia e Cola */}
+        {isPix && (
+          <div className="w-full text-left mt-4 mb-2">
             <PixPaymentCard
               valor={valorPedido}
               identificador={savedTrackingCode || String(savedOrderId || '')}
@@ -593,7 +586,88 @@ export default function Cart({
             />
           </div>
         )}
-        {successActionButtons}
+
+        {/* Quando for Outra Forma (Cartão de Crédito, Débito ou Dinheiro): Mostra resumo do pagamento */}
+        {!isPix && (
+          <div className="w-full max-w-sm bg-stone-50 rounded-2xl ring-1 ring-stone-200/80 p-4 text-left mt-4 mb-2 space-y-2.5">
+            <div className="flex justify-between items-center text-[14px]">
+              <span className="text-stone-500 font-medium">Pagamento selecionado:</span>
+              <span className="font-bold text-stone-900 flex items-center gap-1.5">
+                {pagamento.includes("Cartão") ? (
+                  <CreditCard className="w-4 h-4 text-brand-700" />
+                ) : (
+                  <Banknote className="w-4 h-4 text-leaf" />
+                )}
+                {pagamento}
+              </span>
+            </div>
+
+            {pagamento === "Dinheiro" && trocoPara && (
+              <div className="flex justify-between items-center text-[13px] text-stone-600 border-t border-stone-200/70 pt-2">
+                <span>Troco para:</span>
+                <span className="font-semibold text-stone-900">R$ {trocoPara}</span>
+              </div>
+            )}
+
+            {pagamento.includes("Cartão") && orderType === "Delivery" && (
+              <div className="text-[12px] text-stone-500 italic border-t border-stone-200/70 pt-1.5">
+                Levar maquininha de cartão na entrega.
+              </div>
+            )}
+
+            <div className="flex justify-between items-center text-[15px] border-t border-stone-200 pt-2.5">
+              <span className="font-semibold text-stone-700">Total a pagar:</span>
+              <span className="font-extrabold text-brand-800 text-[18px] tabular-nums">
+                {brl(valorPedido)}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* O ÚLTIMO BOTÃO: ENVIAR PARA O WHATSAPP */}
+        <div className="w-full max-w-sm mx-auto flex flex-col gap-2 mt-4">
+          <a
+            href={whatsappUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => {
+              setHasClickedWhatsapp(true);
+              hapticLight();
+            }}
+            className="w-full h-14 bg-[#25D366] hover:bg-[#1EBE5D] text-white font-bold text-[16px] rounded-2xl flex items-center justify-center gap-2.5 shadow-[0_8px_20px_rgba(37,211,102,0.32)] transition cursor-pointer active:scale-[0.99]"
+          >
+            <MessageCircle className="w-6 h-6 fill-current shrink-0" />
+            <span>{hasClickedWhatsapp ? "Reenviar para o WhatsApp" : "Enviar Pedido para o WhatsApp"}</span>
+          </a>
+
+          <p className="text-[12px] text-stone-500 text-center leading-tight">
+            {isPix
+              ? "⚠️ Envie a mensagem no WhatsApp para a loja confirmar e iniciar o preparo!"
+              : "⚠️ Clique acima para abrir a conversa com o pedido pronto para envio!"}
+          </p>
+
+          {savedOrderId && (
+            <a
+              href="/conta"
+              className="w-full h-11 bg-white hover:bg-stone-50 text-stone-700 font-semibold text-[14px] rounded-xl ring-1 ring-stone-200 flex items-center justify-center gap-2 transition cursor-pointer mt-3"
+            >
+              Acompanhar em Meus Pedidos
+            </a>
+          )}
+
+          <button
+            type="button"
+            onClick={() => {
+              setIsSuccess(false);
+              setCurrentStep("items");
+              setHasClickedWhatsapp(false);
+              onClose();
+            }}
+            className="h-10 text-[14px] text-stone-500 hover:text-stone-900 font-medium cursor-pointer"
+          >
+            Voltar ao cardápio
+          </button>
+        </div>
       </div>
     );
 
@@ -1158,16 +1232,16 @@ export default function Cart({
                     type="button"
                     onClick={handleCheckout}
                     disabled={isSubmitting || !businessStatus.isOpen}
-                    className={`flex-1 min-w-0 h-[52px] px-3 rounded-2xl font-semibold text-[15px] transition flex justify-center items-center gap-2 cursor-pointer ${
+                    className={`flex-1 min-w-0 h-[52px] px-3 rounded-2xl font-bold text-[16px] transition flex justify-center items-center gap-2 cursor-pointer ${
                       isSubmitting || !businessStatus.isOpen
                         ? 'bg-stone-100 text-stone-500 cursor-not-allowed'
-                        : 'bg-[#25D366] hover:bg-[#1EBE5D] active:scale-[0.99] text-white shadow-[0_8px_20px_rgba(37,211,102,0.3)]'
+                        : 'bg-brand-700 hover:bg-brand-800 active:scale-[0.99] text-white shadow-[0_8px_20px_rgba(77,4,113,0.25)]'
                     }`}
                   >
                     {isSubmitting ? (
                       <>
                         <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        <span>Enviando...</span>
+                        <span>Finalizando...</span>
                       </>
                     ) : !businessStatus.isOpen ? (
                       <>
@@ -1175,7 +1249,10 @@ export default function Cart({
                         <span>Loja fechada</span>
                       </>
                     ) : (
-                      <span>Enviar pelo WhatsApp</span>
+                      <>
+                        <CheckCircle2 className="w-5 h-5 text-brand-200" />
+                        <span>Finalizar Pedido</span>
+                      </>
                     )}
                   </button>
                 </div>
