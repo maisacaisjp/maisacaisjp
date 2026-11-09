@@ -74,8 +74,9 @@ export default function PixPaymentCard({
         </div>
       </div>
 
+      {/* QR só no computador/tablet: no celular o cliente paga no próprio aparelho (usa o copia e cola) */}
       {mostrarQrCode && (
-        <div className="mt-4 flex flex-col items-center">
+        <div className="mt-4 hidden sm:flex flex-col items-center">
           <div className="relative p-3 bg-white rounded-2xl ring-2 ring-stone-100 shadow-xs">
             <img
               src={qrUrl}

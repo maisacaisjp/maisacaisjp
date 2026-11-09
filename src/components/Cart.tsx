@@ -91,6 +91,7 @@ export default function Cart({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [valorPedido, setValorPedido] = useState(0); // total do pedido enviado (para o PIX da tela de sucesso)
   const [whatsappUrl, setWhatsappUrl] = useState("");
   const [savedOrderId, setSavedOrderId] = useState<number | null>(null);
   const [savedTrackingCode, setSavedTrackingCode] = useState<string | null>(null);
@@ -533,6 +534,7 @@ export default function Cart({
     window.open(wappUrl, "_blank");
 
     setWhatsappUrl(wappUrl);
+    setValorPedido(total); // guarda antes de esvaziar a sacola (senão o PIX sai com R$ 0,00)
     setIsSuccess(true);
     onClearCart();
   };
@@ -585,7 +587,7 @@ export default function Cart({
         {pagamento === 'PIX' && (
           <div className="w-full text-left mt-4">
             <PixPaymentCard
-              valor={total}
+              valor={valorPedido}
               identificador={savedTrackingCode || String(savedOrderId || '')}
               className="w-full"
             />
@@ -598,13 +600,13 @@ export default function Cart({
     return (
       <>
         <div className="hidden lg:block sticky top-[76px] w-full">
-          <div className="bg-white rounded-3xl ring-1 ring-stone-200/80 shadow-[0_10px_30px_rgba(38,1,58,0.06)]">{sucesso}</div>
+          <div className="bg-white rounded-3xl ring-1 ring-stone-200/80 shadow-[0_10px_30px_rgba(38,1,58,0.06)] max-h-[calc(100vh-92px)] overflow-y-auto overscroll-contain">{sucesso}</div>
         </div>
 
         {isOpen && (
           <div className="lg:hidden fixed inset-0 z-[55] flex flex-col justify-end">
             <div className="absolute inset-0 bg-stone-950/55 animate-fade-in" onClick={onClose} />
-            <div className="relative bg-white w-full rounded-t-[28px] shadow-2xl pb-safe animate-sheet-in">{sucesso}</div>
+            <div className="relative bg-white w-full max-h-[92dvh] overflow-y-auto overscroll-contain rounded-t-[28px] shadow-2xl pb-safe animate-sheet-in">{sucesso}</div>
           </div>
         )}
       </>
