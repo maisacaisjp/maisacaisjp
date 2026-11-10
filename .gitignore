@@ -17,3 +17,8 @@ supabase/.temp/
 # Telefones de clientes
 CASHBACK_MIGRACAO_MULTIPEDIDOS.sql
 relatorios faturamento*
+
+# Planilhas de clientes (dados pessoais - nunca enviar ao GitHub)
+clientes_mais_acai.csv
+clientes*.csv
+clientes*.xlsx
