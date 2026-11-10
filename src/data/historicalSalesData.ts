@@ -1,5 +1,5 @@
-// Dados Consolidados de Vendas Históricas (2020 a Junho/2026)
-// Extraídos diretamente dos 12 relatórios do sistema anterior da Mais Açaí
+// Dados Consolidados de Vendas Históricas (2020 a 09/11/2026)
+// Extraídos diretamente dos 13 relatórios do sistema anterior da Mais Açaí
 
 export interface SemestreHistorico {
   id: string;
@@ -77,28 +77,28 @@ export interface TotalGeralHistorico {
 }
 
 export const DADOS_HISTORICOS_TOTAL: TotalGeralHistorico = {
-  "faturamentoTotal": 1173253.59,
-  "pedidosTotal": 30235,
-  "ticketMedioGeral": 38.8,
+  "faturamentoTotal": 1226617.7,
+  "pedidosTotal": 31196,
+  "ticketMedioGeral": 39.32,
   "canais": {
     "entrega": {
-      "faturamento": 103784.14,
-      "pedidos": 2085
+      "faturamento": 108478.05,
+      "pedidos": 2139
     },
     "mesas": {
-      "faturamento": 746872.66,
-      "pedidos": 20402
+      "faturamento": 784432.46,
+      "pedidos": 21127
     },
     "balcao": {
-      "faturamento": 322596.79,
-      "pedidos": 7748
+      "faturamento": 333707.19,
+      "pedidos": 7930
     }
   },
   "pagamentos": {
-    "cartao": 835914.51,
-    "dinheiro": 181306.78,
-    "pix": 151064.08,
-    "outros": 6781.83
+    "cartao": 870162.75,
+    "dinheiro": 184206.88,
+    "pix": 167159.95,
+    "outros": 6901.73
   }
 };
 
@@ -112,15 +112,15 @@ export const DADOS_HISTORICOS_ANOS: AnoHistorico[] = [
       "balcao": 1952
     },
     "faturamento": {
-      "total": 140427.0,
-      "entrega": 37863.0,
-      "mesas": 39560.0,
-      "balcao": 63004.0
+      "total": 140427,
+      "entrega": 37863,
+      "mesas": 39560,
+      "balcao": 63004
     },
     "pagamentos": {
       "cartao": 90492.21,
-      "dinheiro": 46911.0,
-      "pix": 0.0,
+      "dinheiro": 46911,
+      "pix": 0,
       "outros": 4970.5
     },
     "semestres": [
@@ -140,20 +140,20 @@ export const DADOS_HISTORICOS_ANOS: AnoHistorico[] = [
           "balcao": 118
         },
         "faturamento": {
-          "total": 15300.0,
-          "entrega": 9378.0,
-          "mesas": 1700.0,
-          "balcao": 4222.0
+          "total": 15300,
+          "entrega": 9378,
+          "mesas": 1700,
+          "balcao": 4222
         },
         "pagamentos": {
-          "cartao": 10044.0,
-          "cartaoCredito": 1466.0,
-          "cartaoDebito": 5968.0,
-          "dinheiro": 4787.0,
-          "pix": 0.0,
-          "voucher": 300.0,
-          "online": 501.0,
-          "taxaEntrega": 1273.0
+          "cartao": 10044,
+          "cartaoCredito": 1466,
+          "cartaoDebito": 5968,
+          "dinheiro": 4787,
+          "pix": 0,
+          "voucher": 300,
+          "online": 501,
+          "taxaEntrega": 1273
         },
         "ticketMedio": 36.87
       },
@@ -173,20 +173,20 @@ export const DADOS_HISTORICOS_ANOS: AnoHistorico[] = [
           "balcao": 1834
         },
         "faturamento": {
-          "total": 125127.0,
-          "entrega": 28485.0,
-          "mesas": 37860.0,
-          "balcao": 58782.0
+          "total": 125127,
+          "entrega": 28485,
+          "mesas": 37860,
+          "balcao": 58782
         },
         "pagamentos": {
           "cartao": 80448.21,
           "cartaoCredito": 16598.5,
           "cartaoDebito": 62214.21,
-          "dinheiro": 42124.0,
-          "pix": 0.0,
+          "dinheiro": 42124,
+          "pix": 0,
           "voucher": 1635.5,
-          "online": 2534.0,
-          "taxaEntrega": 3406.0
+          "online": 2534,
+          "taxaEntrega": 3406
         },
         "ticketMedio": 32.8
       }
@@ -204,7 +204,7 @@ export const DADOS_HISTORICOS_ANOS: AnoHistorico[] = [
     "faturamento": {
       "total": 213378.7,
       "entrega": 24914.9,
-      "mesas": 114556.0,
+      "mesas": 114556,
       "balcao": 73907.8
     },
     "pagamentos": {
@@ -232,7 +232,7 @@ export const DADOS_HISTORICOS_ANOS: AnoHistorico[] = [
         "faturamento": {
           "total": 95705.7,
           "entrega": 20285.9,
-          "mesas": 31527.0,
+          "mesas": 31527,
           "balcao": 43892.8
         },
         "pagamentos": {
@@ -241,9 +241,9 @@ export const DADOS_HISTORICOS_ANOS: AnoHistorico[] = [
           "cartaoDebito": 50939.9,
           "dinheiro": 28011.9,
           "pix": 1458.8,
-          "voucher": 0.0,
+          "voucher": 0,
           "online": 874.45,
-          "taxaEntrega": 1386.0
+          "taxaEntrega": 1386
         },
         "ticketMedio": 33.42
       },
@@ -263,20 +263,20 @@ export const DADOS_HISTORICOS_ANOS: AnoHistorico[] = [
           "balcao": 786
         },
         "faturamento": {
-          "total": 117673.0,
-          "entrega": 4629.0,
-          "mesas": 83029.0,
-          "balcao": 30015.0
+          "total": 117673,
+          "entrega": 4629,
+          "mesas": 83029,
+          "balcao": 30015
         },
         "pagamentos": {
           "cartao": 87868.5,
           "cartaoCredito": 15947.5,
-          "cartaoDebito": 71716.0,
+          "cartaoDebito": 71716,
           "dinheiro": 24035.5,
-          "pix": 5368.0,
-          "voucher": 0.0,
-          "online": 401.0,
-          "taxaEntrega": 265.0
+          "pix": 5368,
+          "voucher": 0,
+          "online": 401,
+          "taxaEntrega": 265
         },
         "ticketMedio": 34.93
       }
@@ -292,16 +292,16 @@ export const DADOS_HISTORICOS_ANOS: AnoHistorico[] = [
       "balcao": 428
     },
     "faturamento": {
-      "total": 110302.0,
-      "entrega": 0.0,
-      "mesas": 90859.0,
-      "balcao": 19443.0
+      "total": 110302,
+      "entrega": 0,
+      "mesas": 90859,
+      "balcao": 19443
     },
     "pagamentos": {
-      "cartao": 84289.0,
-      "dinheiro": 20845.0,
-      "pix": 4833.0,
-      "outros": 315.0
+      "cartao": 84289,
+      "dinheiro": 20845,
+      "pix": 4833,
+      "outros": 315
     },
     "semestres": [
       {
@@ -320,20 +320,20 @@ export const DADOS_HISTORICOS_ANOS: AnoHistorico[] = [
           "balcao": 428
         },
         "faturamento": {
-          "total": 110302.0,
-          "entrega": 0.0,
-          "mesas": 90859.0,
-          "balcao": 19443.0
+          "total": 110302,
+          "entrega": 0,
+          "mesas": 90859,
+          "balcao": 19443
         },
         "pagamentos": {
-          "cartao": 84289.0,
-          "cartaoCredito": 22464.0,
-          "cartaoDebito": 61598.0,
-          "dinheiro": 20845.0,
-          "pix": 4833.0,
-          "voucher": 0.0,
-          "online": 315.0,
-          "taxaEntrega": 0.0
+          "cartao": 84289,
+          "cartaoCredito": 22464,
+          "cartaoDebito": 61598,
+          "dinheiro": 20845,
+          "pix": 4833,
+          "voucher": 0,
+          "online": 315,
+          "taxaEntrega": 0
         },
         "ticketMedio": 33.07
       }
@@ -358,7 +358,7 @@ export const DADOS_HISTORICOS_ANOS: AnoHistorico[] = [
       "cartao": 155240.3,
       "dinheiro": 23612.1,
       "pix": 31860.51,
-      "outros": 0.0
+      "outros": 0
     },
     "semestres": [
       {
@@ -386,10 +386,10 @@ export const DADOS_HISTORICOS_ANOS: AnoHistorico[] = [
           "cartao": 77442.4,
           "cartaoCredito": 18751.9,
           "cartaoDebito": 58690.5,
-          "dinheiro": 12258.0,
+          "dinheiro": 12258,
           "pix": 11973.5,
-          "voucher": 0.0,
-          "online": 0.0,
+          "voucher": 0,
+          "online": 0,
           "taxaEntrega": 204.1
         },
         "ticketMedio": 37.24
@@ -413,7 +413,7 @@ export const DADOS_HISTORICOS_ANOS: AnoHistorico[] = [
           "total": 109039.01,
           "entrega": 6088.51,
           "mesas": 90509.5,
-          "balcao": 12441.0
+          "balcao": 12441
         },
         "pagamentos": {
           "cartao": 77797.9,
@@ -421,8 +421,8 @@ export const DADOS_HISTORICOS_ANOS: AnoHistorico[] = [
           "cartaoDebito": 56239.7,
           "dinheiro": 11354.1,
           "pix": 19887.01,
-          "voucher": 0.0,
-          "online": 0.0,
+          "voucher": 0,
+          "online": 0,
           "taxaEntrega": 497.8
         },
         "ticketMedio": 37.37
@@ -478,8 +478,8 @@ export const DADOS_HISTORICOS_ANOS: AnoHistorico[] = [
           "cartaoDebito": 50047.02,
           "dinheiro": 9850.26,
           "pix": 18897.95,
-          "voucher": 0.0,
-          "online": 0.0,
+          "voucher": 0,
+          "online": 0,
           "taxaEntrega": 445.58
         },
         "ticketMedio": 40.11
@@ -511,7 +511,7 @@ export const DADOS_HISTORICOS_ANOS: AnoHistorico[] = [
           "cartaoDebito": 50111.47,
           "dinheiro": 7028.28,
           "pix": 22001.45,
-          "voucher": 0.0,
+          "voucher": 0,
           "online": 167.98,
           "taxaEntrega": 403.52
         },
@@ -557,7 +557,7 @@ export const DADOS_HISTORICOS_ANOS: AnoHistorico[] = [
           "balcao": 456
         },
         "faturamento": {
-          "total": 95522.0,
+          "total": 95522,
           "entrega": 8992.3,
           "mesas": 63046.2,
           "balcao": 23483.5
@@ -569,7 +569,7 @@ export const DADOS_HISTORICOS_ANOS: AnoHistorico[] = [
           "dinheiro": 7178.9,
           "pix": 19056.3,
           "voucher": 52.9,
-          "online": 0.0,
+          "online": 0,
           "taxaEntrega": 1226.1
         },
         "ticketMedio": 46.94
@@ -601,9 +601,9 @@ export const DADOS_HISTORICOS_ANOS: AnoHistorico[] = [
           "cartaoDebito": 53425.27,
           "dinheiro": 8416.08,
           "pix": 27163.22,
-          "voucher": 0.0,
-          "online": 0.0,
-          "taxaEntrega": 1299.0
+          "voucher": 0,
+          "online": 0,
+          "taxaEntrega": 1299
         },
         "ticketMedio": 49.72
       }
@@ -613,22 +613,22 @@ export const DADOS_HISTORICOS_ANOS: AnoHistorico[] = [
   {
     "ano": 2026,
     "pedidos": {
-      "total": 1610,
-      "entrega": 79,
-      "mesas": 849,
-      "balcao": 682
+      "total": 2571,
+      "entrega": 133,
+      "mesas": 1574,
+      "balcao": 864
     },
     "faturamento": {
-      "total": 85422.01,
-      "entrega": 6627.89,
-      "mesas": 41588.1,
-      "balcao": 37206.02
+      "total": 138786.12,
+      "entrega": 11321.8,
+      "mesas": 79147.9,
+      "balcao": 48316.42
     },
     "pagamentos": {
-      "cartao": 59533.4,
-      "dinheiro": 5417.76,
-      "pix": 20424.85,
-      "outros": 0.0
+      "cartao": 93781.64,
+      "dinheiro": 8317.86,
+      "pix": 36520.72,
+      "outros": 119.9
     },
     "semestres": [
       {
@@ -658,14 +658,47 @@ export const DADOS_HISTORICOS_ANOS: AnoHistorico[] = [
           "cartaoDebito": 39282.29,
           "dinheiro": 5417.76,
           "pix": 20424.85,
-          "voucher": 0.0,
-          "online": 0.0,
+          "voucher": 0,
+          "online": 0,
           "taxaEntrega": 981.21
         },
         "ticketMedio": 53.06
+      },
+      {
+        "id": "2026-S2",
+        "arquivo": "relatoriogeral (13).xlsx",
+        "inicio": "01/07/2026",
+        "fim": "09/11/2026",
+        "ano": 2026,
+        "semestre": 2,
+        "label": "2º Semestre 2026 (até 09/11)",
+        "labelCurto": "2S/26",
+        "pedidos": {
+          "total": 961,
+          "entrega": 54,
+          "mesas": 725,
+          "balcao": 182
+        },
+        "faturamento": {
+          "total": 53364.11,
+          "entrega": 4693.91,
+          "mesas": 37559.8,
+          "balcao": 11110.4
+        },
+        "pagamentos": {
+          "cartao": 34248.24,
+          "cartaoCredito": 12654.25,
+          "cartaoDebito": 21274.82,
+          "dinheiro": 2900.1,
+          "pix": 16095.87,
+          "voucher": 319.17,
+          "online": 0,
+          "taxaEntrega": 352.46
+        },
+        "ticketMedio": 55.53
       }
     ],
-    "ticketMedio": 53.06
+    "ticketMedio": 53.98
   }
 ];
 
@@ -686,20 +719,20 @@ export const DADOS_HISTORICOS_SEMESTRES: SemestreHistorico[] = [
       "balcao": 118
     },
     "faturamento": {
-      "total": 15300.0,
-      "entrega": 9378.0,
-      "mesas": 1700.0,
-      "balcao": 4222.0
+      "total": 15300,
+      "entrega": 9378,
+      "mesas": 1700,
+      "balcao": 4222
     },
     "pagamentos": {
-      "cartao": 10044.0,
-      "cartaoCredito": 1466.0,
-      "cartaoDebito": 5968.0,
-      "dinheiro": 4787.0,
-      "pix": 0.0,
-      "voucher": 300.0,
-      "online": 501.0,
-      "taxaEntrega": 1273.0
+      "cartao": 10044,
+      "cartaoCredito": 1466,
+      "cartaoDebito": 5968,
+      "dinheiro": 4787,
+      "pix": 0,
+      "voucher": 300,
+      "online": 501,
+      "taxaEntrega": 1273
     },
     "ticketMedio": 36.87
   },
@@ -719,20 +752,20 @@ export const DADOS_HISTORICOS_SEMESTRES: SemestreHistorico[] = [
       "balcao": 1834
     },
     "faturamento": {
-      "total": 125127.0,
-      "entrega": 28485.0,
-      "mesas": 37860.0,
-      "balcao": 58782.0
+      "total": 125127,
+      "entrega": 28485,
+      "mesas": 37860,
+      "balcao": 58782
     },
     "pagamentos": {
       "cartao": 80448.21,
       "cartaoCredito": 16598.5,
       "cartaoDebito": 62214.21,
-      "dinheiro": 42124.0,
-      "pix": 0.0,
+      "dinheiro": 42124,
+      "pix": 0,
       "voucher": 1635.5,
-      "online": 2534.0,
-      "taxaEntrega": 3406.0
+      "online": 2534,
+      "taxaEntrega": 3406
     },
     "ticketMedio": 32.8
   },
@@ -754,7 +787,7 @@ export const DADOS_HISTORICOS_SEMESTRES: SemestreHistorico[] = [
     "faturamento": {
       "total": 95705.7,
       "entrega": 20285.9,
-      "mesas": 31527.0,
+      "mesas": 31527,
       "balcao": 43892.8
     },
     "pagamentos": {
@@ -763,9 +796,9 @@ export const DADOS_HISTORICOS_SEMESTRES: SemestreHistorico[] = [
       "cartaoDebito": 50939.9,
       "dinheiro": 28011.9,
       "pix": 1458.8,
-      "voucher": 0.0,
+      "voucher": 0,
       "online": 874.45,
-      "taxaEntrega": 1386.0
+      "taxaEntrega": 1386
     },
     "ticketMedio": 33.42
   },
@@ -785,20 +818,20 @@ export const DADOS_HISTORICOS_SEMESTRES: SemestreHistorico[] = [
       "balcao": 786
     },
     "faturamento": {
-      "total": 117673.0,
-      "entrega": 4629.0,
-      "mesas": 83029.0,
-      "balcao": 30015.0
+      "total": 117673,
+      "entrega": 4629,
+      "mesas": 83029,
+      "balcao": 30015
     },
     "pagamentos": {
       "cartao": 87868.5,
       "cartaoCredito": 15947.5,
-      "cartaoDebito": 71716.0,
+      "cartaoDebito": 71716,
       "dinheiro": 24035.5,
-      "pix": 5368.0,
-      "voucher": 0.0,
-      "online": 401.0,
-      "taxaEntrega": 265.0
+      "pix": 5368,
+      "voucher": 0,
+      "online": 401,
+      "taxaEntrega": 265
     },
     "ticketMedio": 34.93
   },
@@ -818,20 +851,20 @@ export const DADOS_HISTORICOS_SEMESTRES: SemestreHistorico[] = [
       "balcao": 428
     },
     "faturamento": {
-      "total": 110302.0,
-      "entrega": 0.0,
-      "mesas": 90859.0,
-      "balcao": 19443.0
+      "total": 110302,
+      "entrega": 0,
+      "mesas": 90859,
+      "balcao": 19443
     },
     "pagamentos": {
-      "cartao": 84289.0,
-      "cartaoCredito": 22464.0,
-      "cartaoDebito": 61598.0,
-      "dinheiro": 20845.0,
-      "pix": 4833.0,
-      "voucher": 0.0,
-      "online": 315.0,
-      "taxaEntrega": 0.0
+      "cartao": 84289,
+      "cartaoCredito": 22464,
+      "cartaoDebito": 61598,
+      "dinheiro": 20845,
+      "pix": 4833,
+      "voucher": 0,
+      "online": 315,
+      "taxaEntrega": 0
     },
     "ticketMedio": 33.07
   },
@@ -860,10 +893,10 @@ export const DADOS_HISTORICOS_SEMESTRES: SemestreHistorico[] = [
       "cartao": 77442.4,
       "cartaoCredito": 18751.9,
       "cartaoDebito": 58690.5,
-      "dinheiro": 12258.0,
+      "dinheiro": 12258,
       "pix": 11973.5,
-      "voucher": 0.0,
-      "online": 0.0,
+      "voucher": 0,
+      "online": 0,
       "taxaEntrega": 204.1
     },
     "ticketMedio": 37.24
@@ -887,7 +920,7 @@ export const DADOS_HISTORICOS_SEMESTRES: SemestreHistorico[] = [
       "total": 109039.01,
       "entrega": 6088.51,
       "mesas": 90509.5,
-      "balcao": 12441.0
+      "balcao": 12441
     },
     "pagamentos": {
       "cartao": 77797.9,
@@ -895,8 +928,8 @@ export const DADOS_HISTORICOS_SEMESTRES: SemestreHistorico[] = [
       "cartaoDebito": 56239.7,
       "dinheiro": 11354.1,
       "pix": 19887.01,
-      "voucher": 0.0,
-      "online": 0.0,
+      "voucher": 0,
+      "online": 0,
       "taxaEntrega": 497.8
     },
     "ticketMedio": 37.37
@@ -928,8 +961,8 @@ export const DADOS_HISTORICOS_SEMESTRES: SemestreHistorico[] = [
       "cartaoDebito": 50047.02,
       "dinheiro": 9850.26,
       "pix": 18897.95,
-      "voucher": 0.0,
-      "online": 0.0,
+      "voucher": 0,
+      "online": 0,
       "taxaEntrega": 445.58
     },
     "ticketMedio": 40.11
@@ -961,7 +994,7 @@ export const DADOS_HISTORICOS_SEMESTRES: SemestreHistorico[] = [
       "cartaoDebito": 50111.47,
       "dinheiro": 7028.28,
       "pix": 22001.45,
-      "voucher": 0.0,
+      "voucher": 0,
       "online": 167.98,
       "taxaEntrega": 403.52
     },
@@ -983,7 +1016,7 @@ export const DADOS_HISTORICOS_SEMESTRES: SemestreHistorico[] = [
       "balcao": 456
     },
     "faturamento": {
-      "total": 95522.0,
+      "total": 95522,
       "entrega": 8992.3,
       "mesas": 63046.2,
       "balcao": 23483.5
@@ -995,7 +1028,7 @@ export const DADOS_HISTORICOS_SEMESTRES: SemestreHistorico[] = [
       "dinheiro": 7178.9,
       "pix": 19056.3,
       "voucher": 52.9,
-      "online": 0.0,
+      "online": 0,
       "taxaEntrega": 1226.1
     },
     "ticketMedio": 46.94
@@ -1027,9 +1060,9 @@ export const DADOS_HISTORICOS_SEMESTRES: SemestreHistorico[] = [
       "cartaoDebito": 53425.27,
       "dinheiro": 8416.08,
       "pix": 27163.22,
-      "voucher": 0.0,
-      "online": 0.0,
-      "taxaEntrega": 1299.0
+      "voucher": 0,
+      "online": 0,
+      "taxaEntrega": 1299
     },
     "ticketMedio": 49.72
   },
@@ -1060,48 +1093,81 @@ export const DADOS_HISTORICOS_SEMESTRES: SemestreHistorico[] = [
       "cartaoDebito": 39282.29,
       "dinheiro": 5417.76,
       "pix": 20424.85,
-      "voucher": 0.0,
-      "online": 0.0,
+      "voucher": 0,
+      "online": 0,
       "taxaEntrega": 981.21
     },
     "ticketMedio": 53.06
+  },
+  {
+    "id": "2026-S2",
+    "arquivo": "relatoriogeral (13).xlsx",
+    "inicio": "01/07/2026",
+    "fim": "09/11/2026",
+    "ano": 2026,
+    "semestre": 2,
+    "label": "2º Semestre 2026 (até 09/11)",
+    "labelCurto": "2S/26",
+    "pedidos": {
+      "total": 961,
+      "entrega": 54,
+      "mesas": 725,
+      "balcao": 182
+    },
+    "faturamento": {
+      "total": 53364.11,
+      "entrega": 4693.91,
+      "mesas": 37559.8,
+      "balcao": 11110.4
+    },
+    "pagamentos": {
+      "cartao": 34248.24,
+      "cartaoCredito": 12654.25,
+      "cartaoDebito": 21274.82,
+      "dinheiro": 2900.1,
+      "pix": 16095.87,
+      "voucher": 319.17,
+      "online": 0,
+      "taxaEntrega": 352.46
+    },
+    "ticketMedio": 55.53
   }
 ];
 
 export const DADOS_HISTORICOS_MENSAIS: Array<{ mes: string; faturamento: number; pedidos: number; obs: string }> = [
   {
     "mes": "2020-01",
-    "faturamento": 2550.0,
+    "faturamento": 2550,
     "pedidos": 69,
     "obs": "Importado do 1º Semestre 2020"
   },
   {
     "mes": "2020-02",
-    "faturamento": 2550.0,
+    "faturamento": 2550,
     "pedidos": 69,
     "obs": "Importado do 1º Semestre 2020"
   },
   {
     "mes": "2020-03",
-    "faturamento": 2550.0,
+    "faturamento": 2550,
     "pedidos": 69,
     "obs": "Importado do 1º Semestre 2020"
   },
   {
     "mes": "2020-04",
-    "faturamento": 2550.0,
+    "faturamento": 2550,
     "pedidos": 69,
     "obs": "Importado do 1º Semestre 2020"
   },
   {
     "mes": "2020-05",
-    "faturamento": 2550.0,
+    "faturamento": 2550,
     "pedidos": 69,
     "obs": "Importado do 1º Semestre 2020"
   },
   {
     "mes": "2020-06",
-    "faturamento": 2550.0,
+    "faturamento": 2550,
     "pedidos": 70,
     "obs": "Importado do 1º Semestre 2020"
   },
@@ -1467,31 +1533,31 @@ export const DADOS_HISTORICOS_MENSAIS: Array<{ mes: string; faturamento: number;
   },
   {
     "mes": "2026-01",
-    "faturamento": 14237.0,
+    "faturamento": 14237,
     "pedidos": 268,
     "obs": "Importado do 1º Semestre 2026"
   },
   {
     "mes": "2026-02",
-    "faturamento": 14237.0,
+    "faturamento": 14237,
     "pedidos": 268,
     "obs": "Importado do 1º Semestre 2026"
   },
   {
     "mes": "2026-03",
-    "faturamento": 14237.0,
+    "faturamento": 14237,
     "pedidos": 268,
     "obs": "Importado do 1º Semestre 2026"
   },
   {
     "mes": "2026-04",
-    "faturamento": 14237.0,
+    "faturamento": 14237,
     "pedidos": 268,
     "obs": "Importado do 1º Semestre 2026"
   },
   {
     "mes": "2026-05",
-    "faturamento": 14237.0,
+    "faturamento": 14237,
     "pedidos": 268,
     "obs": "Importado do 1º Semestre 2026"
   },
@@ -1500,5 +1566,35 @@ export const DADOS_HISTORICOS_MENSAIS: Array<{ mes: string; faturamento: number;
     "faturamento": 14237.01,
     "pedidos": 270,
     "obs": "Importado do 1º Semestre 2026"
+  },
+  {
+    "mes": "2026-07",
+    "faturamento": 12532.48,
+    "pedidos": 226,
+    "obs": "Estimado: média diária do relatório 01/07 a 09/11/2026"
+  },
+  {
+    "mes": "2026-08",
+    "faturamento": 12532.48,
+    "pedidos": 226,
+    "obs": "Estimado: média diária do relatório 01/07 a 09/11/2026"
+  },
+  {
+    "mes": "2026-09",
+    "faturamento": 12128.21,
+    "pedidos": 218,
+    "obs": "Estimado: média diária do relatório 01/07 a 09/11/2026"
+  },
+  {
+    "mes": "2026-10",
+    "faturamento": 12532.48,
+    "pedidos": 226,
+    "obs": "Estimado: média diária do relatório 01/07 a 09/11/2026"
+  },
+  {
+    "mes": "2026-11",
+    "faturamento": 3638.46,
+    "pedidos": 65,
+    "obs": "Estimado: 01 a 09/11/2026 (média diária do relatório 01/07 a 09/11)"
   }
 ];

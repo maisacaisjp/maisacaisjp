@@ -336,7 +336,7 @@ export const HistoricalSalesModal: React.FC<HistoricalSalesModalProps> = ({
               <p className="text-xl sm:text-2xl font-black text-stone-900 mt-2">
                 {formatBRL(DADOS_HISTORICOS_TOTAL.faturamentoTotal)}
               </p>
-              <span className="text-[11px] text-stone-500 mt-0.5 block">Histórico de 2020 até Junho/2026</span>
+              <span className="text-[11px] text-stone-500 mt-0.5 block">Histórico de 2020 até 09/11/2026</span>
             </div>
 
             <div className="bg-gradient-to-br from-blue-500/5 to-blue-50 border border-blue-200 rounded-xl p-3.5 shadow-xs">
