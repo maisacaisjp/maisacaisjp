@@ -36,7 +36,7 @@ import {
   Banknote
 } from "lucide-react";
 import { useAnalytics } from '../hooks/useAnalytics';
-import { getCashbackConfig, getCustomerCashbackInfo, applyOrderCashback, dataCurta, DEFAULT_CASHBACK_PERCENT } from '../utils/cashback';
+import { getCashbackConfig, getCustomerCashbackInfo, dataCurta, DEFAULT_CASHBACK_PERCENT } from '../utils/cashback';
 import PixPaymentCard from './PixPaymentCard';
 import { gerarPixCopiaECola, PIX_CONFIG_PADRAO } from '../utils/pix';
 
@@ -288,107 +288,81 @@ export default function Cart({
     let newOrderId = null;
     let trackingCode: string | null = null;
     let orderSavedSuccessfully = false;
+    let erroServidor: string | null = null;
+    // Valores confirmados pelo servidor (taxa do bairro e saldo de cashback conferidos lá)
+    let totalFinal = total;
+    let taxaFinal = deliveryFee;
+    let descontoFinal = cashbackDiscount;
+    let ganhoFinal = earnedCashback;
+    let saldoFinal = Math.max(0, customerCashbackBalance - cashbackDiscount + earnedCashback);
     try {
-      const { data: activeSession } = await supabase
-        .from('cash_sessions')
-        .select('id')
-        .eq('status', 'aberto')
-        .maybeSingle();
-
-      const { data, error } = await supabase.from('orders').insert([{
-        cash_session_id: activeSession ? activeSession.id : null,
-        customer_name: name,
-        customer_phone: telefone,
-        order_type: orderType,
-        payment_method: pagamento,
-        status: 'Pendente',
-        total_amount: total,
-        delivery_address: orderType === 'Delivery' ? morada : null,
-        delivery_zone: orderType === 'Delivery' ? zona : null,
-        change_for: pagamento === 'Dinheiro' ? trocoPara : null,
-        nif: nif.trim() ? nif : null,
-        notes: cashbackDiscount > 0 ? `[Desconto Cashback: R$ ${cashbackDiscount.toFixed(2)}]` : null,
-        items: items.map(item => {
-          let itemName = item.menuItem.name;
-          if (item.isHalfAndHalf && item.halfAndHalfFlavor) {
-            itemName = `1/2 ${item.menuItem.name} e 1/2 ${item.halfAndHalfFlavor.name}`;
-          }
-          if (item.size) {
-            const sizeMap: Record<string, string> = {
-              'P': '330ml',
-              'M': '440ml',
-              'G': '550ml',
-              'Big': '770ml',
-              'Super Big': 'Pote Recheado 1 Litro',
-              '2L': '2 Litros'
+      const resp = await fetch('/.netlify/functions/pedido-criar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customer_name: name,
+          customer_phone: telefone,
+          order_type: orderType,
+          payment_method: pagamento,
+          delivery_address: orderType === 'Delivery' ? morada : null,
+          delivery_zone: orderType === 'Delivery' ? zona : null,
+          change_for: pagamento === 'Dinheiro' ? trocoPara : null,
+          nif: nif.trim() ? nif : null,
+          taxa_entrega: deliveryFee,
+          usar_cashback: cashbackDiscount > 0,
+          items: items.map(item => {
+            let itemName = item.menuItem.name;
+            if (item.isHalfAndHalf && item.halfAndHalfFlavor) {
+              itemName = `1/2 ${item.menuItem.name} e 1/2 ${item.halfAndHalfFlavor.name}`;
+            }
+            if (item.size) {
+              const sizeMap: Record<string, string> = {
+                'P': '330ml',
+                'M': '440ml',
+                'G': '550ml',
+                'Big': '770ml',
+                'Super Big': 'Pote Recheado 1 Litro',
+                '2L': '2 Litros'
+              };
+              itemName += ` (${sizeMap[item.size] || item.size})`;
+            }
+            const extrasTotalPrice = (item.extras || []).reduce((sum, e) => sum + e.price, 0);
+            return {
+              name: itemName,
+              category: item.menuItem.category,
+              quantity: item.quantity,
+              priceCalculated: item.priceCalculated,
+              basePrice: item.priceCalculated - extrasTotalPrice,
+              extras: item.extras || [],
+              notes: item.notes || ""
             };
-            itemName += ` (${sizeMap[item.size] || item.size})`;
-          }
-          const extrasTotalPrice = (item.extras || []).reduce((sum, e) => sum + e.price, 0);
-          return {
-            name: itemName,
-            category: item.menuItem.category,
-            quantity: item.quantity,
-            priceCalculated: item.priceCalculated,
-            basePrice: item.priceCalculated - extrasTotalPrice,
-            extras: item.extras || [],
-            notes: item.notes || ""
-          };
-        })
-      }]).select();
+          })
+        }),
+      });
+      const r = await resp.json().catch(() => null);
+      if (!resp.ok || !r?.ok) {
+        erroServidor = r?.erro || null;
+        throw new Error(r?.erro || `pedido-criar respondeu ${resp.status}`);
+      }
 
-      if (error) throw error;
-      if (data && data.length > 0) {
-        newOrderId = data[0].id;
-        setSavedOrderId(newOrderId);
-        setSavedTrackingCode(data[0].tracking_code);
-        trackingCode = data[0].tracking_code || null;
-        orderSavedSuccessfully = true;
-        // Aviso "seu pedido está em preparo" no topo do cardápio, mesmo se o cliente fechar e voltar
-        if (trackingCode) {
-          guardarUltimoPedido({ codigo: trackingCode, id: newOrderId, criadoEm: new Date().toISOString() });
-          window.dispatchEvent(new Event('maisacai:pedido-enviado'));
-        }
-
-        try {
-          if (telefone) {
-            const { data: existingCustomer } = await supabase
-              .from('customers')
-              .select('id, total_orders, total_spent')
-              .eq('phone', telefone)
-              .maybeSingle();
-
-            if (existingCustomer) {
-              await supabase.from('customers').update({
-                name,
-                total_orders: (existingCustomer.total_orders || 0) + 1,
-                total_spent: (Number(existingCustomer.total_spent) || 0) + total,
-                last_order_at: new Date().toISOString(),
-              }).eq('id', existingCustomer.id);
-            } else {
-              await supabase.from('customers').insert([{
-                phone: telefone,
-                name,
-                total_orders: 1,
-                total_spent: total,
-                last_order_at: new Date().toISOString(),
-              }]);
-            }
-
-            // Atualiza saldo de fidelidade/cashback do cliente
-            if (earnedCashback > 0 || cashbackDiscount > 0) {
-              try {
-                await applyOrderCashback(telefone, earnedCashback, cashbackDiscount, newOrderId);
-                setCustomerCashbackBalance(prev => Math.max(0, Number((prev - cashbackDiscount + earnedCashback).toFixed(2))));
-                setUseCashback(false);
-              } catch (cbErr) {
-                console.warn('[Cart] Aviso ao processar cashback:', cbErr);
-              }
-            }
-          }
-        } catch (custErr) {
-          console.warn('[Cart] Não foi possível atualizar o cadastro do cliente (CRM):', custErr);
-        }
+      newOrderId = r.id;
+      setSavedOrderId(newOrderId);
+      setSavedTrackingCode(r.tracking_code);
+      trackingCode = r.tracking_code || null;
+      orderSavedSuccessfully = true;
+      totalFinal = Number(r.total);
+      taxaFinal = Number(r.taxa_entrega);
+      descontoFinal = Number(r.cashback_usado);
+      ganhoFinal = Number(r.cashback_ganho);
+      saldoFinal = Number(r.saldo_cashback);
+      if (descontoFinal > 0 || ganhoFinal > 0) {
+        setCustomerCashbackBalance(saldoFinal);
+        setUseCashback(false);
+      }
+      // Aviso "seu pedido está em preparo" no topo do cardápio, mesmo se o cliente fechar e voltar
+      if (trackingCode) {
+        guardarUltimoPedido({ codigo: trackingCode, id: newOrderId, criadoEm: new Date().toISOString() });
+        window.dispatchEvent(new Event('maisacai:pedido-enviado'));
       }
     } catch (err) {
       console.error("Error saving order:", err);
@@ -397,7 +371,7 @@ export default function Cart({
     }
 
     if (!orderSavedSuccessfully) {
-      setFormError("Não foi possível registrar o seu pedido agora. Verifique a conexão e tente novamente.");
+      setFormError(erroServidor || "Não foi possível registrar o seu pedido agora. Verifique a conexão e tente novamente.");
       return;
     }
 
@@ -483,21 +457,21 @@ export default function Cart({
     text += `-----------------------------------\n`;
     text += `*Subtotal: R$ ${subtotal.toFixed(2)}*\n`;
     if (orderType === "Delivery") {
-      text += `Taxa Entrega (${zona || 'SJP'}): R$ ${deliveryFee.toFixed(2)}\n`;
+      text += `Taxa Entrega (${zona || 'SJP'}): R$ ${taxaFinal.toFixed(2)}\n`;
     }
-    if (cashbackDiscount > 0) {
-      text += `Desconto Cashback: -R$ ${cashbackDiscount.toFixed(2)}\n`;
+    if (descontoFinal > 0) {
+      text += `Desconto Cashback: -R$ ${descontoFinal.toFixed(2)}\n`;
     }
-    text += `*TOTAL: R$ ${total.toFixed(2)}*\n`;
+    text += `*TOTAL: R$ ${totalFinal.toFixed(2)}*\n`;
 
     if (cashbackConfig.enabled) {
       text += `-----------------------------------\n`;
       text += `🎁 FIDELIDADE & CASHBACK (${cashbackConfig.percent}%)\n`;
-      if (cashbackDiscount > 0) {
-        text += `Desconto Cashback Utilizado: -R$ ${cashbackDiscount.toFixed(2)}\n`;
+      if (descontoFinal > 0) {
+        text += `Desconto Cashback Utilizado: -R$ ${descontoFinal.toFixed(2)}\n`;
       }
-      text += `Cashback Ganho Hoje: +R$ ${earnedCashback.toFixed(2)}\n`;
-      const nextBal = Math.max(0, customerCashbackBalance - cashbackDiscount + earnedCashback);
+      text += `Cashback Ganho Hoje: +R$ ${ganhoFinal.toFixed(2)}\n`;
+      const nextBal = saldoFinal;
       text += `Saldo Disponível Próximo Pedido: R$ ${nextBal.toFixed(2)}\n`;
     }
 
@@ -517,14 +491,14 @@ export default function Cart({
     }
     if (pagamento === "PIX") {
       const pixCodigo = gerarPixCopiaECola({
-        valor: total,
+        valor: totalFinal,
         identificador: trackingCode || String(newOrderId || orderNumber)
       });
       text += `\n🔑 *DADOS PARA PAGAMENTO PIX:*\n`;
       text += `• Chave (Celular): *${PIX_CONFIG_PADRAO.telefoneFormatado}*\n`;
       text += `• Conta: *Mais Açaí* (${PIX_CONFIG_PADRAO.banco})\n`;
       text += `• Na confirmação pode aparecer *${PIX_CONFIG_PADRAO.nomesNaConfirmacao}*: é a mesma conta da loja\n`;
-      text += `• Valor: *R$ ${total.toFixed(2)}*\n\n`;
+      text += `• Valor: *R$ ${totalFinal.toFixed(2)}*\n\n`;
       text += `📋 *Código Copia e Cola:*\n${pixCodigo}\n`;
     }
     text += `-----------------------------------`;
@@ -535,7 +509,7 @@ export default function Cart({
     const encoded = encodeURIComponent(text);
     const wappUrl = `https://wa.me/${RESTAURANT_WHATSAPP_PHONE}?text=${encoded}`;
 
-    trackEvent('purchase', { total_value: total, order_id: newOrderId || orderNumber });
+    trackEvent('purchase', { total_value: totalFinal, order_id: newOrderId || orderNumber });
     
     // Dispara comemoração e haptic feedback
     try {
@@ -544,7 +518,7 @@ export default function Cart({
     hapticSuccess();
 
     setWhatsappUrl(wappUrl);
-    setValorPedido(total); // guarda antes de esvaziar a sacola (senão o PIX sai com R$ 0,00)
+    setValorPedido(totalFinal); // guarda antes de esvaziar a sacola (senão o PIX sai com R$ 0,00)
     setHasClickedWhatsapp(false);
     setIsSuccess(true);
     onClearCart();

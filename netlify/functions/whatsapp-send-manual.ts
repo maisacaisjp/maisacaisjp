@@ -6,7 +6,7 @@ const SUPABASE_ANON = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE
 /**
  * Só envia para quem está logado no gestor e pode usar o Agente IA
  * (dono, ou funcionário com a permissão "gerenciar_configuracoes").
- * Mesma regra do gestor: conta sem perfil cadastrado = dono.
+ * Mesma regra do gestor: conta sem perfil cadastrado não tem acesso.
  */
 async function podeEnviar(req: Request): Promise<boolean> {
   const auth = req.headers.get('authorization') || '';
@@ -26,7 +26,8 @@ async function podeEnviar(req: Request): Promise<boolean> {
     .eq('id', usuario.user.id)
     .maybeSingle();
   if (erroPerfil) return false;
-  if (!perfil || !perfil.role || perfil.role === 'owner') return true;
+  if (!perfil || !perfil.role) return false; // sem perfil = sem acesso
+  if (perfil.role === 'owner') return true;
   return perfil.permissions?.gerenciar_configuracoes === true;
 }
 

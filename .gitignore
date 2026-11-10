@@ -23,3 +23,6 @@ clientes_mais_acai.csv
 clientes*.csv
 clientes*.xlsx
 MIGRACAO_MULTIPEDIDOS_DADOS.sql
+
+# Chave interna da Maya (segredo)
+SEGURANCA_ETAPA2_CHAVE_MAYA.sql

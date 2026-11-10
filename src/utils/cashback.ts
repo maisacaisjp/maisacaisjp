@@ -81,77 +81,53 @@ export async function saveCashbackConfig(enabled: boolean, percent: number, vali
   }
 }
 
-/**
- * Limpa o número de telefone para chave única (apenas dígitos).
- */
-export function cleanCustomerPhone(phone: string): string {
-  return String(phone || '').replace(/\D/g, '');
-}
-
 // ─── Créditos com validade ───────────────────────────────────────────────────
-// Cada compra vira um crédito ("lote") com a sua data de vencimento, como no Multipedidos.
-// Ao usar o saldo, consome primeiro o crédito que vence antes. Crédito vencido não conta.
-// Registro antigo, só com { balance, expires_at }, vira um lote único.
+// As regras ficam em cashbackLotes.ts (as mesmas que o servidor usa no checkout).
+import {
+  aplicarPedidoNosLotes,
+  cleanCustomerPhone,
+  lotesDoRegistro,
+  resumo,
+  r2,
+  type CashbackInfo,
+} from './cashbackLotes';
 
-export interface CashbackLote {
-  valor: number;
-  /** yyyy-mm-dd; vale até o fim desse dia. null = sem vencimento. */
-  expira: string | null;
-}
+export { cleanCustomerPhone };
+export type { CashbackLote, CashbackInfo } from './cashbackLotes';
 
-export interface CashbackInfo {
-  saldo: number;
-  /** Data do crédito que vence primeiro (yyyy-mm-dd), se houver. */
-  proximoVencimento: string | null;
-  valorProximoVencimento: number;
-}
-
-const r2 = (n: number) => Math.round(n * 100) / 100;
-
-const hojeSP = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
-
-const somarDias = (dias: number) => {
-  const d = new Date(`${hojeSP()}T12:00:00`);
-  d.setDate(d.getDate() + dias);
-  return d.toISOString().slice(0, 10);
-};
-
-const vencido = (l: CashbackLote) => l.expira !== null && l.expira < hojeSP();
-
-// Vence primeiro quem tem data; sem data fica por último
-const ordemVencimento = (a: CashbackLote, b: CashbackLote) =>
-  (a.expira ?? '9999-12-31').localeCompare(b.expira ?? '9999-12-31');
-
-function lotesDoRegistro(value: any): CashbackLote[] {
-  if (value === null || value === undefined) return [];
-  if (typeof value === 'object' && Array.isArray(value.lotes)) {
-    return value.lotes
-      .map((l: any) => ({ valor: Number(l.valor) || 0, expira: l.expira ? String(l.expira).slice(0, 10) : null }))
-      .filter((l: CashbackLote) => l.valor > 0);
+/** Gestor logado lê direto do banco; cliente no cardápio consulta pela função do Netlify. */
+async function temSessaoGestor(): Promise<boolean> {
+  try {
+    const { data } = await supabase.auth.getSession();
+    return !!data.session;
+  } catch {
+    return false;
   }
-  const saldo = typeof value === 'object' ? Number(value.balance) || 0 : parseFloat(String(value)) || 0;
-  const expira = typeof value === 'object' && value.expires_at ? String(value.expires_at).slice(0, 10) : null;
-  return saldo > 0 ? [{ valor: saldo, expira }] : [];
 }
 
-const lotesValidos = (lotes: CashbackLote[]) => lotes.filter(l => !vencido(l) && l.valor > 0).sort(ordemVencimento);
-
-function resumo(lotes: CashbackLote[]): CashbackInfo {
-  const validos = lotesValidos(lotes);
-  const saldo = r2(validos.reduce((s, l) => s + l.valor, 0));
-  const primeiro = validos.find(l => l.expira !== null) || null;
-  const valorProx = primeiro ? r2(validos.filter(l => l.expira === primeiro.expira).reduce((s, l) => s + l.valor, 0)) : 0;
-  return { saldo, proximoVencimento: primeiro ? primeiro.expira : null, valorProximoVencimento: valorProx };
+async function infoDoServidor(clean: string): Promise<CashbackInfo> {
+  const r = await fetch('/.netlify/functions/cashback-saldo', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ telefone: clean }),
+  });
+  const body = await r.json().catch(() => null);
+  if (!r.ok || !body?.ok) throw new Error(body?.erro || `cashback-saldo respondeu ${r.status}`);
+  return {
+    saldo: Number(body.saldo) || 0,
+    proximoVencimento: body.proximoVencimento ?? null,
+    valorProximoVencimento: Number(body.valorProximoVencimento) || 0,
+  };
 }
 
-async function lerLotes(clean: string): Promise<CashbackLote[] | null> {
+async function infoDoBanco(clean: string): Promise<CashbackInfo> {
   const { data, error } = await supabase
     .from('settings')
     .select('value')
     .eq('key', `cashback_balance_${clean}`)
     .maybeSingle();
   if (error) throw error;
-  return data ? lotesDoRegistro(data.value) : [];
+  return resumo(data ? lotesDoRegistro(data.value) : []);
 }
 
 /**
@@ -162,14 +138,13 @@ export async function getCustomerCashbackInfo(phone: string): Promise<CashbackIn
   const vazio: CashbackInfo = { saldo: 0, proximoVencimento: null, valorProximoVencimento: 0 };
   if (!clean) return vazio;
   try {
-    const lotes = await lerLotes(clean);
-    const info = resumo(lotes || []);
+    const info = (await temSessaoGestor()) ? await infoDoBanco(clean) : await infoDoServidor(clean);
     try {
       localStorage.setItem(`cashback_bal_${clean}`, String(info.saldo));
     } catch (e) {}
     return info;
   } catch (err) {
-    console.warn('[Cashback] Erro ao consultar saldo do cliente no Supabase, usando local:', err);
+    console.warn('[Cashback] Erro ao consultar saldo do cliente, usando local:', err);
     try {
       const local = parseFloat(localStorage.getItem(`cashback_bal_${clean}`) || '0') || 0;
       return { ...vazio, saldo: Math.max(0, r2(local)) };
@@ -187,8 +162,8 @@ export async function getCustomerCashbackBalance(phone: string): Promise<number>
 }
 
 /**
- * Atualiza o saldo de cashback do cliente após um pedido.
- * Usa primeiro o crédito que vence antes; o cashback ganho vira um crédito novo com validade.
+ * Atualiza o saldo de cashback do cliente após um pedido do PDV (gestor logado).
+ * Pedido do cardápio online é gravado pela função pedido-criar, que já faz isso no servidor.
  * @param phone Telefone do cliente
  * @param earnedAmount Valor de cashback acumulado na compra atual
  * @param redeemedAmount Valor de saldo que o cliente utilizou para abater na compra atual
@@ -202,50 +177,32 @@ export async function applyOrderCashback(
   const clean = cleanCustomerPhone(phone);
   if (!clean) return 0;
 
-  let lotes: CashbackLote[];
+  let atual;
   try {
-    lotes = lotesValidos((await lerLotes(clean)) || []);
+    const { data, error } = await supabase
+      .from('settings')
+      .select('value')
+      .eq('key', `cashback_balance_${clean}`)
+      .maybeSingle();
+    if (error) throw error;
+    atual = data ? lotesDoRegistro(data.value) : [];
   } catch (err) {
     console.warn('[Cashback] Não foi possível ler o saldo; cashback deste pedido não foi registrado:', err);
     return 0;
   }
 
-  // Abate o valor usado, do crédito que vence primeiro para o último
-  let aUsar = r2(Math.max(0, redeemedAmount));
-  for (const l of lotes) {
-    if (aUsar <= 0) break;
-    const tira = Math.min(l.valor, aUsar);
-    l.valor = r2(l.valor - tira);
-    aUsar = r2(aUsar - tira);
-  }
-  lotes = lotes.filter(l => l.valor > 0);
-
-  if (earnedAmount > 0) {
-    const { validadeDias } = await getCashbackConfig();
-    lotes.push({ valor: r2(earnedAmount), expira: somarDias(validadeDias) });
-  }
-
-  lotes.sort(ordemVencimento);
-  const info = resumo(lotes);
+  const { validadeDias } = await getCashbackConfig();
+  const { info, value } = aplicarPedidoNosLotes(atual, earnedAmount, redeemedAmount, validadeDias, orderId || null);
 
   try {
     localStorage.setItem(`cashback_bal_${clean}`, String(info.saldo));
   } catch (e) {}
 
   try {
-    const nowIso = new Date().toISOString();
     const { error } = await supabase.from('settings').upsert({
       key: `cashback_balance_${clean}`,
-      value: {
-        balance: info.saldo,
-        lotes,
-        expires_at: info.proximoVencimento,
-        last_order_id: orderId || null,
-        last_earned: r2(earnedAmount),
-        last_redeemed: r2(redeemedAmount),
-        updated_at: nowIso
-      },
-      updated_at: nowIso
+      value,
+      updated_at: value.updated_at
     });
     if (error) throw error;
   } catch (err) {

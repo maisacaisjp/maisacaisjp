@@ -205,10 +205,12 @@ export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userPermissions, setUserPermissions] = useState<Record<string, boolean>>({});
+  const [perfilLido, setPerfilLido] = useState(false);
   const isOwner = userRole === 'owner';
 
+  // Sem perfil cadastrado = sem acesso (antes, quem não tinha perfil virava dono)
   const hasPermission = (permKey: string): boolean => {
-    if (!userRole || userRole === 'owner') return true;
+    if (userRole === 'owner') return true;
     return !!userPermissions[permKey];
   };
 
@@ -850,7 +852,7 @@ export default function AdminDashboard() {
   const fileirasComandas = useLinhasQueCabem(comandasRef, 432, { reserva: 64, min: 1, max: 6, deps: [activeTab, ordersViewMode, ordersStatusFilter] });
   useEffect(() => setPedidosPagina(1), [ordersStatusFilter, ordersSearchTerm, ordersViewMode]);
   // Alertas da agenda contábil (Financeiro → Contábil), só para o dono
-  const alertasContabeis = useAlertasContabeis(isAuthenticated && (!userRole || isOwner), activeTab);
+  const alertasContabeis = useAlertasContabeis(isAuthenticated && isOwner, activeTab);
   const [entradaFinanceiro, setEntradaFinanceiro] = useState<{ chave: number; contabil: boolean }>({ chave: 0, contabil: false });
   const abrirAgendaContabil = () => {
     setEntradaFinanceiro({ chave: Date.now(), contabil: true });
@@ -876,44 +878,6 @@ export default function AdminDashboard() {
 
   
   
-  const purgeAllTestData = async (showAlert = false) => {
-    try {
-      await supabase.from('orders').delete().neq('id', 0);
-      await supabase.from('orders').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      await supabase.from('cash_sessions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      await supabase.from('customers').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-
-      ['mock_db_orders', 'mock_db_cash_sessions', 'mock_db_customers', 'mock_db_caixa', 'orders', 'cash_sessions', 'customers'].forEach(k => {
-        localStorage.removeItem(k);
-      });
-
-      setAllOrders([]);
-      setDashboardData({
-        faturamentoGeral: 0,
-        faturamentoMes: 0,
-        faturamentoSeteDias: 0,
-        pedidosConcluidos: 0,
-        ticketMedio: 0,
-        cancelamentosCount: 0,
-        cancelamentosValor: 0,
-        vendasHojeCount: 0,
-        vendasHojeTotal: 0,
-        produtosPopulares: [],
-        vendasComplementos: [],
-        vendasFormasPagamento: [],
-        pedidosHoje: []
-      });
-
-      await fetchDashboardData(true);
-      if (showAlert) {
-        alert('Todos os dados de vendas, caixa, relatórios e clientes de teste foram zerados com sucesso!');
-      }
-    } catch (err: any) {
-      console.error('Erro ao zerar dados:', err);
-      if (showAlert) alert('Erro ao zerar dados: ' + (err.message || String(err)));
-    }
-  };
-
   useEffect(() => {
     const fetchRole = async (userId: string) => {
       const { data } = await supabase.from('profiles').select('role, permissions').eq('id', userId).maybeSingle();
@@ -923,6 +887,7 @@ export default function AdminDashboard() {
       } else {
         setUserPermissions({});
       }
+      setPerfilLido(true);
     };
 
     // CÓDIGO DE PURGE AUTOMÁTICO REMOVIDO PARA EVITAR EXCLUSÃO DE DADOS DE PRODUÇÃO
@@ -954,6 +919,7 @@ export default function AdminDashboard() {
         setIsAuthenticated(false);
         setUserRole(null);
         setUserPermissions({});
+        setPerfilLido(false);
         setIsLoading(false);
       }
     });
@@ -1244,7 +1210,7 @@ export default function AdminDashboard() {
     {
       titulo: 'Gestão',
       itens: [
-        { id: 'financeiro', rotulo: 'Financeiro', Icone: Wallet, mostrar: !userRole || isOwner, badge: alertasContabeis.length, palavras: 'dre contabil custos' },
+        { id: 'financeiro', rotulo: 'Financeiro', Icone: Wallet, mostrar: isOwner, badge: alertasContabeis.length, palavras: 'dre contabil custos' },
         { id: 'configuracoes', rotulo: 'Configurações', Icone: Settings, mostrar: hasPermission('gerenciar_configuracoes'), palavras: 'horario impressora entrega' },
         { id: 'agente-ia', rotulo: 'Agente IA', Icone: BotMessageSquare, mostrar: hasPermission('gerenciar_configuracoes'), palavras: 'whatsapp robo atendimento' },
         { id: 'usuarios', rotulo: 'Usuários e acesso', Icone: Shield, mostrar: hasPermission('gerenciar_usuarios'), palavras: 'funcionarios senha permissoes' },
@@ -1333,6 +1299,18 @@ export default function AdminDashboard() {
 
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center bg-[#f7f2fb] text-[#6a2092] font-medium">Carregando...</div>;
+  }
+
+  if (isAuthenticated && perfilLido && !userRole) {
+    return (
+      <div className="min-h-screen bg-[#f7f2fb] flex items-center justify-center p-4 font-sans">
+        <div className="bg-white p-8 rounded-2xl shadow-sm border border-[#ece1f5] w-full max-w-md text-center">
+          <h1 className="text-xl font-black text-[#4d0471] mb-2">Acesso ainda não liberado</h1>
+          <p className="text-sm text-stone-600 mb-6">Este login não tem perfil de acesso no gestor. Peça ao responsável pela loja para liberar o seu usuário em Usuários e acesso.</p>
+          <button onClick={handleLogout} className="w-full rounded-xl bg-[#6a2092] px-4 py-3 text-sm font-bold text-white hover:bg-[#5a1a7d]">Sair</button>
+        </div>
+      </div>
+    );
   }
 
   if (!isAuthenticated) {
@@ -1602,7 +1580,7 @@ export default function AdminDashboard() {
                     Clientes
                   </button>
                 )}
-                {(!userRole || isOwner) && (
+                {isOwner && (
                   <button
                     onClick={() => { setActiveTab("financeiro"); setIsMobileMenuOpen(false); }}
                     className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'financeiro' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
@@ -1883,7 +1861,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {activeTab === "financeiro" && (!userRole || isOwner) && (
+        {activeTab === "financeiro" && isOwner && (
           <div className="mt-1">
             <FinanceiroManager
               key={entradaFinanceiro.chave}

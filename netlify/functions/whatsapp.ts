@@ -1,9 +1,7 @@
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin } from '../lib/admin';
 
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '',
-  process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || ''
-);
+// Acesso pelo servidor (chave secreta só no Netlify); a função já exige o WHATSAPP_API_TOKEN.
+const supabase = supabaseAdmin();
 
 export default async (req, context) => {
   const headers = {
