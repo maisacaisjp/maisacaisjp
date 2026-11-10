@@ -64,41 +64,42 @@ export default function Comanda({ pedido }: { pedido: any }) {
   const troco = Number(String(pedido.changeFor || '').replace(/[^\d,.]/g, '').replace(',', '.')) || 0;
   const qtdItens = itens.reduce((s, i) => s + Number(i.quantity || 1), 0);
 
-  return (
-    <div style={{ fontFamily: "Arial, Helvetica, sans-serif", color: '#000', fontSize: '10pt', lineHeight: 1.3, fontWeight: 600 }}>
-      {/* Loja */}
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: '13pt', fontWeight: 900, letterSpacing: '1px' }}>MAIS AÇAÍ SJP</div>
-        <div style={{ fontSize: '8pt', fontWeight: 600 }}>Pedido pelo cardápio digital</div>
-      </div>
-      <div style={S.linhaCheia} />
 
-      {/* Número e tipo */}
+  // Escala de fontes: 1 número grande, 1 total grande, nomes médios em negrito, detalhes normais
+  const T = {
+    rotulo: { fontSize: '8pt', fontWeight: 700, letterSpacing: '1px', margin: '0 0 2px' } as const,
+    detalhe: { fontSize: '9.5pt', fontWeight: 400 } as const,
+    forte: { fontSize: '11pt', fontWeight: 700 } as const,
+  };
+
+  return (
+    <div style={{ fontFamily: 'Arial, Helvetica, sans-serif', color: '#000', fontSize: '9.5pt', lineHeight: 1.3, fontWeight: 400 }}>
+      {/* Loja, número e tipo */}
       <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: '9pt', fontWeight: 700 }}>PEDIDO</div>
-        <div style={{ fontSize: '26pt', fontWeight: 900, lineHeight: 1 }}>#{pedido.id}</div>
-        <div style={{ display: 'inline-block', background: '#000', color: '#fff', fontSize: '13pt', fontWeight: 900, padding: '2px 12px', margin: '5px 0 3px', letterSpacing: '1px', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' } as any}>
+        <div style={{ fontSize: '10pt', fontWeight: 700, letterSpacing: '1px' }}>MAIS AÇAÍ SJP</div>
+        <div style={{ fontSize: '24pt', fontWeight: 800, lineHeight: 1.1, marginTop: '4px' }}>PEDIDO #{pedido.id}</div>
+        <div style={{ display: 'inline-block', background: '#000', color: '#fff', fontSize: '12pt', fontWeight: 700, padding: '2px 14px', margin: '4px 0 3px', letterSpacing: '1px', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' } as any}>
           {tipo}
         </div>
-        {pedido.createdAt && <div style={{ fontSize: '9pt', fontWeight: 600 }}>{dataHora(pedido.createdAt)}</div>}
+        {pedido.createdAt && <div style={T.detalhe}>{dataHora(pedido.createdAt)}</div>}
       </div>
       <div style={S.linha} />
 
       {/* Cliente */}
-      <p style={S.rotulo}>CLIENTE</p>
-      <div style={{ fontSize: '12pt', fontWeight: 900 }}>{pedido.customerName || 'Cliente'}</div>
-      {pedido.customerPhone && <div style={{ fontSize: '10pt' }}>{telefone(pedido.customerPhone)}</div>}
+      <p style={T.rotulo}>CLIENTE</p>
+      <div style={T.forte}>{pedido.customerName || 'Cliente'}</div>
+      {pedido.customerPhone && <div style={T.detalhe}>{telefone(pedido.customerPhone)}</div>}
       {entrega && (pedido.deliveryAddress || pedido.deliveryZone) && (
-        <div style={{ marginTop: '4px' }}>
-          <p style={S.rotulo}>ENDEREÇO DE ENTREGA</p>
-          {pedido.deliveryAddress && <div style={{ fontSize: '11pt', fontWeight: 800 }}>{pedido.deliveryAddress}</div>}
-          {pedido.deliveryZone && <div style={{ fontSize: '10pt', fontWeight: 700 }}>Bairro: {pedido.deliveryZone}</div>}
+        <div style={{ marginTop: '5px' }}>
+          <p style={T.rotulo}>ENTREGAR EM</p>
+          {pedido.deliveryAddress && <div style={T.forte}>{pedido.deliveryAddress}</div>}
+          {pedido.deliveryZone && <div style={T.detalhe}>Bairro: {pedido.deliveryZone}</div>}
         </div>
       )}
       <div style={S.linha} />
 
       {/* Itens */}
-      <div style={{ ...S.par, ...S.rotulo }}>
+      <div style={{ ...S.par, ...T.rotulo }}>
         <span>ITENS ({qtdItens})</span>
         <span>VALOR</span>
       </div>
@@ -111,88 +112,81 @@ export default function Comanda({ pedido }: { pedido: any }) {
         return (
           <div key={idx} style={{ marginBottom: '6px' }}>
             <div style={S.par}>
-              <span style={{ fontSize: '11pt', fontWeight: 900 }}>
+              <span style={T.forte}>
                 {qtd}x {String(item.name || '').trim()}
               </span>
-              <span style={{ fontSize: '10pt', fontWeight: 800, whiteSpace: 'nowrap' }}>{brl(base * qtd)}</span>
+              <span style={{ ...T.forte, whiteSpace: 'nowrap' }}>{brl(base * qtd)}</span>
             </div>
             {extras.map((e, j) => (
-              <div key={j} style={{ ...S.par, paddingLeft: '10px', fontSize: '9.5pt', fontWeight: 600 }}>
+              <div key={j} style={{ ...S.par, ...T.detalhe, paddingLeft: '10px' }}>
                 <span>+ {Number(e.quantity) > 1 ? `${e.quantity}x ` : ''}{e.name}</span>
                 <span style={{ whiteSpace: 'nowrap' }}>{Number(e.price) ? brl(Number(e.price) * Number(e.quantity || 1) * qtd) : ''}</span>
               </div>
             ))}
-            {notas && (
-              <div style={{ paddingLeft: '10px', fontSize: '10pt', fontWeight: 900, marginTop: '1px' }}>
-                {/^creme:/i.test(notas) ? notas : `OBS: ${notas}`}
-              </div>
-            )}
+            {notas &&
+              (/^creme:/i.test(notas) ? (
+                <div style={{ ...T.detalhe, paddingLeft: '10px' }}>{notas}</div>
+              ) : (
+                <div style={{ paddingLeft: '10px', fontSize: '10pt', fontWeight: 700 }}>OBS: {notas}</div>
+              ))}
           </div>
         );
       })}
       <div style={S.linha} />
 
       {/* Totais */}
-      <div style={{ ...S.par, fontSize: '10pt' }}>
+      <div style={{ ...S.par, ...T.detalhe }}>
         <span>Subtotal</span>
         <span>{brl(subtotal)}</span>
       </div>
       {entrega && (
-        <div style={{ ...S.par, fontSize: '10pt' }}>
+        <div style={{ ...S.par, ...T.detalhe }}>
           <span>Taxa de entrega</span>
           <span>{taxaEntrega > 0 ? brl(taxaEntrega) : 'Grátis'}</span>
         </div>
       )}
       {adicional > 0 && (
-        <div style={{ ...S.par, fontSize: '10pt' }}>
+        <div style={{ ...S.par, ...T.detalhe }}>
           <span>Acréscimo{pedido.editReason ? ` (${pedido.editReason})` : ''}</span>
           <span>+ {brl(adicional)}</span>
         </div>
       )}
       {desconto > 0 && (
-        <div style={{ ...S.par, fontSize: '10pt' }}>
+        <div style={{ ...S.par, ...T.detalhe }}>
           <span>Desconto</span>
           <span>- {brl(desconto)}</span>
         </div>
       )}
       {descontoCashback > 0 && (
-        <div style={{ ...S.par, fontSize: '10pt' }}>
+        <div style={{ ...S.par, ...T.detalhe }}>
           <span>Cashback usado</span>
           <span>- {brl(descontoCashback)}</span>
         </div>
       )}
-      <div style={{ ...S.par, fontSize: '14pt', fontWeight: 900, marginTop: '3px' }}>
+      <div style={{ ...S.par, fontSize: '14pt', fontWeight: 800, marginTop: '4px' }}>
         <span>TOTAL</span>
         <span>{brl(total)}</span>
       </div>
       <div style={S.linha} />
 
       {/* Pagamento */}
-      <p style={S.rotulo}>PAGAMENTO</p>
-      <div style={{ fontSize: '12pt', fontWeight: 900 }}>{String(pedido.paymentMethod || 'Não informado').toUpperCase()}</div>
+      <p style={T.rotulo}>PAGAMENTO</p>
+      <div style={T.forte}>{String(pedido.paymentMethod || 'Não informado').toUpperCase()}</div>
       {troco > 0 && (
-        <div style={{ fontSize: '10pt', fontWeight: 800 }}>
+        <div style={{ fontSize: '10pt', fontWeight: 700 }}>
           Troco para {brl(troco)}
-          {troco > total ? ` — levar ${brl(troco - total)}` : ''}
+          {troco > total ? ` (levar ${brl(troco - total)})` : ''}
         </div>
       )}
-      {/pix/i.test(String(pedido.paymentMethod || '')) && <div style={{ fontSize: '9pt' }}>Conferir o comprovante do PIX</div>}
-      {pedido.nif && <div style={{ fontSize: '9.5pt', marginTop: '2px' }}>CPF na nota: {pedido.nif}</div>}
+      {pedido.nif && <div style={T.detalhe}>CPF na nota: {pedido.nif}</div>}
 
       {observacao && (
         <>
           <div style={S.linha} />
-          <p style={S.rotulo}>OBSERVAÇÕES DO PEDIDO</p>
-          <div style={{ fontSize: '10.5pt', fontWeight: 900 }}>{observacao}</div>
+          <p style={T.rotulo}>OBSERVAÇÕES DO PEDIDO</p>
+          <div style={{ fontSize: '10pt', fontWeight: 700 }}>{observacao}</div>
         </>
       )}
-
-      <div style={S.linhaCheia} />
-      <div style={{ textAlign: 'center', fontSize: '8.5pt', fontWeight: 600 }}>
-        Obrigado pela preferência!
-        <br />
-        maisacaisjpbr.netlify.app
-      </div>
     </div>
   );
 }
