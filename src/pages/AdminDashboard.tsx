@@ -776,7 +776,11 @@ export default function AdminDashboard() {
             playNotificationSound();
           }
           if (autoPrintRef.current) {
-            handlePrintOrder(latestOrder);
+            const visto = lastSeenOrderIdRef.current;
+            const novos = data.recentOrders
+              .filter((o: any) => Number(o.id) > visto && o.status !== 'Cancelado')
+              .sort((a: any, b: any) => Number(a.id) - Number(b.id));
+            enfileirarImpressao(novos);
           }
         }
         if (lastSeenOrderIdRef.current === null || latestOrder.id > lastSeenOrderIdRef.current) {
@@ -813,6 +817,49 @@ export default function AdminDashboard() {
 
   const handleConfirmPrint = () => {
     window.print();
+  };
+
+  // Impressão automática: cada pedido novo vai para a fila e sai sozinho na impressora padrão.
+  // Sem a janela de confirmação, o Chrome precisa estar aberto com --kiosk-printing.
+  const filaImpressao = useRef<any[]>([]);
+  const imprimindo = useRef(false);
+  const jaImpressos = useRef<Set<string>>(new Set());
+  const atrasoImpressao = useRef(300);
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    supabase.from('settings').select('value').eq('key', 'print_delay_ms').maybeSingle().then(({ data }) => {
+      const n = Number(data?.value);
+      if (Number.isFinite(n) && n >= 0 && n <= 5000) atrasoImpressao.current = n;
+    });
+  }, [isAuthenticated]);
+
+  const processarFilaImpressao = async () => {
+    if (imprimindo.current) return;
+    imprimindo.current = true;
+    try {
+      while (filaImpressao.current.length) {
+        const pedido = filaImpressao.current.shift();
+        setShowPrintPreview(false);
+        setPrintOrder(pedido);
+        // espera a comanda aparecer na página antes de mandar imprimir
+        await new Promise(r => requestAnimationFrame(() => setTimeout(r, Math.max(150, atrasoImpressao.current))));
+        window.print();
+        await new Promise(r => setTimeout(r, 400));
+      }
+    } finally {
+      imprimindo.current = false;
+      setPrintOrder(null);
+    }
+  };
+
+  const enfileirarImpressao = (pedidos: any[]) => {
+    for (const p of pedidos) {
+      const chave = String(p.id);
+      if (jaImpressos.current.has(chave)) continue;
+      jaImpressos.current.add(chave);
+      filaImpressao.current.push(p);
+    }
+    processarFilaImpressao();
   };
 
   const handleClosePrintPreview = () => {
@@ -1837,7 +1884,7 @@ export default function AdminDashboard() {
             <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
             <div>
               <p className="font-bold mb-1">Impressão Automática Ativada!</p>
-              <p>O sistema verificará novos pedidos a cada 15 segundos e enviará para a impressora. Para que a impressão ocorra de forma invisível (sem abrir janela de confirmação), inicie o Google Chrome com o atalho <b>--kiosk-printing</b> apontando para a sua impressora padrão (térmica 80mm).</p>
+              <p>Cada pedido novo sai sozinho na impressora padrão do computador. Deixe esta aba do gestor aberta. Para não aparecer a janela de confirmação, abra o gestor pelo atalho do Chrome com <b>--kiosk-printing</b> (térmica 80mm como impressora padrão do Windows).</p>
             </div>
           </div>
         )}
