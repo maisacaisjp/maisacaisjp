@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import Comanda from "../components/Comanda";
+import Comanda, { ComandaTexto } from "../components/Comanda";
 import {
   X, TrendingUp, TrendingDown, Filter, Layers, RefreshCw, ChevronDown, Key,
   DollarSign,
@@ -226,6 +226,14 @@ export default function AdminDashboard() {
   const [pausedItems, setPausedItems] = useState<string[]>([]);
   const [printOrder, setPrintOrder] = useState<any>(null);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
+  // Modelo da comanda neste computador: "texto" para o driver Generic / Text Only, "formatado" para o driver da impressora
+  const [modoImpressora, setModoImpressora] = useState<'texto' | 'formatado'>(() => {
+    try { return localStorage.getItem('modoImpressora') === 'formatado' ? 'formatado' : 'texto'; } catch { return 'texto'; }
+  });
+  const trocarModoImpressora = (m: 'texto' | 'formatado') => {
+    setModoImpressora(m);
+    try { localStorage.setItem('modoImpressora', m); } catch {}
+  };
   const [cardapioSearchTerm, setCardapioSearchTerm] = useState("");
   const [autoPrint, setAutoPrint] = useState(() => localStorage.getItem("autoPrint") === "true");
   const autoPrintRef = useRef(autoPrint);
@@ -4383,8 +4391,16 @@ export default function AdminDashboard() {
             </div>
             {/* Receipt Content */}
             <div style={{ padding: '10px 8px', flexGrow: 1, overflowY: 'auto' }}>
+              <div style={{ display: 'flex', gap: '6px', marginBottom: '10px', fontSize: '12px' }}>
+                {([['texto', 'Somente texto (driver atual)'], ['formatado', 'Driver Bematech (formatado)']] as const).map(([m, rotulo]) => (
+                  <button key={m} type="button" onClick={() => trocarModoImpressora(m)}
+                    style={{ flex: 1, padding: '6px', borderRadius: '8px', border: modoImpressora === m ? '2px solid #6a2092' : '1px solid #d1d5db', background: modoImpressora === m ? '#f5edfb' : '#fff', fontWeight: 700, cursor: 'pointer', color: '#111' }}>
+                    {rotulo}
+                  </button>
+                ))}
+              </div>
               <div style={{ width: '72mm', margin: '0 auto' }}>
-                <Comanda pedido={printOrder} />
+                {modoImpressora === 'texto' ? <ComandaTexto pedido={printOrder} /> : <Comanda pedido={printOrder} />}
               </div>
             </div>
             {/* Modal Actions */}
@@ -4409,7 +4425,7 @@ export default function AdminDashboard() {
       {/* Hidden receipt for actual printing */}
       {printOrder && (
         <div className="print-only">
-          <Comanda pedido={printOrder} />
+          {modoImpressora === 'texto' ? <ComandaTexto pedido={printOrder} /> : <Comanda pedido={printOrder} />}
         </div>
       )}
     {editingOrder && (
