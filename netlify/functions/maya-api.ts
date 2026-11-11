@@ -2,11 +2,12 @@
 // "x-maya-chave" (guardada em segredos_internos 'maya_api' e na credencial do n8n — nunca no fluxo).
 //
 // Ações (POST JSON { acao, ... }):
-//   relatorio     → { tipo, termo, data_inicio, data_fim, telefone, order_id } → { resultado }
-//   status_pedido → { telefone, termo } → último pedido DESTE telefone (cliente não vê pedido de outra pessoa)
-//   criar_pedido  → { telefone, customer_name, order_type, payment_method, total_amount, delivery_address, delivery_zone, items_description }
+//   relatorio      → { tipo, termo, data_inicio, data_fim, telefone, order_id } → { resultado }
+//   status_pedido  → { telefone, termo } → último pedido DESTE telefone (cliente não vê pedido de outra pessoa)
+//   criar_pedido   → { telefone, customer_name, order_type, payment_method, total_amount, delivery_address, delivery_zone, items_description }
+//   lancar_despesa → { valor, descricao, categoria, forma_pagamento, data, autor } → { ok, resultado, despesa }
 import { CORS, iguais, json, segredo, supabaseAdmin } from '../lib/admin';
-import { montarRelatorio } from '../lib/mayaRelatorios';
+import { montarRelatorio, lancarDespesa } from '../lib/mayaRelatorios';
 import { criarPedido, ErroPedido } from '../lib/pedidos';
 
 const soDigitos = (v: unknown) => String(v ?? '').replace(/\D/g, '');
@@ -84,6 +85,10 @@ export default async (req: Request) => {
         ganhar_cashback: false,
       });
       return json(200, { ok: true, ...r });
+    }
+    if (acao === 'lancar_despesa') {
+      const r = await lancarDespesa(corpo);
+      return json(r.sucesso ? 200 : 400, { ok: r.sucesso, resultado: r.mensagem, despesa: r.despesa });
     }
     return json(400, { ok: false, erro: 'Ação desconhecida.' });
   } catch (e: any) {

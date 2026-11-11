@@ -20,6 +20,11 @@ export interface EntradaRelatorio {
   order_id?: string | number;
   /** Telefone REAL de quem mandou a mensagem (vem do n8n, não da IA). Autoriza troca de horário. */
   autor?: string;
+  valor?: number | string;
+  descricao?: string;
+  categoria?: string;
+  forma_pagamento?: string;
+  data?: string;
 }
 
 // ─── Datas no fuso de São José dos Pinhais (UTC−3, sem horário de verão) ────────
@@ -478,6 +483,113 @@ function resumoVendas(todos: any[], de: string, ate: string) {
   return linhas.join('\n');
 }
 
+// ─── Lançamento de despesas pelos sócios ──────────────────────────────────────────
+export function normalizarCategoriaDespesa(cat: string, desc: string): string {
+  const texto = (cat + ' ' + desc).toLowerCase();
+  if (/embalagem|copo|tampa|sacola|colher|canudo|pote|bobina/i.test(texto)) return 'Embalagens & Descartáveis';
+  if (/energia|luz|copel|agua|água|sanepar|gas|gás|internet|net|wifi/i.test(texto)) return 'Água, Luz, Gás & Net';
+  if (/salario|salário|diaria|diária|freela|motoboy|entregador|ajudante/i.test(texto)) return 'Salários & Equipe';
+  if (/anuncio|anúncio|trafego|tráfego|marketing|panfleto|meta|insta/i.test(texto)) return 'Marketing & Anúncios';
+  if (/manuten|conserto|reforma|reparo|freezer|liquidificador|balança|equipamento/i.test(texto)) return 'Manutenção & Equipamentos';
+  if (/imposto|das|taxa|mei|simples|tributo/i.test(texto)) return 'Impostos & Taxas';
+  if (/aluguel|iptu|condominio|condomínio/i.test(texto)) return 'Aluguel / Renda';
+  if (/acai|açaí|fruta|morango|banana|leite|nutella|creme|polpa|sorvete|chocolate|atacadao|atacadão|ceasa|condor|mercado|insumo|fornecedor/i.test(texto)) return 'Fornecedores & Insumos';
+  return 'Outros Gastos';
+}
+
+export function normalizarFormaPagamentoDespesa(forma: string): string {
+  const f = String(forma || '').toLowerCase();
+  if (f.includes('dinheiro') || f.includes('cash')) return 'Dinheiro';
+  if (f.includes('cart') || f.includes('card') || f.includes('cred') || f.includes('deb')) return 'Cartão';
+  if (f.includes('transf') || f.includes('ted') || f.includes('doc')) return 'Transferência';
+  return 'PIX';
+}
+
+export async function lancarDespesa(dados: {
+  descricao?: string;
+  valor?: number | string;
+  categoria?: string;
+  forma_pagamento?: string;
+  data?: string;
+  autor?: string;
+}): Promise<{ sucesso: boolean; mensagem: string; despesa?: any }> {
+  const tel = String(dados.autor || '').replace(/\D/g, '');
+  const isJunior = ['996560080', '96560080'].some((d) => tel.endsWith(d));
+  const isMichele = ['997349076', '97349076'].some((d) => tel.endsWith(d));
+  if (!isJunior && !isMichele) {
+    return { sucesso: false, mensagem: '❌ Ação não autorizada. Apenas os sócios (Junior e Michele) podem lançar despesas.' };
+  }
+  const nomeDono = isJunior ? 'Junior' : 'Michele';
+
+  const valorNum = Number(String(dados.valor || 0).replace(',', '.'));
+  if (!valorNum || valorNum <= 0 || isNaN(valorNum)) {
+    return { sucesso: false, mensagem: '❌ Valor da despesa inválido. Informe um valor numérico maior que zero (ex: R$ 85,00).' };
+  }
+
+  const desc = String(dados.descricao || 'Despesa avulsa').trim().slice(0, 300);
+  const cat = normalizarCategoriaDespesa(dados.categoria || '', desc);
+  const forma = normalizarFormaPagamentoDespesa(dados.forma_pagamento || '');
+  const hoje = hojeSP();
+  const diaValido = dados.data && /^\d{4}-\d{2}-\d{2}$/.test(dados.data) ? dados.data : hoje;
+  const isoCriacao = `${diaValido}T12:00:00${FUSO}`;
+
+  const { data: novaDespesa, error } = await sb()
+    .from('expenses')
+    .insert({
+      description: `${desc} (via Maya - ${nomeDono})`,
+      amount: Number(valorNum.toFixed(2)),
+      category: cat,
+      payment_method: forma,
+      created_at: isoCriacao,
+    })
+    .select('id,description,amount,category,payment_method,created_at')
+    .single();
+
+  if (error) {
+    console.error('[lancarDespesa] Erro supabase:', error);
+    return { sucesso: false, mensagem: '❌ Erro ao salvar despesa no banco: ' + error.message };
+  }
+
+  // Se foi pago em dinheiro, registra sangria automática no caixa aberto (se houver)
+  if (forma === 'Dinheiro') {
+    try {
+      const { data: openSession } = await sb()
+        .from('cash_sessions')
+        .select('id')
+        .eq('status', 'aberto')
+        .order('opened_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (openSession?.id) {
+        await sb().from('cash_movements').insert({
+          id: `mov-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+          session_id: openSession.id,
+          type: 'sangria',
+          amount: Number(valorNum.toFixed(2)),
+          reason: `Despesa: ${desc} (${cat})`,
+          created_at: new Date().toISOString(),
+        });
+      }
+    } catch (e: any) {
+      console.warn('[lancarDespesa] Aviso sangria:', e?.message || e);
+    }
+  }
+
+  return {
+    sucesso: true,
+    mensagem:
+      `✅ Despesa lançada com sucesso por ${nomeDono}!\n` +
+      `• *Valor:* ${brl(valorNum)}\n` +
+      `• *Descrição:* ${desc}\n` +
+      `• *Categoria:* ${cat}\n` +
+      `• *Pagamento:* ${forma}\n` +
+      `• *Data:* ${dma(diaValido)}\n\n` +
+      `O valor já foi computado no DRE e no painel financeiro da loja.`,
+    despesa: novaDespesa,
+  };
+}
+
 // ─── Entrada ─────────────────────────────────────────────────────────────────────
 export async function montarRelatorio(inp: EntradaRelatorio): Promise<string> {
   const tipo = String(inp.tipo || 'resumo').toLowerCase().trim();
@@ -541,6 +653,48 @@ export async function montarRelatorio(inp: EntradaRelatorio): Promise<string> {
       const tel = String(inp.autor || '').replace(/\D/g, '');
       if (!tel) return 'Não consegui identificar o seu telefone para autorizar a alteração.';
       return await alterarHorario(tipo, termo, tel);
+    }
+    if (['lancar_despesa', 'inserir_despesa', 'registrar_despesa', 'nova_despesa', 'despesa_lancar'].includes(tipo)) {
+      const tel = String(inp.autor || inp.telefone || '').replace(/\D/g, '');
+      let valor = inp.valor;
+      let desc = inp.descricao;
+      let cat = inp.categoria;
+      let forma = inp.forma_pagamento;
+      let data = inp.data || inp.data_inicio;
+
+      // Se termo for JSON ou texto estruturado
+      if (termo && termo.trim().startsWith('{')) {
+        try {
+          const j = JSON.parse(termo);
+          valor = valor ?? j.valor ?? j.amount;
+          desc = desc ?? j.descricao ?? j.description;
+          cat = cat ?? j.categoria ?? j.category;
+          forma = forma ?? j.forma_pagamento ?? j.payment_method;
+          data = data ?? j.data ?? j.date;
+        } catch {}
+      } else if (termo && !valor) {
+        if (termo.includes('|')) {
+          const partes = termo.split('|').map((s) => s.trim());
+          valor = partes[0];
+          desc = partes[1];
+          cat = partes[2];
+          forma = partes[3];
+        } else {
+          const m = termo.match(/(?:r\$\s*|valor\s*:?\s*)?(\d+(?:[.,]\d{1,2})?)/i);
+          if (m) valor = m[1];
+          desc = termo.replace(/(?:r\$\s*|valor\s*:?\s*)?(\d+(?:[.,]\d{1,2})?)/i, '').trim() || termo;
+        }
+      }
+
+      const r = await lancarDespesa({
+        valor,
+        descricao: desc,
+        categoria: cat,
+        forma_pagamento: forma,
+        data,
+        autor: tel,
+      });
+      return r.mensagem;
     }
     if (tipo === 'pedido') {
       const id = String(inp.order_id || inp.termo || '').replace(/\D/g, '');
