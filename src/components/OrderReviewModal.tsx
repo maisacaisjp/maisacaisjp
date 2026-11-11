@@ -95,7 +95,8 @@ export default function OrderReviewModal({
       const { data, error } = await supabase
         .from('order_reviews')
         .insert([payload])
-        .select()
+        // Só as colunas públicas: telefone e pedido do cliente não voltam para o navegador
+        .select('id, customer_name, rating, tags, comment, store_reply, replied_at, created_at, is_public')
         .single();
 
       if (error) throw error;
