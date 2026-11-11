@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-11T04:25:19.150Z",
+  "updatedAt": "2026-11-11T05:45:29.496Z",
   "createdAt": "2026-09-30T14:21:03.015Z",
   "id": "vjeDpsq8JzCw6M7A",
   "name": "ATENDENTE HUMANIZADO - MAIS AÇAÍ SJP",
@@ -65,18 +65,6 @@
       "id": "067ef811-98db-4cc1-ab18-9f53d6d89513",
       "name": "PAUSA DE 7 SEGUNDOS",
       "webhookId": "179bfea1-31c5-4f13-aa84-dc213e9b0aa7"
-    },
-    {
-      "parameters": {},
-      "id": "3f6559d3-4455-401f-967c-439c074ac8cc",
-      "name": "DELAY 1 SEGUNDO",
-      "type": "n8n-nodes-base.wait",
-      "typeVersion": 1.1,
-      "position": [
-        6896,
-        1088
-      ],
-      "webhookId": "6d02588c-2679-4d65-9ddd-1a5700d0fc19"
     },
     {
       "parameters": {
@@ -370,7 +358,7 @@
             "conversation_id": 1,
             "message_type": 0,
             "source_id": "={{ $('Coleta').item.json.telefone }}",
-            "content": "={{ $('Coleta').item.json.mensagem }}",
+            "content": "={{ $json.mensagem || $('Coleta').item.json.mensagem }}",
             "account_id": 1,
             "content_type": 0,
             "sender_id": 0
@@ -1509,7 +1497,7 @@
         "promptType": "define",
         "text": "={{ $json.text }}",
         "options": {
-          "systemMessage": "=Você é a Maya, diretora de operações e assistente executiva do Mais Açaí SJP, falando pelo WhatsApp com {{ $('Modo Gestor').first().json.nomeDono || 'a diretoria' }} (sócio(a) da loja). Trate a pessoa pelo nome (Junior ou Michele).\n\nAgora (Brasília): {{ $now.setZone('America/Sao_Paulo').setLocale('pt-BR').toFormat(\"cccc, dd/MM/yyyy HH:mm\") }}\nHoje: {{ $now.setZone('America/Sao_Paulo').toFormat('yyyy-MM-dd') }} | Ontem: {{ $now.setZone('America/Sao_Paulo').minus({ days: 1 }).toFormat('yyyy-MM-dd') }}\n\n# SAUDAÇÃO\nSe a mensagem for só uma saudação (\"oi\", \"olá\", \"bom dia\", \"opa\"), responda na hora, com energia, SEM chamar ferramenta. Ex.: \"Opa, Junior! Quer o resumo de hoje, o caixa ou o status da loja?\"\n\n# O QUE VOCÊ CONSULTA (ferramenta relatorio_gestor — dados reais do sistema)\nEscolha o \"tipo\":\n- resumo: vendas do período (pedidos, faturamento, ticket médio, canais, pagamentos, mais vendidos, bairros, pedidos em aberto, cancelados). Use data_inicio/data_fim (para \"hoje\" e \"ontem\" use as datas acima).\n- caixa: caixa aberto/fechado, fundo, vendas em dinheiro, sangrias, suprimentos e conferência.\n- despesas: despesas lançadas no período.\n- dre: DRE / lucro do período (receita, CMV, despesas, resultado).\n- cashback: saldo de um cliente (termo = telefone) ou panorama geral.\n- avaliacoes: notas e comentários dos clientes.\n- agenda: obrigações contábeis atrasadas, de hoje e próximas.\n- ficha: custo, CMV e margem de um produto (termo = nome, ex.: \"nevado\").\n- ranking_margens / maior_cmv: produtos mais lucrativos / com custo mais alto.\n- insumo: custo de compra e fornecedor (termo = nome do insumo).\n- custos_fixos: despesas fixas mensais.\n- pedido: detalhe de um pedido (order_id = número).\n- cliente: histórico de um cliente (telefone).\n- ranking_clientes: melhores clientes.\n- loja: status da loja, Maya atendente ligada/desligada e grade de horários.\nPara o cardápio e preços atuais, use a ferramenta cardapio_mais_acai_gestor.\n\n# O QUE VOCÊ ALTERA\n- Horário e status da loja: relatorio_gestor com tipo \"alterar_horario\" e o comando em \"termo\".\n  Ex.: \"hoje 14:00 23:00\", \"domingo 14:00 22:00\", \"fechar hoje\", \"fechar agora\", \"abrir agora\", \"auto\" (voltar à grade normal).\n  O sistema confere sozinho que é o Junior ou a Michele pelo número do WhatsApp. Depois confirme o que ficou registrado.\n- Outras mudanças (pausar produto, mudar preço, cancelar pedido, lançar despesa) ainda são feitas pelo gestor: diga isso com clareza e oriente onde fazer. Não diga que fez algo que não fez.\n\n# COMO RESPONDER\n- Tom: parceira, executiva, direta. Respostas enxutas e organizadas para WhatsApp (negrito com *um asterisco*, listas com \"-\").\n- Valores em reais: R$ 1.234,56.\n- NUNCA invente números. Use só o que a ferramenta devolveu; se faltar dado, diga exatamente o que falta.\n- Se a ferramenta der erro, diga que o sistema não respondeu agora e peça para tentar de novo em instantes.\n- Para mandar em 2 balões, separe com |||."
+          "systemMessage": "=Você é a Maya, diretora de operações e assistente executiva do Mais Açaí SJP, falando pelo WhatsApp com {{ $('Modo Gestor').first().json.nomeDono || 'a diretoria' }} (sócio(a) da loja). Trate a pessoa pelo nome (Junior ou Michele).\n\nAgora (Brasília): {{ $now.setZone('America/Sao_Paulo').setLocale('pt-BR').toFormat(\"cccc, dd/MM/yyyy HH:mm\") }}\nHoje: {{ $now.setZone('America/Sao_Paulo').toFormat('yyyy-MM-dd') }} | Ontem: {{ $now.setZone('America/Sao_Paulo').minus({ days: 1 }).toFormat('yyyy-MM-dd') }}\n\n# SAUDAÇÃO\nSe a mensagem for só uma saudação (\"oi\", \"olá\", \"bom dia\", \"opa\"), responda na hora, com energia, SEM chamar ferramenta. Ex.: \"Opa, Junior! Quer o resumo de hoje, o caixa ou o status da loja?\"\n\n# O QUE VOCÊ CONSULTA (ferramenta relatorio_gestor — dados reais do sistema)\nEscolha o \"tipo\":\n- resumo: vendas do período (pedidos, faturamento, ticket médio, canais, pagamentos, mais vendidos, bairros, pedidos em aberto, cancelados). Use data_inicio/data_fim (para \"hoje\" e \"ontem\" use as datas acima).\n- caixa: caixa aberto/fechado, fundo, vendas em dinheiro, sangrias, suprimentos e conferência.\n- despesas: despesas lançadas no período.\n- dre: DRE / lucro do período (receita, CMV, despesas, resultado).\n- cashback: saldo de um cliente (termo = telefone) ou panorama geral.\n- avaliacoes: notas e comentários dos clientes.\n- agenda: obrigações contábeis atrasadas, de hoje e próximas.\n- ficha: custo, CMV e margem de um produto (termo = nome, ex.: \"nevado\").\n- ranking_margens / maior_cmv: produtos mais lucrativos / com custo mais alto.\n- insumo: custo de compra e fornecedor (termo = nome do insumo).\n- custos_fixos: despesas fixas mensais.\n- pedido: detalhe de um pedido (order_id = número).\n- cliente: histórico de um cliente (telefone).\n- ranking_clientes: melhores clientes.\n- loja: status da loja, Maya atendente ligada/desligada e grade de horários.\nPara o cardápio e preços atuais, use a ferramenta cardapio_mais_acai_gestor.\n\n# O QUE VOCÊ ALTERA E LANÇA\n- Lançar despesa no sistema (DRE): relatorio_gestor com tipo \"lancar_despesa\" e em \"termo\":\n  Formato: \"valor | descrição | categoria | forma de pagamento\"\n  Ex.: \"145.80 | Atacadão - Leite em pó e Nutella | Fornecedores & Insumos | PIX\"\n  Ex.: \"85.00 | Ceasa - Morango | Fornecedores & Insumos | Dinheiro\"\n  Categorias válidas: \"Fornecedores & Insumos\", \"Embalagens & Descartáveis\", \"Água, Luz, Gás & Net\", \"Salários & Equipe\", \"Marketing & Anúncios\", \"Manutenção & Equipamentos\", \"Impostos & Taxas\", \"Outros Gastos\".\n  Formas: \"PIX\", \"Dinheiro\", \"Cartão\", \"Transferência\".\n\n  REGRA DE CONFIRMAÇÃO DE COMPROVANTES (FOTOS/RECIBOS):\n  Quando a mensagem recebida contiver leitura de comprovante (\"[COMPROVANTE FISCAL IDENTIFICADO]\"):\n  1. Mostre para o sócio os dados identificados: Estabelecimento, Valor (R$), Categoria sugerida e Itens.\n  2. Pergunte de forma direta e parceira se confirma o lançamento:\n     \"Junior, identifiquei este comprovante do Atacadão no valor de R$ 145,80 em Fornecedores & Insumos. Posso lançar na DRE?\"\n  3. Quando o sócio responder confirmando (\"sim\", \"pode\", \"confirma\", \"lança\", \"positivo\"), chame IMEDIATAMENTE a ferramenta relatorio_gestor com tipo \"lancar_despesa\" com os dados do comprovante!\n  4. Se o sócio pediu para lançar diretamente por texto ou áudio (ex: \"lança 50 reais de morango no ceasa pago em dinheiro\"), chame a ferramenta direto e confirme o lançamento realizado!\n\n- Horário e status da loja: relatorio_gestor com tipo \"alterar_horario\" e o comando em \"termo\".\n  Ex.: \"hoje 14:00 23:00\", \"domingo 14:00 22:00\", \"fechar hoje\", \"fechar agora\", \"abrir agora\", \"auto\" (voltar à grade normal).\n  O sistema confere sozinho que é o Junior ou a Michele pelo número do WhatsApp. Depois confirme o que ficou registrado.\n- Outras mudanças (pausar produto, mudar preço, cancelar pedido) ainda são feitas pelo gestor: diga isso com clareza e oriente onde fazer. Não diga que fez algo que não fez.\n\n# COMO RESPONDER\n- Tom: parceira, executiva, direta. Respostas enxutas e organizadas para WhatsApp (negrito com *um asterisco*, listas com \"-\").\n- Valores em reais: R$ 1.234,56.\n- NUNCA invente números. Use só o que a ferramenta devolveu; se faltar dado, diga exatamente o que falta.\n- Se a ferramenta der erro, diga que o sistema não respondeu agora e peça para tentar de novo em instantes.\n- Para mandar em 2 balões, separe com |||."
         }
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
@@ -1580,7 +1568,7 @@
     },
     {
       "parameters": {
-        "description": "Consulta os dados REAIS de vendas, financeiro, fichas técnicas e altera ou consulta horários e status da loja Mais Açaí SJP. Campos:\n- tipo:\n  'resumo' = movimento geral do período (vendas, canais, pagamentos, mais vendidos)\n  'caixa' = caixa aberto/fechado, fundo, sangrias e conferência\n  'despesas' = despesas lançadas no período\n  'dre' = DRE / lucro do período\n  'cashback' = saldo de cashback de um cliente (termo = telefone) ou resumo geral\n  'avaliacoes' = avaliações dos clientes\n  'agenda' = fichas contábeis e prazos atrasados/para hoje\n  'ficha' = ficha técnica com custo, CMV e margem\n  'insumo' = custo de compra e fornecedor\n  'ranking_margens' = produtos mais lucrativos\n  'maior_cmv' = produtos com maior custo\n  'custos_fixos' = despesas fixas\n  'pedido' = detalhe de um pedido\n  'cliente' = histórico de cliente\n  'ranking_clientes' = top clientes\n  'loja' = status da loja e grade semanal de horários\n  'alterar_horario' = altera horário de hoje ou da semana, ou abre/fecha loja (termo = instrução, ex: 'hoje 14:00 23:00', 'fechar agora', 'abrir agora', 'auto')\n- termo: nome do combo/insumo, telefone do cliente ou instrução de horário\n- data_inicio e data_fim: AAAA-MM-DD",
+        "description": "Consulta os dados REAIS de vendas, financeiro, fichas técnicas, lança despesas e altera horários e status da loja Mais Açaí SJP. Campos:\n- tipo:\n  'resumo' = movimento geral do período (vendas, canais, pagamentos, mais vendidos)\n  'caixa' = caixa aberto/fechado, fundo, sangrias e conferência\n  'despesas' = despesas lançadas no período\n  'dre' = DRE / lucro do período\n  'cashback' = saldo de cashback de um cliente (termo = telefone) ou resumo geral\n  'avaliacoes' = avaliações dos clientes\n  'agenda' = fichas contábeis e prazos atrasados/para hoje\n  'ficha' = ficha técnica com custo, CMV e margem\n  'insumo' = custo de compra e fornecedor\n  'ranking_margens' = produtos mais lucrativos\n  'maior_cmv' = produtos com maior custo\n  'custos_fixos' = despesas fixas\n  'pedido' = detalhe de um pedido\n  'cliente' = histórico de cliente\n  'ranking_clientes' = top clientes\n  'loja' = status da loja e grade semanal de horários\n  'alterar_horario' = altera horário de hoje ou da semana, ou abre/fecha loja (termo = instrução, ex: 'hoje 14:00 23:00', 'fechar agora', 'abrir agora', 'auto')\n  'lancar_despesa' = lança despesa na DRE e no financeiro (termo = 'valor | descrição | categoria | forma_pagamento')\n- termo: dados da consulta/ação ou despesa\n- data_inicio e data_fim: AAAA-MM-DD",
         "workflowId": {
           "__rl": true,
           "value": "9yGHwRbZDao1PKgb",
@@ -1591,8 +1579,8 @@
         "workflowInputs": {
           "mappingMode": "defineBelow",
           "value": {
-            "tipo": "={{ $fromAI('tipo', 'resumo, caixa, despesas, dre, cashback, avaliacoes, agenda, ficha, insumo, ranking_margens, maior_cmv, custos_fixos, pedido, cliente, ranking_clientes, loja ou alterar_horario', 'string') }}",
-            "termo": "={{ $fromAI('termo', 'Nome do produto, combo, insumo, telefone ou instrução de horário', 'string') }}",
+            "tipo": "={{ $fromAI('tipo', 'resumo, caixa, despesas, dre, cashback, avaliacoes, agenda, ficha, insumo, ranking_margens, maior_cmv, custos_fixos, pedido, cliente, ranking_clientes, loja, alterar_horario ou lancar_despesa', 'string') }}",
+            "termo": "={{ $fromAI('termo', 'Nome do produto, combo, insumo, telefone, instrução de horário ou dados da despesa: valor | descricao | categoria | forma', 'string') }}",
             "data_inicio": "={{ $fromAI('data_inicio', 'Data inicial AAAA-MM-DD ou string vazia', 'string') }}",
             "data_fim": "={{ $fromAI('data_fim', 'Data final AAAA-MM-DD ou string vazia', 'string') }}",
             "telefone": "={{ $fromAI('telefone', 'Telefone do cliente consultado ou string vazia', 'string') }}",
@@ -1701,6 +1689,121 @@
       ],
       "id": "node-prepara-entrada-gestor",
       "name": "Prepara Entrada Gestor"
+    },
+    {
+      "id": "node-prepara-audio",
+      "name": "Prepara Binario Audio",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3560,
+        960
+      ],
+      "parameters": {
+        "jsCode": "const item = $input.first()?.json || {};\nconst body = item.body || item;\nconst data = body.data || {};\nconst msg = data.message || {};\n\nconst b64 = msg.base64 || data.base64 || item.base64;\nconst mime = msg.audioMessage?.mimetype || 'audio/ogg';\n\nif (!b64) {\n  return [{\n    json: {\n      ...item,\n      transcricaoFalhou: true,\n      textoAudio: '[Áudio recebido sem arquivo base64 disponível]'\n    }\n  }];\n}\n\nreturn [{\n  json: item,\n  binary: {\n    data: {\n      data: b64,\n      mimeType: mime.split(';')[0].trim(),\n      fileName: 'audio.ogg'\n    }\n  }\n}];"
+      }
+    },
+    {
+      "id": "node-transcreve-audio",
+      "name": "Transcreve Audio Gemini",
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        3760,
+        960
+      ],
+      "parameters": {
+        "binaryPropertyName": "data",
+        "inputType": "binary",
+        "modelId": {
+          "__rl": true,
+          "cachedResultName": "models/gemini-2.0-flash",
+          "mode": "list",
+          "value": "models/gemini-2.0-flash"
+        },
+        "operation": "transcribe",
+        "options": {},
+        "resource": "audio",
+        "simplify": true
+      },
+      "credentials": {
+        "googlePalmApi": {
+          "id": "8kTzhAgNaPa168MW",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "node-ajusta-audio",
+      "name": "Ajusta Mensagem Audio",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3960,
+        960
+      ],
+      "parameters": {
+        "jsCode": "const coleta = $('Coleta').first()?.json || {};\nconst out = $input.first()?.json || {};\n\nconst rawText = String(out.text || out.content || out.textoAudio || '').trim();\nconst textoFinal = rawText || '[Áudio não compreendido]';\n\nreturn [{\n  json: {\n    ...coleta,\n    mensagem: textoFinal,\n    tipo: 'audio_transcrito'\n  }\n}];"
+      }
+    },
+    {
+      "id": "node-prepara-imagem",
+      "name": "Prepara Binario Imagem",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3560,
+        1160
+      ],
+      "parameters": {
+        "jsCode": "const item = $input.first()?.json || {};\nconst body = item.body || item;\nconst data = body.data || {};\nconst msg = data.message || {};\n\nconst b64 = msg.base64 || data.base64 || item.base64;\nconst mime = msg.imageMessage?.mimetype || 'image/jpeg';\nconst caption = String(msg.imageMessage?.caption || '').trim();\n\nif (!b64) {\n  return [{\n    json: {\n      ...item,\n      leituraFalhou: true,\n      caption,\n      textoOCR: '[Imagem recebida sem base64 disponível]'\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ...item,\n    caption\n  },\n  binary: {\n    data: {\n      data: b64,\n      mimeType: mime.split(';')[0].trim(),\n      fileName: 'comprovante.jpg'\n    }\n  }\n}];"
+      }
+    },
+    {
+      "id": "node-analisa-imagem",
+      "name": "Analisa Comprovante Gemini",
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        3760,
+        1160
+      ],
+      "parameters": {
+        "binaryPropertyName": "data",
+        "inputType": "binary",
+        "modelId": {
+          "__rl": true,
+          "cachedResultName": "models/gemini-2.0-flash",
+          "mode": "list",
+          "value": "models/gemini-2.0-flash"
+        },
+        "operation": "analyze",
+        "options": {},
+        "resource": "image",
+        "simplify": true,
+        "text": "Você é o especialista de OCR e leitura de comprovantes fiscais do Mais Açaí SJP.\nAnalise esta imagem (cupom fiscal, recibo, nota de compra ou comprovante de pagamento) com atenção máxima aos números e dados.\nExtraia:\n1. Estabelecimento / Fornecedor (ex: Atacadão, Condor, Ceasa, Distribuidora Plastsul, Posto, etc.)\n2. Valor Total em R$ (ex: 145.80)\n3. Data do comprovante (AAAA-MM-DD)\n4. Principais itens comprados (resumo claro)\n5. Categoria sugerida entre:\n   - Fornecedores & Insumos (açaí, frutas, leite em pó, nutella, alimentos, compras de mercado)\n   - Embalagens & Descartáveis (copos, tampas, colheres, sacolas, canudos, bobinas)\n   - Água, Luz, Gás & Net\n   - Salários & Equipe\n   - Manutenção & Equipamentos\n   - Marketing & Anúncios\n   - Impostos & Taxas\n   - Outros Gastos\n6. Forma de pagamento identificada (PIX, Dinheiro, Cartão ou Transferência)\n\nRetorne APENAS o resumo estruturado no seguinte padrão exato:\n[COMPROVANTE FISCAL IDENTIFICADO]\n• Fornecedor: <nome>\n• Valor: R$ <valor com duas casas decimais>\n• Data: <data ou hoje>\n• Categoria sugerida: <categoria>\n• Itens: <resumo dos itens>\n• Forma de pagamento: <forma>\nDados para lançamento: <valor numérico> | <fornecedor - itens> | <categoria> | <forma>"
+      },
+      "credentials": {
+        "googlePalmApi": {
+          "id": "8kTzhAgNaPa168MW",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "node-ajusta-imagem",
+      "name": "Ajusta Mensagem Imagem",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3960,
+        1160
+      ],
+      "parameters": {
+        "jsCode": "const coleta = $('Coleta').first()?.json || {};\nconst inputItem = $input.first()?.json || {};\nconst caption = String($('Prepara Binario Imagem').first()?.json?.caption || '').trim();\n\nconst analise = String(inputItem.content || inputItem.text || inputItem.textoOCR || '').trim();\nlet textoFinal = analise || '[Foto de comprovante recebida sem texto legível]';\nif (caption) {\n  textoFinal += '\\n\\nObservação do sócio: ' + caption;\n}\n\nreturn [{\n  json: {\n    ...coleta,\n    mensagem: textoFinal,\n    tipo: 'imagem_analisada'\n  }\n}];"
+      }
     }
   ],
   "connections": {
@@ -1749,17 +1852,6 @@
         ]
       ]
     },
-    "DELAY 1 SEGUNDO": {
-      "main": [
-        [
-          {
-            "node": "Loop Over Items1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "BUSCA MENSAGENS DO USUÁRIO": {
       "main": [
         [
@@ -1801,14 +1893,17 @@
             "type": "main",
             "index": 0
           }
-        ]
-      ]
-    },
-    "Envia mensagem para o WhatsApp": {
-      "main": [
+        ],
         [
           {
-            "node": "DELAY 1 SEGUNDO",
+            "node": "Prepara Binario Audio",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepara Binario Imagem",
             "type": "main",
             "index": 0
           }
@@ -2132,6 +2227,72 @@
           }
         ]
       ]
+    },
+    "Prepara Binario Audio": {
+      "main": [
+        [
+          {
+            "node": "Transcreve Audio Gemini",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcreve Audio Gemini": {
+      "main": [
+        [
+          {
+            "node": "Ajusta Mensagem Audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ajusta Mensagem Audio": {
+      "main": [
+        [
+          {
+            "node": "REGISTRA MENSAGEM2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepara Binario Imagem": {
+      "main": [
+        [
+          {
+            "node": "Analisa Comprovante Gemini",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analisa Comprovante Gemini": {
+      "main": [
+        [
+          {
+            "node": "Ajusta Mensagem Imagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ajusta Mensagem Imagem": {
+      "main": [
+        [
+          {
+            "node": "REGISTRA MENSAGEM2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
@@ -2155,9 +2316,9 @@
   },
   "meta": null,
   "pinData": {},
-  "versionId": "d7edd15a-1c28-4c34-be4e-47ec00b6149b",
-  "activeVersionId": "d7edd15a-1c28-4c34-be4e-47ec00b6149b",
-  "versionCounter": 176,
+  "versionId": "6403c93c-6e90-4928-9f08-c54b742655ee",
+  "activeVersionId": "6403c93c-6e90-4928-9f08-c54b742655ee",
+  "versionCounter": 179,
   "triggerCount": 1,
   "shared": [
     {
