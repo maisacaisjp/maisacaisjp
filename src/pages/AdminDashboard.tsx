@@ -3484,23 +3484,23 @@ export default function AdminDashboard() {
                       <div ref={pedidosListaRef} className="overflow-x-auto">
                       <table className="w-full table-fixed text-left">
                         <colgroup>
-                          <col className="w-[124px]" />
+                          <col className="w-[130px]" />
                           <col />
-                          <col className="w-[118px]" />
-                          <col className="w-[19%]" />
-                          <col className="w-[100px]" />
-                          <col className="w-[178px]" />
-                          <col className="w-[230px]" />
+                          <col className="w-[150px]" />
+                          <col className="w-[16%]" />
+                          <col className="w-[112px]" />
+                          <col className="w-[196px]" />
+                          <col className="w-[250px]" />
                         </colgroup>
                         <thead>
                           <tr className="border-b border-stone-100 text-[11px] font-semibold text-stone-400 uppercase tracking-wider bg-stone-50/60">
-                            <th className="h-9 pl-4 pr-3 font-semibold">Pedido</th>
-                            <th className="h-9 px-3 font-semibold">Cliente</th>
-                            <th className="h-9 px-3 font-semibold">Tipo</th>
-                            <th className="h-9 px-3 font-semibold">Pagamento</th>
-                            <th className="h-9 px-3 font-semibold text-right">Valor</th>
-                            <th className="h-9 px-3 font-semibold">Status</th>
-                            <th className="h-9 pl-3 pr-4 font-semibold text-right">Ações</th>
+                            <th className="h-10 pl-5 pr-3 font-semibold">Pedido</th>
+                            <th className="h-10 px-3 font-semibold">Cliente</th>
+                            <th className="h-10 px-3 font-semibold">Tipo</th>
+                            <th className="h-10 px-3 font-semibold">Pagamento</th>
+                            <th className="h-10 px-3 font-semibold text-right">Valor</th>
+                            <th className="h-10 pl-5 pr-3 font-semibold">Status</th>
+                            <th className="h-10 pl-3 pr-5 font-semibold text-right">Ações</th>
                           </tr>
                         </thead>
                         <tbody className="text-[13px] divide-y divide-stone-100">
@@ -3511,64 +3511,75 @@ export default function AdminDashboard() {
                             const isRetirada = order.orderType === 'retirada';
                             const ativo = order.status !== 'Finalizado' && order.status !== 'Cancelado';
                             const corEspera = elapsed.urgency === 'danger' ? 'text-rose-600 font-semibold' : elapsed.urgency === 'warning' ? 'text-amber-600 font-semibold' : 'text-stone-400';
+                            // Nome em formato "Isabele Pedroso" (sem caixa alta gritando) e telefone legível
+                            const nomeCliente = String(order.customerName || 'Cliente')
+                              .trim()
+                              .toLowerCase()
+                              .replace(/(^|\s)(\p{L})/gu, (_m: string, esp: string, l: string) => esp + l.toUpperCase())
+                              .replace(/\s(D[aeo]s?|E)\s/g, (m: string) => m.toLowerCase());
+                            const dig = String(order.customerPhone || '').replace(/\D/g, '').replace(/^55(?=\d{10,11}$)/, '');
+                            const foneCliente = dig.length === 11 ? `(${dig.slice(0, 2)}) ${dig.slice(2, 7)}-${dig.slice(7)}` : dig.length === 10 ? `(${dig.slice(0, 2)}) ${dig.slice(2, 6)}-${dig.slice(6)}` : order.customerPhone || '';
+                            const temTroco = order.changeFor && Number(order.changeFor) > 0;
 
                             return (
-                              <tr key={order.id} className={`h-14 transition-colors ${order.status === 'Pendente' ? 'bg-amber-50/40 hover:bg-amber-50/70' : 'hover:bg-brand-50/40'}`}>
-                                <td className="pl-4 pr-3 py-2 whitespace-nowrap">
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="font-bold text-stone-900 tabular-nums text-[14px]">#{order.id}</span>
+                              <tr key={order.id} className={`transition-colors ${order.status === 'Pendente' ? 'bg-amber-50/40 hover:bg-amber-50/70' : 'hover:bg-brand-50/40'}`}>
+                                <td className="pl-5 pr-3 py-4 whitespace-nowrap align-middle">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-bold text-stone-900 tabular-nums text-[15px] leading-none">#{order.id}</span>
                                     {(order.isEdited || order.is_edited) && (
-                                      <span className="text-[11px] font-semibold px-1.5 rounded bg-amber-100 text-amber-900">editado</span>
+                                      <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 leading-none">editado</span>
                                     )}
                                   </div>
-                                  <div className="text-[12px] text-stone-500 tabular-nums">
+                                  <div className="mt-1.5 text-[12px] text-stone-500 tabular-nums leading-none">
                                     {new Date(order.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                                     {ativo && elapsed.text && <span className={corEspera}> · {elapsed.text}</span>}
                                   </div>
                                 </td>
 
-                                <td className="px-3 py-2">
-                                  <div className="font-semibold text-stone-900 text-[14px] truncate">{order.customerName}</div>
-                                  <div className="flex items-center gap-2 text-[12px] text-stone-500">
-                                    {order.customerPhone && (
-                                      <a href={`tel:${order.customerPhone}`} className="hover:text-brand-700 tabular-nums transition-colors">
-                                        {order.customerPhone}
-                                      </a>
-                                    )}
-                                    {order.nif && <span className="px-1 bg-stone-100 rounded text-[11px] font-semibold">CPF {order.nif}</span>}
+                                <td className="px-3 py-4 align-middle">
+                                  <div className="font-semibold text-stone-900 text-[14px] leading-tight truncate" title={nomeCliente}>
+                                    {nomeCliente}
                                   </div>
+                                  {foneCliente && (
+                                    <a href={`tel:${dig || order.customerPhone}`} className="mt-1.5 block text-[12px] text-stone-500 hover:text-brand-700 tabular-nums leading-none transition-colors w-fit">
+                                      {foneCliente}
+                                    </a>
+                                  )}
                                 </td>
 
-                                <td className="px-3 py-2 whitespace-nowrap">
+                                <td className="px-3 py-4 align-middle">
                                   <span
                                     title={isDelivery && order.deliveryAddress ? `Endereço: ${order.deliveryAddress}` : undefined}
-                                    className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[12px] font-semibold ${
+                                    className={`inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-[12px] font-semibold whitespace-nowrap ${
                                       isDelivery ? 'bg-sky-50 text-sky-800' : isRetirada ? 'bg-brand-50 text-brand-800' : 'bg-stone-100 text-stone-700'
                                     }`}
                                   >
                                     {isDelivery ? <Bike size={13} /> : <Store size={13} />}
                                     {isDelivery ? 'Entrega' : isRetirada ? 'Retirada' : 'Balcão'}
                                   </span>
+                                  {isDelivery && order.deliveryZone && (
+                                    <div className="mt-1.5 text-[12px] text-stone-500 leading-none truncate" title={order.deliveryAddress || order.deliveryZone}>
+                                      {order.deliveryZone}
+                                    </div>
+                                  )}
                                 </td>
 
-                                <td className="px-3 py-2">
-                                  <div className="flex items-center gap-1.5 min-w-0">
-                                    <span className="truncate text-stone-700" title={order.paymentMethod || 'Dinheiro'}>
-                                      {order.paymentMethod || 'Dinheiro'}
-                                    </span>
-                                    {order.changeFor && Number(order.changeFor) > 0 && (
-                                      <span className="shrink-0 text-[11px] font-semibold text-amber-800 bg-amber-50 px-1.5 rounded border border-amber-200 whitespace-nowrap">
-                                        troco p/ {brl(Number(order.changeFor))}
-                                      </span>
-                                    )}
+                                <td className="px-3 py-4 align-middle">
+                                  <div className="text-[13px] text-stone-800 font-medium leading-tight truncate" title={order.paymentMethod || 'Dinheiro'}>
+                                    {order.paymentMethod || 'Dinheiro'}
                                   </div>
+                                  {temTroco && (
+                                    <div className="mt-1.5 text-[12px] font-semibold text-amber-700 leading-none whitespace-nowrap">
+                                      Troco p/ {brl(Number(order.changeFor))}
+                                    </div>
+                                  )}
                                 </td>
 
-                                <td className="px-3 py-2 text-right font-bold tabular-nums text-stone-900 text-[14px] whitespace-nowrap">
+                                <td className="px-3 py-4 align-middle text-right font-bold tabular-nums text-stone-900 text-[15px] whitespace-nowrap">
                                   {brl(Number(Number(order.totalAmount || 0)))}
                                 </td>
 
-                                <td className="px-3 py-2">
+                                <td className="pl-5 pr-3 py-4 align-middle">
                                   <select
                                     value={order.status}
                                     onChange={(e) => updateOrderStatus(order.id, e.target.value)}
@@ -3583,8 +3594,9 @@ export default function AdminDashboard() {
                                   </select>
                                 </td>
 
-                                <td className="pl-3 pr-4 py-2">
+                                <td className="pl-3 pr-5 py-4 align-middle">
                                   <div className="flex items-center justify-end gap-1">
+                                    <div className="mr-2 empty:hidden">
                                     {order.status === 'Pendente' && (
                                       <button
                                         onClick={() => updateOrderStatus(order.id, 'Em Preparo')}
@@ -3612,6 +3624,7 @@ export default function AdminDashboard() {
                                         Concluir
                                       </button>
                                     )}
+                                    </div>
                                     <button
                                       onClick={() => handlePrintOrder(order)}
                                       className="w-8 h-8 flex items-center justify-center text-stone-500 hover:text-stone-900 hover:bg-stone-100 rounded-lg transition-colors cursor-pointer"
