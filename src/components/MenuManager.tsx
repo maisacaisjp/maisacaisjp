@@ -136,14 +136,8 @@ export default function MenuManager() {
   };
 
   useEffect(() => {
-    // Check and create 'mais-pedidos' category if missing
-    supabase.from('categories').select('id').eq('id', 'mais-pedidos').then(({data}) => {
-      if (!data || data.length === 0) {
-        supabase.from('categories').insert({id: 'mais-pedidos', name: 'OS MAIS PEDIDOS 🔥', order_index: 2}).then(() => {
-          loadData();
-        });
-      }
-    });
+    // A categoria "Os mais pedidos" não é mais recriada sozinha: a loja pode excluir e ela não volta.
+    // (No cardápio, o carrossel de mais pedidos só aparece se algum produto estiver marcado como destaque.)
     garantirCremes()
       .then(criou => {
         if (criou) {
@@ -162,7 +156,6 @@ export default function MenuManager() {
     // Insert categories first
     const predefinedCategories = [
       { id: 'promocoes', name: 'PROMOÇÃO DO DIA', order_index: 1 },
-      { id: 'mais-pedidos', name: 'OS MAIS PEDIDOS 🔥', order_index: 2 },
       { id: 'pizzas', name: 'Pizzas', order_index: 3 },
       { id: 'esfihas-salgadas-tradicionais', name: 'Esfihas Salgadas Tradicionais', order_index: 4 },
       { id: 'esfihas-salgadas-especiais', name: 'Esfihas Salgadas Especiais', order_index: 5 },

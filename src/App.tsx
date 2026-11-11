@@ -442,7 +442,7 @@ function App({ abrirConta = false }: { abrirConta?: boolean }) {
 
     const hasBestsellers = menuItems.some((item: any) => item.isBestseller);
     const allTabs = hasBestsellers && !tabsMap['mais-pedidos']
-      ? [...dbTabs, { id: "mais-pedidos", label: "OS MAIS PEDIDOS 🔥", sub: "Os queridinhos dos nossos clientes", group: ["mais-pedidos"], order: 0 }]
+      ? [...dbTabs, { id: "mais-pedidos", label: "OS MAIS PEDIDOS 🔥", sub: "Os queridinhos dos nossos clientes", group: ["mais-pedidos"], order: 1.5 }]
       : dbTabs;
 
     return allTabs.sort((a, b) => a.order - b.order);
