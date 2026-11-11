@@ -237,315 +237,354 @@ export default function CashSessionDetailsModal({ session, onClose }: CashSessio
 
   if (!session) return null;
 
+  const brl = (v: number) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const nomeBonito = (n: any) =>
+    String(n || '').trim().toLowerCase()
+      .replace(/(^|\s)(\p{L})/gu, (_m: string, e: string, l: string) => e + l.toUpperCase())
+      .replace(/\s(D[aeo]s?|E)\s/g, (m: string) => m.toLowerCase());
+  const foneBonito = (t: any) => {
+    const d = String(t || '').replace(/\D/g, '').replace(/^55(?=\d{10,11}$)/, '');
+    if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+    if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+    return String(t || '');
+  };
+  const fechado = session.status === 'fechado';
+  const diferenca = summary.difference;
+  const exata = Math.abs(diferenca) < 0.005;
+  const ticketMedio = summary.totalOrdersCount > 0 ? summary.totalRevenue / summary.totalOrdersCount : 0;
+  const abertura = session.opened_at ? new Date(session.opened_at) : null;
+  const fechamento = session.closed_at ? new Date(session.closed_at) : null;
+
+  const corPagamento = (pm: string) => {
+    const p = pm.toLowerCase();
+    if (p.includes('dinheiro')) return 'bg-emerald-500';
+    if (p.includes('pix')) return 'bg-sky-500';
+    if (p.includes('créd') || p.includes('cred')) return 'bg-violet-500';
+    if (p.includes('déb') || p.includes('deb')) return 'bg-indigo-400';
+    return 'bg-stone-400';
+  };
+
+  const pagamentosPorCanal = (orders: any[]) =>
+    Object.entries(
+      orders.reduce((acc: Record<string, number>, o: any) => {
+        paymentParts(o.payment_method || o.paymentMethod, Number(o.total_amount || o.totalAmount || 0)).forEach((part) => {
+          const pm = normalizePaymentMethod(part.method);
+          acc[pm] = (acc[pm] || 0) + part.amount;
+        });
+        return acc;
+      }, {})
+    )
+      .map(([pm, val]) => `${pm} ${brl(Number(val))}`)
+      .join(' · ');
+
+  const canais = [
+    { chave: 'entrega', nome: 'Entrega', icone: <Bike size={16} />, cor: 'text-sky-700 bg-sky-50', barra: 'bg-sky-500', dados: summary.entrega },
+    { chave: 'retirada', nome: 'Retirada / balcão', icone: <ShoppingBag size={16} />, cor: 'text-brand-700 bg-brand-50', barra: 'bg-brand-500', dados: summary.retirada },
+    { chave: 'mesa', nome: 'Mesa', icone: <UtensilsCrossed size={16} />, cor: 'text-emerald-700 bg-emerald-50', barra: 'bg-emerald-500', dados: summary.mesa },
+  ];
+
+  const pagamentos = Object.entries(summary.paymentTotals as Record<string, number>).sort((a, b) => b[1] - a[1]);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-3 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-[#111110] rounded-none sm:rounded-xl w-full h-full sm:h-auto sm:max-w-[1380px] sm:max-h-[95vh] flex flex-col shadow-2xl border-0 sm:border border-stone-800 relative overflow-hidden">
-        
-        {/* CABEÇALHO ULTRA DENSO (BOLDER) */}
-        <div className="px-3.5 py-1.5 bg-[#0a0a09] border-b border-stone-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <span className={`w-2 h-2 rounded-full ${session.status === 'fechado' ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`} />
-            <h2 className="font-mono font-bold text-white text-base sm:text-lg tracking-tight flex items-center gap-2">
-              FECHAMENTO
-            </h2>
-            <span className={`text-[9.5px] font-mono font-bold px-2 py-0.5 rounded uppercase border ${
-              session.status === 'fechado' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-            }`}>
-              {session.status === 'fechado' ? 'FECHADO' : 'EM ABERTO'}
-            </span>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-6 bg-stone-950/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-stone-50 rounded-none sm:rounded-2xl w-full h-full sm:h-[90vh] sm:max-w-[1240px] flex flex-col shadow-2xl border-0 sm:border border-stone-200 relative overflow-hidden">
+
+        {/* CABEÇALHO */}
+        <div className="px-5 sm:px-7 py-4 bg-white border-b border-stone-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shrink-0">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2.5">
+              <h2 className="font-bold text-stone-900 text-lg sm:text-xl tracking-tight">Fechamento de caixa</h2>
+              <span className={`inline-flex items-center gap-1.5 text-[12px] font-semibold px-2.5 py-1 rounded-full ${fechado ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${fechado ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`} />
+                {fechado ? 'Fechado' : 'Em aberto'}
+              </span>
+            </div>
+            {abertura && (
+              <p className="mt-1 text-[13px] text-stone-500 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                <span className="inline-flex items-center gap-1.5"><Calendar size={13} /> {format(abertura, "EEEE, dd 'de' MMMM", { locale: ptBR })}</span>
+                <span className="text-stone-300">•</span>
+                <span className="inline-flex items-center gap-1.5 tabular-nums">
+                  <Clock size={13} /> {format(abertura, 'HH:mm')} {fechamento ? `até ${format(fechamento, 'HH:mm')}` : 'até agora'}
+                </span>
+                <span className="text-stone-300">•</span>
+                <span className="tabular-nums">{summary.durationText}</span>
+              </p>
+            )}
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="flex bg-stone-900 rounded p-1 border border-stone-800">
-              <button onClick={() => setActiveTab('balanco')} className={`px-3 py-1 text-xs font-mono font-bold rounded ${activeTab === 'balanco' ? 'bg-[#fdde58] text-black' : 'text-stone-400 hover:text-white'}`}>BALANÇO</button>
-              <button onClick={() => setActiveTab('pedidos')} className={`px-3 py-1 text-xs font-mono font-bold rounded flex items-center gap-1.5 ${activeTab === 'pedidos' ? 'bg-[#fdde58] text-black' : 'text-stone-400 hover:text-white'}`}>
-                PEDIDOS <span className={`px-1.5 py-0.5 rounded text-[9px] ${activeTab === 'pedidos' ? 'bg-black/20' : 'bg-stone-800'}`}>{summary.totalOrdersCount}</span>
+          <div className="flex items-center gap-3 self-stretch sm:self-auto">
+            <div className="flex bg-stone-100 rounded-xl p-1 flex-1 sm:flex-none">
+              <button
+                onClick={() => setActiveTab('balanco')}
+                className={`flex-1 sm:flex-none px-4 h-9 text-[13px] font-semibold rounded-lg transition-colors cursor-pointer ${activeTab === 'balanco' ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500 hover:text-stone-800'}`}
+              >
+                Resumo
+              </button>
+              <button
+                onClick={() => setActiveTab('pedidos')}
+                className={`flex-1 sm:flex-none px-4 h-9 text-[13px] font-semibold rounded-lg transition-colors cursor-pointer inline-flex items-center justify-center gap-2 ${activeTab === 'pedidos' ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500 hover:text-stone-800'}`}
+              >
+                Pedidos
+                <span className={`min-w-[22px] h-[22px] px-1.5 inline-flex items-center justify-center rounded-full text-[11px] ${activeTab === 'pedidos' ? 'bg-brand-600 text-white' : 'bg-stone-200 text-stone-600'}`}>
+                  {summary.totalOrdersCount}
+                </span>
               </button>
             </div>
-            <button onClick={onClose} className="p-1.5 text-stone-400 hover:text-white bg-stone-900 hover:bg-stone-800 rounded transition-colors"><X size={16} /></button>
+            <button onClick={onClose} title="Fechar (Esc)" className="w-10 h-10 shrink-0 flex items-center justify-center text-stone-500 hover:text-stone-900 hover:bg-stone-100 rounded-xl transition-colors cursor-pointer">
+              <X size={20} />
+            </button>
           </div>
         </div>
 
-        {/* ESTATÍSTICAS INLINE NO TOPO */}
-        {activeTab === 'balanco' && (
-          <div className="px-3 py-1 bg-stone-900/60 border-b border-stone-800 flex items-center justify-between gap-3 shrink-0 overflow-x-auto no-scrollbar">
-            <div className="flex gap-4 sm:gap-6 min-w-max">
-              <div className="flex flex-col">
-                <span className="text-[9px] font-mono text-stone-500 uppercase tracking-wider">Faturamento Bruto</span>
-                <span className="font-mono text-white font-bold text-xs sm:text-sm leading-tight">R$ {summary.totalRevenue.toFixed(2)}</span>
-              </div>
-              <div className="flex flex-col border-l border-stone-800 pl-4 sm:pl-6">
-                <span className="text-[9px] font-mono text-stone-500 uppercase tracking-wider">Dinheiro</span>
-                <span className="font-mono text-emerald-400 font-bold text-xs sm:text-sm leading-tight">R$ {summary.totalDinheiro.toFixed(2)}</span>
-              </div>
-              <div className="flex flex-col border-l border-stone-800 pl-4 sm:pl-6">
-                <span className="text-[9px] font-mono text-stone-500 uppercase tracking-wider">PIX</span>
-                <span className="font-mono text-blue-400 font-bold text-xs sm:text-sm leading-tight">R$ {(summary.paymentTotals['PIX'] || summary.paymentTotals['PIX'] || summary.paymentTotals['mbway'] || 0).toFixed(2)}</span>
-              </div>
-              <div className="flex flex-col border-l border-stone-800 pl-4 sm:pl-6">
-                <span className="text-[9px] font-mono text-[#fdde58]/70 uppercase tracking-wider">Caixa (Fundo + Vendas)</span>
-                <span className="font-mono text-[#fdde58] font-bold text-xs sm:text-sm leading-tight">R$ {(summary.fundoInicial + summary.totalDinheiro).toFixed(2)}</span>
-              </div>
-            </div>
-            
-            <div className="text-[9px] font-mono text-stone-500 flex gap-2.5 text-right shrink-0">
-              <span>ABERTURA: {format(new Date(session.opened_at), "HH:mm", { locale: ptBR })}</span>
-              {session.closed_at && <span>FECHAMENTO: {format(new Date(session.closed_at), "HH:mm", { locale: ptBR })}</span>}
-            </div>
-          </div>
-        )}
-
-        <div className="flex-1 overflow-y-auto bg-[#111110]">
+        <div className="flex-1 overflow-y-auto">
           {loading ? (
-            <div className="py-20 flex flex-col items-center justify-center text-stone-500">
-              <div className="w-8 h-8 border-2 border-stone-800 border-t-[#fdde58] rounded-full animate-spin mb-4" />
-              <p className="font-mono text-xs uppercase tracking-widest">Auditando Sessão...</p>
+            <div className="py-24 flex flex-col items-center justify-center text-stone-500">
+              <div className="w-8 h-8 border-2 border-stone-200 border-t-brand-600 rounded-full animate-spin mb-4" />
+              <p className="text-sm">Carregando o fechamento...</p>
             </div>
           ) : activeTab === 'balanco' ? (
-            
-            /* ========================================================= */
-            /* ABA 1: BALANÇO & CONFERÊNCIA FINANCEIRA (GRID COMPACTA ZERO SCROLL) */
-            /* ========================================================= */
-            <div className="p-2 sm:p-2.5 grid grid-cols-1 lg:grid-cols-3 gap-2 items-start">
-              
-              {/* COLUNA 1: CANAIS */}
-              <div className="bg-stone-900 border border-stone-800 rounded-lg p-2 flex flex-col">
-                <h3 className="font-mono text-[9px] text-stone-500 uppercase tracking-widest mb-1.5 border-b border-stone-800 pb-1 flex items-center gap-1.5">
-                  <Sparkles size={11} className="text-[#fdde58]" /> Canais de Atendimento
-                </h3>
-                <div className="space-y-1.5 flex-1">
-                  
-                  {/* Entrega */}
-                  <div className="p-1.5 sm:p-2 rounded bg-black/40 border border-stone-800/60">
-                    <div className="flex justify-between items-center mb-0.5">
-                      <span className="font-mono text-[11px] font-bold text-stone-300 flex items-center gap-1.5">
-                        <Bike size={12} className="text-amber-500" /> ENTREGA
-                      </span>
-                      <span className="font-mono text-xs sm:text-sm font-bold text-white">R$ {summary.entrega.total.toFixed(2)}</span>
-                    </div>
-                    <div className="text-[9px] font-mono text-stone-500 flex justify-between items-center">
-                      <span>{summary.entrega.count} pedidos</span>
-                      {summary.entrega.count > 0 && <span className="truncate max-w-[180px]">{Object.entries(summary.entrega.orders.reduce((acc: Record<string, number>, o: any) => { paymentParts(o.payment_method || o.paymentMethod, Number(o.total_amount || o.totalAmount || 0)).forEach(part => { const pm = normalizePaymentMethod(part.method); acc[pm] = (acc[pm] || 0) + part.amount; }); return acc; }, {})).map(([pm, val]) => `${pm} R$ ${Number(val).toFixed(2)}`).join(' | ')}</span>}
-                    </div>
-                  </div>
 
-                  {/* Mesa */}
-                  <div className="p-1.5 sm:p-2 rounded bg-black/40 border border-stone-800/60">
-                    <div className="flex justify-between items-center mb-0.5">
-                      <span className="font-mono text-[11px] font-bold text-stone-300 flex items-center gap-1.5">
-                        <UtensilsCrossed size={12} className="text-emerald-500" /> MESA
-                      </span>
-                      <span className="font-mono text-xs sm:text-sm font-bold text-white">R$ {summary.mesa.total.toFixed(2)}</span>
-                    </div>
-                    <div className="text-[9px] font-mono text-stone-500 flex justify-between items-center">
-                      <span>{summary.mesa.count} pedidos</span>
-                      {summary.mesa.count > 0 && <span className="truncate max-w-[180px]">{Object.entries(summary.mesa.orders.reduce((acc: Record<string, number>, o: any) => { paymentParts(o.payment_method || o.paymentMethod, Number(o.total_amount || o.totalAmount || 0)).forEach(part => { const pm = normalizePaymentMethod(part.method); acc[pm] = (acc[pm] || 0) + part.amount; }); return acc; }, {})).map(([pm, val]) => `${pm} R$ ${Number(val).toFixed(2)}`).join(' | ')}</span>}
-                    </div>
-                  </div>
+            /* ===================== ABA RESUMO ===================== */
+            <div className="p-5 sm:p-7 space-y-6">
 
-                  {/* Retirada */}
-                  <div className="p-1.5 sm:p-2 rounded bg-black/40 border border-stone-800/60">
-                    <div className="flex justify-between items-center mb-0.5">
-                      <span className="font-mono text-[11px] font-bold text-stone-300 flex items-center gap-1.5">
-                        <ShoppingBag size={12} className="text-sky-500" /> RETIRADA
-                      </span>
-                      <span className="font-mono text-xs sm:text-sm font-bold text-white">R$ {summary.retirada.total.toFixed(2)}</span>
-                    </div>
-                    <div className="text-[9px] font-mono text-stone-500 flex justify-between items-center">
-                      <span>{summary.retirada.count} pedidos</span>
-                      {summary.retirada.count > 0 && <span className="truncate max-w-[180px]">{Object.entries(summary.retirada.orders.reduce((acc: Record<string, number>, o: any) => { paymentParts(o.payment_method || o.paymentMethod, Number(o.total_amount || o.totalAmount || 0)).forEach(part => { const pm = normalizePaymentMethod(part.method); acc[pm] = (acc[pm] || 0) + part.amount; }); return acc; }, {})).map(([pm, val]) => `${pm} R$ ${Number(val).toFixed(2)}`).join(' | ')}</span>}
-                    </div>
-                  </div>
-
+              {/* Números principais */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-white rounded-2xl border border-stone-200 p-5">
+                  <p className="text-[13px] font-medium text-stone-500">Faturamento</p>
+                  <p className="mt-2 text-2xl sm:text-[28px] font-bold text-stone-900 tabular-nums leading-none">{brl(summary.totalRevenue)}</p>
+                  <p className="mt-2 text-[12px] text-stone-400">Total vendido no turno</p>
+                </div>
+                <div className="bg-white rounded-2xl border border-stone-200 p-5">
+                  <p className="text-[13px] font-medium text-stone-500">Pedidos</p>
+                  <p className="mt-2 text-2xl sm:text-[28px] font-bold text-stone-900 tabular-nums leading-none">{summary.totalOrdersCount}</p>
+                  <p className="mt-2 text-[12px] text-stone-400 tabular-nums">Ticket médio {brl(ticketMedio)}</p>
+                </div>
+                <div className="bg-white rounded-2xl border border-stone-200 p-5">
+                  <p className="text-[13px] font-medium text-stone-500">Dinheiro na gaveta</p>
+                  <p className="mt-2 text-2xl sm:text-[28px] font-bold text-stone-900 tabular-nums leading-none">{brl(summary.expectedCash)}</p>
+                  <p className="mt-2 text-[12px] text-stone-400">Esperado no fechamento</p>
+                </div>
+                <div className={`rounded-2xl border p-5 ${!fechado ? 'bg-white border-stone-200' : exata ? 'bg-emerald-50 border-emerald-200' : diferenca < 0 ? 'bg-rose-50 border-rose-200' : 'bg-amber-50 border-amber-200'}`}>
+                  <p className={`text-[13px] font-medium ${!fechado ? 'text-stone-500' : exata ? 'text-emerald-700' : diferenca < 0 ? 'text-rose-700' : 'text-amber-700'}`}>Conferência</p>
+                  {fechado ? (
+                    <>
+                      <p className={`mt-2 text-2xl sm:text-[28px] font-bold tabular-nums leading-none ${exata ? 'text-emerald-700' : diferenca < 0 ? 'text-rose-700' : 'text-amber-700'}`}>
+                        {exata ? 'Bateu' : diferenca < 0 ? `Falta ${brl(Math.abs(diferenca))}` : `Sobra ${brl(diferenca)}`}
+                      </p>
+                      <p className={`mt-2 text-[12px] tabular-nums ${exata ? 'text-emerald-700/70' : diferenca < 0 ? 'text-rose-700/70' : 'text-amber-700/70'}`}>Contado {brl(summary.countedCash)}</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="mt-2 text-xl font-bold text-stone-400 leading-none">Caixa aberto</p>
+                      <p className="mt-2 text-[12px] text-stone-400">Conferido ao fechar</p>
+                    </>
+                  )}
                 </div>
               </div>
 
-              {/* COLUNA 2: PAGAMENTOS E MOVS */}
-              <div className="bg-stone-900 border border-stone-800 rounded-lg p-2 flex flex-col gap-1.5">
-                
-                {/* Pagamentos */}
-                <div>
-                  <h3 className="font-mono text-[9px] text-stone-500 uppercase tracking-widest mb-1.5 border-b border-stone-800 pb-1 flex items-center gap-1.5">
-                    <CreditCard size={11} /> Recebimentos
-                  </h3>
-                  <div className="space-y-1.5">
-                    {Object.entries(summary.paymentTotals).map(([pm, val]: any) => {
-                      const pct = summary.totalRevenue > 0 ? (val / summary.totalRevenue) * 100 : 0;
-                      return (
-                        <div key={pm}>
-                          <div className="flex justify-between text-[11px] font-mono mb-0.5">
-                            <span className="text-stone-300">{pm}</span>
-                            <span className="font-bold text-white">R$ {val.toFixed(2)}</span>
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
+
+                {/* Coluna esquerda: canais e pagamentos */}
+                <div className="lg:col-span-3 space-y-6">
+
+                  <section className="bg-white rounded-2xl border border-stone-200">
+                    <header className="px-5 pt-5 pb-3">
+                      <h3 className="text-[15px] font-semibold text-stone-900">Vendas por canal</h3>
+                    </header>
+                    <div className="px-5 pb-2 divide-y divide-stone-100">
+                      {canais.map((c) => {
+                        const pct = summary.totalRevenue > 0 ? (c.dados.total / summary.totalRevenue) * 100 : 0;
+                        const vazio = c.dados.count === 0;
+                        return (
+                          <div key={c.chave} className={`py-4 flex items-center gap-4 ${vazio ? 'opacity-50' : ''}`}>
+                            <span className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center ${c.cor}`}>{c.icone}</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-baseline justify-between gap-3">
+                                <span className="text-[14px] font-semibold text-stone-900">{c.nome}</span>
+                                <span className="text-[15px] font-bold text-stone-900 tabular-nums whitespace-nowrap">{brl(c.dados.total)}</span>
+                              </div>
+                              <div className="mt-2 h-1.5 w-full bg-stone-100 rounded-full overflow-hidden">
+                                <div className={`h-full rounded-full ${c.barra}`} style={{ width: `${pct}%` }} />
+                              </div>
+                              <div className="mt-1.5 flex items-center justify-between gap-3 text-[12px] text-stone-500">
+                                <span>{c.dados.count} {c.dados.count === 1 ? 'pedido' : 'pedidos'}</span>
+                                {!vazio && <span className="truncate tabular-nums">{pagamentosPorCanal(c.dados.orders)}</span>}
+                              </div>
+                            </div>
                           </div>
-                          <div className="h-1 w-full bg-stone-800 rounded-full overflow-hidden">
-                            <div className="h-full bg-stone-400" style={{ width: `${pct}%` }} />
+                        );
+                      })}
+                    </div>
+                  </section>
+
+                  <section className="bg-white rounded-2xl border border-stone-200">
+                    <header className="px-5 pt-5 pb-3">
+                      <h3 className="text-[15px] font-semibold text-stone-900">Formas de pagamento</h3>
+                    </header>
+                    <div className="px-5 pb-5 space-y-4">
+                      {pagamentos.length === 0 ? (
+                        <p className="text-[13px] text-stone-400 py-2">Nenhum recebimento neste turno.</p>
+                      ) : (
+                        pagamentos.map(([pm, val]) => {
+                          const pct = summary.totalRevenue > 0 ? (val / summary.totalRevenue) * 100 : 0;
+                          return (
+                            <div key={pm}>
+                              <div className="flex items-baseline justify-between gap-3">
+                                <span className="inline-flex items-center gap-2 text-[14px] font-medium text-stone-800">
+                                  <span className={`w-2.5 h-2.5 rounded-full ${corPagamento(pm)}`} /> {pm}
+                                </span>
+                                <span className="text-[14px] tabular-nums whitespace-nowrap">
+                                  <span className="text-stone-400 mr-3">{pct.toFixed(0)}%</span>
+                                  <span className="font-bold text-stone-900">{brl(val)}</span>
+                                </span>
+                              </div>
+                              <div className="mt-2 h-1.5 w-full bg-stone-100 rounded-full overflow-hidden">
+                                <div className={`h-full rounded-full ${corPagamento(pm)}`} style={{ width: `${pct}%` }} />
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </section>
+                </div>
+
+                {/* Coluna direita: conferência da gaveta e movimentações */}
+                <div className="lg:col-span-2 space-y-6">
+
+                  <section className="bg-white rounded-2xl border border-stone-200">
+                    <header className="px-5 pt-5 pb-3 flex items-center gap-2">
+                      <Wallet size={17} className="text-brand-600" />
+                      <h3 className="text-[15px] font-semibold text-stone-900">Conferência da gaveta</h3>
+                    </header>
+                    <dl className="px-5 text-[14px]">
+                      <div className="flex justify-between py-3 border-b border-stone-100">
+                        <dt className="text-stone-600">Fundo de abertura</dt>
+                        <dd className="tabular-nums text-stone-900">{brl(summary.fundoInicial)}</dd>
+                      </div>
+                      <div className="flex justify-between py-3 border-b border-stone-100">
+                        <dt className="text-stone-600">Vendas em dinheiro</dt>
+                        <dd className="tabular-nums text-emerald-700">+ {brl(summary.totalDinheiro)}</dd>
+                      </div>
+                      <div className="flex justify-between py-3 border-b border-stone-100">
+                        <dt className="text-stone-600">Suprimentos</dt>
+                        <dd className="tabular-nums text-emerald-700">+ {brl(summary.suprimentosTotal)}</dd>
+                      </div>
+                      <div className="flex justify-between py-3">
+                        <dt className="text-stone-600">Sangrias</dt>
+                        <dd className="tabular-nums text-rose-700">− {brl(summary.sangriasTotal)}</dd>
+                      </div>
+                    </dl>
+                    <div className="mx-5 mb-5 mt-1 rounded-xl bg-stone-50 border border-stone-200 divide-y divide-stone-200">
+                      <div className="flex justify-between items-center px-4 py-3.5">
+                        <span className="text-[14px] font-semibold text-stone-900">Saldo esperado</span>
+                        <span className="text-[17px] font-bold text-stone-900 tabular-nums">{brl(summary.expectedCash)}</span>
+                      </div>
+                      {fechado && (
+                        <>
+                          <div className="flex justify-between items-center px-4 py-3.5">
+                            <span className="text-[14px] text-stone-600">Valor contado</span>
+                            <span className="text-[15px] font-semibold text-stone-900 tabular-nums">{brl(summary.countedCash)}</span>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Movimentações */}
-                <div className="flex-1 mt-0.5 border-t border-stone-800 pt-1.5">
-                  <h3 className="font-mono text-[9px] text-stone-500 uppercase tracking-widest mb-1 border-b border-stone-800 pb-0.5">Movimentações Avulsas</h3>
-                  <div className="grid grid-cols-2 gap-1.5 mb-1">
-                    <div className="bg-emerald-950/30 border border-emerald-900/50 px-2 py-1 rounded">
-                      <span className="text-[8.5px] font-mono text-emerald-500 block leading-tight">SUPRIMENTOS</span>
-                      <span className="text-emerald-400 font-mono font-bold text-xs leading-tight">+ R$ {summary.suprimentosTotal.toFixed(2)}</span>
+                          <div className="flex justify-between items-center px-4 py-3.5">
+                            <span className="text-[14px] text-stone-600">Diferença</span>
+                            <span className={`text-[15px] font-bold tabular-nums ${exata ? 'text-emerald-700' : diferenca < 0 ? 'text-rose-700' : 'text-amber-700'}`}>
+                              {exata ? 'R$ 0,00 · bateu' : `${diferenca > 0 ? '+ ' : '− '}${brl(Math.abs(diferenca))}`}
+                            </span>
+                          </div>
+                        </>
+                      )}
                     </div>
-                    <div className="bg-rose-950/30 border border-rose-900/50 px-2 py-1 rounded">
-                      <span className="text-[8.5px] font-mono text-rose-500 block leading-tight">SANGRIAS</span>
-                      <span className="text-rose-400 font-mono font-bold text-xs leading-tight">- R$ {summary.sangriasTotal.toFixed(2)}</span>
-                    </div>
-                  </div>
-                  <div className="max-h-16 overflow-y-auto pr-1 space-y-0.5">
-                    {sessionDetails?.movements && sessionDetails.movements.length > 0 ? (
-                      sessionDetails.movements.map((m: any, idx: number) => (
-                        <div key={idx} className="flex justify-between text-[9px] font-mono">
-                          <span className="text-stone-400 uppercase truncate max-w-[150px]">{m.type} {m.notes ? `(${m.notes})` : ''}</span>
-                          <span className={m.type === 'suprimento' ? 'text-emerald-400' : 'text-rose-400'}>{m.type === 'suprimento' ? '+' : '-'} R$ {Number(m.amount||0).toFixed(2)}</span>
-                        </div>
-                      ))
-                    ) : (
-                      <span className="text-[9px] font-mono text-stone-500 italic">Nenhuma movimentação avulsa</span>
-                    )}
-                  </div>
-                </div>
+                  </section>
 
+                  <section className="bg-white rounded-2xl border border-stone-200">
+                    <header className="px-5 pt-5 pb-3 flex items-center gap-2">
+                      <ArrowLeftRight size={17} className="text-stone-500" />
+                      <h3 className="text-[15px] font-semibold text-stone-900">Movimentações avulsas</h3>
+                    </header>
+                    <div className="px-5 pb-5">
+                      {sessionDetails?.movements && sessionDetails.movements.length > 0 ? (
+                        <ul className="divide-y divide-stone-100">
+                          {sessionDetails.movements.map((m: any, idx: number) => {
+                            const entrada = m.type === 'suprimento';
+                            return (
+                              <li key={idx} className="py-3 flex items-center justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className="text-[14px] font-medium text-stone-800">{entrada ? 'Suprimento' : 'Sangria'}</p>
+                                  {m.notes && <p className="mt-0.5 text-[12px] text-stone-500 truncate">{m.notes}</p>}
+                                </div>
+                                <span className={`text-[14px] font-semibold tabular-nums whitespace-nowrap ${entrada ? 'text-emerald-700' : 'text-rose-700'}`}>
+                                  {entrada ? '+ ' : '− '}{brl(Number(m.amount || 0))}
+                                </span>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      ) : (
+                        <p className="text-[13px] text-stone-400">Nenhum suprimento ou sangria neste turno.</p>
+                      )}
+                    </div>
+                  </section>
+                </div>
               </div>
-
-              {/* COLUNA 3: AUDITORIA GAVETA */}
-              <div className="bg-[#1a1a18] border border-[#fdde58]/20 rounded-lg p-2 flex flex-col shadow-[inset_0_0_20px_rgba(253,222,88,0.02)]">
-                <div className="flex items-center justify-between border-b border-stone-800 pb-1 mb-1.5">
-                  <h3 className="font-mono text-[9px] text-[#fdde58] uppercase tracking-widest flex items-center gap-1.5">
-                    <Wallet size={11} /> Auditoria da Gaveta
-                  </h3>
-                  <span className={`text-[8.5px] font-mono font-bold px-1.5 py-0.5 rounded uppercase border ${summary.difference === 0 ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' : 'text-rose-400 border-rose-500/30 bg-rose-500/10'}`}>
-                    {summary.difference === 0 ? 'EXATA' : summary.difference < 0 ? `FALTA R$ ${Math.abs(summary.difference).toFixed(2)}` : `SOBRA R$ ${summary.difference.toFixed(2)}`}
-                  </span>
-                </div>
-
-                <div className="space-y-1 mb-1.5">
-                  <div className="flex justify-between items-center px-2 py-1 rounded bg-stone-900/80 border border-stone-800/50">
-                    <span className="text-[9px] font-mono text-stone-400">FUNDO ABERTURA</span>
-                    <span className="font-mono text-xs text-stone-200">R$ {summary.fundoInicial.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between items-center px-2 py-1 rounded bg-stone-900/80 border border-stone-800/50">
-                    <span className="text-[9px] font-mono text-stone-400">(+) DINHEIRO VENDAS</span>
-                    <span className="font-mono text-xs text-emerald-400">+ R$ {summary.totalDinheiro.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between items-center px-2 py-1 rounded bg-stone-900/80 border border-stone-800/50">
-                    <span className="text-[9px] font-mono text-stone-400">(+/-) MOVS MANUAIS</span>
-                    <span className={`font-mono text-xs ${summary.netManualMovements >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                      {summary.netManualMovements >= 0 ? '+' : ''} R$ {summary.netManualMovements.toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center px-2 py-1.5 rounded bg-[#fdde58]/10 border border-[#fdde58]/30 mt-0.5 shadow-[0_0_15px_rgba(253,222,88,0.05)]">
-                    <span className="text-[9px] font-mono text-[#fdde58] font-bold">(=) SALDO ESPERADO</span>
-                    <span className="font-mono text-sm font-bold text-[#fdde58]">R$ {summary.expectedCash.toFixed(2)}</span>
-                  </div>
-                </div>
-
-                {session.status === 'fechado' && (
-                  <div className="mt-0.5 border-t border-stone-800 pt-1.5 space-y-1">
-                    <div className="flex justify-between items-center px-1">
-                      <span className="text-[9px] font-mono text-stone-400">VALOR CONTADO:</span>
-                      <span className="font-mono text-xs font-bold text-white bg-stone-800 px-2 py-0.5 rounded border border-stone-700">R$ {summary.countedCash.toFixed(2)}</span>
-                    </div>
-                    <div className={`flex justify-between items-center px-2 py-1 rounded ${summary.difference === 0 ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-900/50' : 'bg-rose-950/40 text-rose-400 border border-rose-900/50'}`}>
-                      <span className="text-[9px] font-mono font-bold uppercase">Diferença:</span>
-                      <span className="font-mono text-sm font-black">{summary.difference >= 0 ? '+' : ''} R$ {summary.difference.toFixed(2)}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
             </div>
 
-
           ) : (
-            
-            /* ========================================================= */
-            /* ABA 2: LISTA DE PEDIDOS DO TURNO (COCKPIT DE AUDITORIA) */
-            /* ========================================================= */
-            <div className="p-2 sm:p-2.5 space-y-2">
-              
-              {/* Barra de Controles & Busca Rápida */}
-              <div className="bg-white rounded-xl border border-stone-200/80 p-2 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2">
-                
-                {/* Segmented Filter Pills */}
-                <div className="inline-flex bg-stone-100 p-0.5 rounded-lg border border-stone-200 text-xs font-mono overflow-x-auto">
-                  <button
-                    onClick={() => setOrderTypeFilter('todos')}
-                    className={`px-2.5 py-1 rounded-md font-bold transition-all cursor-pointer whitespace-nowrap text-[11px] ${
-                      orderTypeFilter === 'todos' ? 'bg-stone-900 text-white shadow-xs' : 'text-stone-600 hover:text-stone-900'
-                    }`}
-                  >
-                    Todos ({sessionDetails?.orders?.length || 0})
-                  </button>
-                  <button
-                    onClick={() => setOrderTypeFilter('entrega')}
-                    className={`px-2.5 py-1 rounded-md font-bold transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap text-[11px] ${
-                      orderTypeFilter === 'entrega' ? 'bg-amber-500 text-stone-950 shadow-xs' : 'text-stone-600 hover:text-stone-900'
-                    }`}
-                  >
-                    <Bike size={12} /> Entrega ({summary.entrega.count})
-                  </button>
-                  <button
-                    onClick={() => setOrderTypeFilter('mesa')}
-                    className={`px-2.5 py-1 rounded-md font-bold transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap text-[11px] ${
-                      orderTypeFilter === 'mesa' ? 'bg-emerald-500 text-white shadow-xs' : 'text-stone-600 hover:text-stone-900'
-                    }`}
-                  >
-                    <UtensilsCrossed size={12} /> Mesa ({summary.mesa.count})
-                  </button>
-                  <button
-                    onClick={() => setOrderTypeFilter('retirada')}
-                    className={`px-2.5 py-1 rounded-md font-bold transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap text-[11px] ${
-                      orderTypeFilter === 'retirada' ? 'bg-sky-500 text-white shadow-xs' : 'text-stone-600 hover:text-stone-900'
-                    }`}
-                  >
-                    <ShoppingBag size={12} /> Retirada ({summary.retirada.count})
-                  </button>
+
+            /* ===================== ABA PEDIDOS ===================== */
+            <div className="p-5 sm:p-7 space-y-4">
+
+              {/* Filtros e busca */}
+              <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                <div className="inline-flex bg-white p-1 rounded-xl border border-stone-200 overflow-x-auto">
+                  {([
+                    ['todos', 'Todos', sessionDetails?.orders?.length || 0, null],
+                    ['entrega', 'Entrega', summary.entrega.count, <Bike size={14} key="b" />],
+                    ['retirada', 'Retirada', summary.retirada.count, <ShoppingBag size={14} key="s" />],
+                    ['mesa', 'Mesa', summary.mesa.count, <UtensilsCrossed size={14} key="u" />],
+                  ] as const).map(([chave, nome, qtd, icone]) => (
+                    <button
+                      key={chave}
+                      onClick={() => setOrderTypeFilter(chave as any)}
+                      className={`px-3.5 h-9 rounded-lg text-[13px] font-semibold transition-colors cursor-pointer inline-flex items-center gap-1.5 whitespace-nowrap ${
+                        orderTypeFilter === chave ? 'bg-stone-900 text-white' : 'text-stone-600 hover:text-stone-900'
+                      }`}
+                    >
+                      {icone} {nome} <span className={orderTypeFilter === chave ? 'text-white/60' : 'text-stone-400'}>{qtd}</span>
+                    </button>
+                  ))}
                 </div>
 
-                {/* Input de Busca em Tempo Real */}
-                <div className="flex items-center gap-2">
-                  <div className="relative flex-1 sm:w-64">
-                    <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400" />
+                <div className="flex items-center gap-3">
+                  <div className="relative flex-1 md:w-72">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
                     <input
                       type="text"
                       value={orderSearch}
                       onChange={(e) => setOrderSearch(e.target.value)}
-                      placeholder="Buscar por cliente, pedido, item..."
-                      className="w-full pl-8 pr-7 py-1.5 text-xs bg-stone-50 hover:bg-white focus:bg-white rounded-lg border border-stone-200 focus:outline-none focus:ring-1 focus:ring-stone-900 text-stone-800 placeholder-stone-400 font-medium transition-all"
+                      placeholder="Buscar cliente, nº ou item"
+                      className="w-full h-11 pl-9 pr-9 text-[14px] bg-white rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-300 text-stone-800 placeholder-stone-400 transition-all"
                     />
                     {orderSearch && (
-                      <button 
-                        onClick={() => setOrderSearch('')} 
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700"
-                      >
-                        <X className="w-3 h-3" />
+                      <button onClick={() => setOrderSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700 cursor-pointer">
+                        <X className="w-4 h-4" />
                       </button>
                     )}
                   </div>
-
-                  <div className="hidden lg:flex items-center gap-1 px-2.5 py-1 bg-stone-100 rounded-lg text-xs font-mono text-stone-600 shrink-0 border border-stone-200">
-                    <span>Filtrado:</span>
-                    <strong className="text-stone-950 font-bold">R$ {totalFilteredRevenue.toFixed(2)}</strong>
+                  <div className="hidden lg:block text-right shrink-0">
+                    <p className="text-[11px] text-stone-400 leading-none">Total filtrado</p>
+                    <p className="mt-1 text-[15px] font-bold text-stone-900 tabular-nums leading-none">{brl(totalFilteredRevenue)}</p>
                   </div>
                 </div>
-
               </div>
 
-              {/* Lista de Pedidos Auditados */}
-              <div className="bg-white rounded-xl border border-stone-200 shadow-xs overflow-hidden">
+              {/* Lista de pedidos */}
+              <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden">
                 {filteredOrders.length === 0 ? (
-                  <div className="p-8 text-center text-stone-400 text-xs font-mono space-y-1.5">
-                    <Filter className="w-7 h-7 mx-auto text-stone-300" />
-                    <p className="font-bold text-stone-600">Nenhum pedido encontrado</p>
-                    <p className="text-[11px]">Tente alterar o filtro de canal ou os termos da busca.</p>
+                  <div className="py-16 text-center space-y-2">
+                    <Filter className="w-8 h-8 mx-auto text-stone-300" />
+                    <p className="font-semibold text-stone-700">Nenhum pedido encontrado</p>
+                    <p className="text-[13px] text-stone-400">Troque o filtro de canal ou o texto da busca.</p>
                   </div>
                 ) : (
                   <div className="divide-y divide-stone-100">
@@ -556,271 +595,117 @@ export default function CashSessionDetailsModal({ session, onClose }: CashSessio
                       const items = safeParseItems(order.items);
                       const totalAmt = Number(order.total_amount || order.totalAmount || 0);
                       const orderDate = new Date(order.created_at || order.createdAt);
+                      const troco = Number(order.change_for || order.changeFor || 0);
 
                       return (
-                        <div key={order.id} className="transition-colors hover:bg-stone-50/80">
-                          {/* Linha Resumida Ultra Compacta */}
-                          <div 
-                            onClick={() => toggleExpandOrder(order.id)}
-                            className="px-2.5 py-1.5 sm:px-3 sm:py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 cursor-pointer select-none"
-                          >
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              
-                              {/* ID & Badge do Canal */}
-                              <div className="shrink-0 text-left font-mono">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="font-bold text-xs text-stone-950">#{order.id}</span>
-                                  <span className={`text-[8.5px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider ${
-                                    normType === 'entrega' 
-                                      ? 'bg-amber-50 text-amber-800 border-amber-300' 
-                                      : normType === 'mesa'
-                                      ? 'bg-purple-50 text-purple-700 border-purple-200'
-                                      : 'bg-sky-50 text-sky-800 border-sky-200'
-                                  }`}>
-                                    {normType === 'entrega' ? 'Entrega' : normType === 'mesa' ? 'Mesa' : 'Retirada'}
-                                  </span>
-                                </div>
-                                <div className="text-[9.5px] text-stone-400 flex items-center gap-1 mt-0.5">
-                                  <Clock size={10} />
-                                  <span>{format(orderDate, 'HH:mm')}</span>
-                                </div>
-                              </div>
-
-                              {/* Dados do Cliente e Resumo de Itens */}
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-bold text-xs text-stone-900 truncate">
-                                    {order.customer_name || order.customerName || 'Cliente Balcão'}
-                                  </span>
-                                  {(order.customer_phone || order.customerPhone) && (
-                                    <span className="text-[9.5px] font-mono text-stone-500 hidden md:inline">
-                                      • {order.customer_phone || order.customerPhone}
-                                    </span>
-                                  )}
-                                </div>
-
-                                <div className="text-[9.5px] text-stone-500 truncate mt-0.5">
-                                  {items.length > 0 ? (
-                                    items.map((it: any) => `${it.quantity || 1}x ${it.name}`).join(', ')
-                                  ) : (
-                                    <span className="italic text-stone-400">Nenhum item registrado</span>
-                                  )}
-                                </div>
-                              </div>
-
+                        <div key={order.id} className={isExpanded ? 'bg-stone-50/70' : 'hover:bg-stone-50/60 transition-colors'}>
+                          <div onClick={() => toggleExpandOrder(order.id)} className="px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5 cursor-pointer select-none">
+                            <div className="w-20 shrink-0">
+                              <p className="font-bold text-[15px] text-stone-900 tabular-nums leading-none">#{order.id}</p>
+                              <p className="mt-1.5 text-[12px] text-stone-500 tabular-nums leading-none">{format(orderDate, 'HH:mm')}</p>
                             </div>
 
-                            {/* Forma de Pagamento, Valor e Ações */}
-                            <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-stone-100">
-                              <span className="text-[9.5px] font-mono font-semibold px-2 py-0.5 rounded bg-stone-100 text-stone-700 border border-stone-200">
-                                {normPayment}
-                              </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-semibold text-[14px] text-stone-900 truncate leading-tight">{nomeBonito(order.customer_name || order.customerName) || 'Cliente balcão'}</p>
+                              <p className="mt-1 text-[12px] text-stone-500 truncate">
+                                {items.length > 0 ? items.map((it: any) => `${it.quantity || 1}x ${it.name}`).join(', ') : 'Nenhum item registrado'}
+                              </p>
+                            </div>
 
-                              <span className="font-mono font-bold text-xs text-stone-950 tabular-nums">
-                                R$ {totalAmt.toFixed(2)}
+                            <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0">
+                              <span className={`inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-[12px] font-semibold ${
+                                normType === 'entrega' ? 'bg-sky-50 text-sky-800' : normType === 'mesa' ? 'bg-emerald-50 text-emerald-800' : 'bg-brand-50 text-brand-800'
+                              }`}>
+                                {normType === 'entrega' ? <Bike size={13} /> : normType === 'mesa' ? <UtensilsCrossed size={13} /> : <ShoppingBag size={13} />}
+                                {normType === 'entrega' ? 'Entrega' : normType === 'mesa' ? 'Mesa' : 'Retirada'}
                               </span>
-
+                              <span className="w-28 text-[13px] text-stone-600 truncate">{normPayment}</span>
+                              <span className="w-24 text-right font-bold text-[15px] text-stone-900 tabular-nums">{brl(totalAmt)}</span>
                               <div className="flex items-center gap-1">
                                 <button
                                   type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedReceiptOrder(order);
-                                  }}
-                                  className="p-1 rounded text-stone-500 hover:text-stone-950 hover:bg-stone-200/80 transition-colors cursor-pointer"
-                                  title="Ver Cupom / Imprimir Talão"
+                                  onClick={(e) => { e.stopPropagation(); setSelectedReceiptOrder(order); }}
+                                  className="w-9 h-9 flex items-center justify-center rounded-lg text-stone-500 hover:text-stone-900 hover:bg-stone-100 transition-colors cursor-pointer"
+                                  title="Ver cupom / imprimir"
                                 >
-                                  <Receipt size={14} />
+                                  <Receipt size={16} />
                                 </button>
-                                
-                                <button
-                                  type="button"
-                                  className={`p-1 rounded text-stone-400 transition-transform ${isExpanded ? 'rotate-180 text-stone-900' : ''}`}
-                                  title={isExpanded ? 'Recolher detalhes' : 'Expandir detalhes'}
-                                >
-                                  <ChevronDown size={15} />
-                                </button>
+                                <span className={`w-9 h-9 flex items-center justify-center rounded-lg text-stone-400 transition-transform ${isExpanded ? 'rotate-180 text-stone-900' : ''}`}>
+                                  <ChevronDown size={18} />
+                                </span>
                               </div>
                             </div>
-
                           </div>
 
-                          {/* Bloco Expandido: Todos os detalhes do pedido */}
                           {isExpanded && (
-                            <div className="p-2 sm:p-3 bg-stone-100/60 border-t border-stone-200 text-xs space-y-2 animate-in fade-in duration-150">
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                
-                                {/* Informações do Cliente & Entrega */}
-                                <div className="bg-white p-2 rounded-xl border border-stone-200 space-y-1.5 shadow-2xs">
-                                  <div className="font-bold text-stone-800 text-[10px] uppercase tracking-wider font-mono border-b border-stone-100 pb-1.5 flex items-center gap-1.5">
-                                    <User size={13} className="text-amber-600" /> Dados do Cliente & Operação
-                                  </div>
-                                  
-                                  <div className="grid grid-cols-2 gap-2 text-stone-600">
-                                    <div>
-                                      <span className="text-[10px] text-stone-400 block uppercase font-mono">Nome:</span>
-                                      <strong className="text-stone-900">{order.customer_name || order.customerName || 'Não informado'}</strong>
-                                    </div>
-                                    <div>
-                                      <span className="text-[10px] text-stone-400 block uppercase font-mono">Telefone:</span>
-                                      <span className="font-mono text-stone-800">
-                                        {order.customer_phone || order.customerPhone || 'Sem telefone'}
-                                      </span>
-                                    </div>
-                                  </div>
+                            <div className="px-5 pb-5 animate-in fade-in duration-150">
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
+                                <div className="bg-white rounded-xl border border-stone-200 p-4 space-y-3 text-[13px]">
+                                  <p className="flex items-center gap-2 text-[12px] font-semibold text-stone-500 uppercase tracking-wide"><User size={14} /> Cliente</p>
+                                  <div>
+                                    <p className="font-semibold text-stone-900">{nomeBonito(order.customer_name || order.customerName) || 'Não informado'}</p>
+                                    <p className="mt-0.5 text-stone-500 tabular-nums">{foneBonito(order.customer_phone || order.customerPhone) || 'Sem telefone'}</p>
+                                    {order.nif && <p className="mt-0.5 text-stone-500 tabular-nums">CPF {order.nif}</p>}
+                                  </div>
                                   {(order.delivery_address || order.deliveryAddress) && (
-                                    <div className="pt-2 border-t border-stone-100">
-                                      <span className="text-[10px] text-stone-400 block uppercase font-mono flex items-center gap-1">
-                                        <MapPin size={11} className="text-rose-500" /> Endereço de Entrega:
-                                      </span>
-                                      <span className="text-stone-800 font-medium block mt-0.5">
-                                        {order.delivery_address || order.deliveryAddress}
-                                      </span>
-                                      {(order.delivery_zone || order.deliveryZone) && (
-                                        <span className="text-[10.5px] text-stone-500 font-mono block mt-0.5">
-                                          Zona: {order.delivery_zone || order.deliveryZone}
-                                        </span>
-                                      )}
-                                    </div>
-                                  )}
-
-                                  {(order.nif) && (
-                                    <div>
-                                      <span className="text-[10px] text-stone-400 block uppercase font-mono">NIF do Cliente:</span>
-                                      <span className="font-mono font-bold text-stone-800">{order.nif}</span>
-                                    </div>
-                                  )}
-
-                                  {(order.notes) && (
-                                    <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200/80 text-amber-900 text-[11px]">
-                                      <strong>Obs do Pedido:</strong> {order.notes}
+                                    <div className="pt-3 border-t border-stone-100">
+                                      <p className="flex items-center gap-1.5 text-[12px] text-stone-500"><MapPin size={13} /> Entrega</p>
+                                      <p className="mt-1 text-stone-800">{order.delivery_address || order.deliveryAddress}</p>
+                                      {(order.delivery_zone || order.deliveryZone) && <p className="mt-0.5 text-stone-500">Bairro: {order.delivery_zone || order.deliveryZone}</p>}
                                     </div>
                                   )}
                                 </div>
 
-                                {/* Informações Financeiras do Pedido */}
-                                <div className="bg-white p-2 rounded-xl border border-stone-200 space-y-1.5 shadow-2xs">
-                                  <div className="font-bold text-stone-800 text-[10px] uppercase tracking-wider font-mono border-b border-stone-100 pb-1.5 flex items-center gap-1.5">
-                                    <CreditCard size={13} className="text-emerald-600" /> Dados Financeiros do Pedido
-                                  </div>
-
-                                  <div className="grid grid-cols-2 gap-2 text-stone-600">
-                                    <div>
-                                      <span className="text-[10px] text-stone-400 block uppercase font-mono">Forma de Pagamento:</span>
-                                      <strong className="text-stone-900">{normPayment}</strong>
-                                    </div>
-                                    <div>
-                                      <span className="text-[10px] text-stone-400 block uppercase font-mono">Status:</span>
-                                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                        {order.status || 'Finalizado'}
-                                      </span>
-                                    </div>
-                                  </div>
-
-                                  {(order.change_for || order.changeFor) && (
-                                    <div>
-                                      <span className="text-[10px] text-stone-400 block uppercase font-mono">Troco Solicitado para:</span>
-                                      <span className="font-mono font-bold text-stone-900">R$ {Number(order.change_for || order.changeFor).toFixed(2)}</span>
-                                    </div>
-                                  )}
-
-                                  <div className="pt-1 border-t border-stone-100 space-y-0.5">
-                                    <div className="flex justify-between text-stone-500 font-mono text-[10px]">
-                                      <span>Data e Hora:</span>
-                                      <span>{format(orderDate, "dd/MM/yyyy 'às' HH:mm")}</span>
-                                    </div>
-                                    <div className="flex justify-between text-stone-900 font-mono font-bold text-xs pt-1 border-t border-dashed border-stone-200">
-                                      <span>Total Pago:</span>
-                                      <span className="text-emerald-700">R$ {totalAmt.toFixed(2)}</span>
-                                    </div>
-                                  </div>
-
-                                  <div className="pt-1 flex justify-end">
+                                <div className="md:col-span-2 bg-white rounded-xl border border-stone-200 overflow-hidden">
+                                  <div className="px-4 py-3 border-b border-stone-100 flex items-center justify-between">
+                                    <p className="text-[12px] font-semibold text-stone-500 uppercase tracking-wide">Itens ({items.length})</p>
                                     <button
                                       type="button"
                                       onClick={() => setSelectedReceiptOrder(order)}
-                                      className="px-2 py-1 bg-stone-900 hover:bg-stone-800 text-white rounded-lg font-mono text-[10px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                                      className="h-8 px-3 bg-stone-900 hover:bg-stone-800 text-white rounded-lg text-[12px] font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
                                     >
-                                      <Printer size={13} /> Ver / Imprimir Talão
+                                      <Printer size={14} /> Ver / imprimir
                                     </button>
+                                  </div>
+                                  <ul className="divide-y divide-stone-100">
+                                    {items.map((item: any, idx: number) => {
+                                      const qty = Number(item.quantity || 1);
+                                      const unitPrice = Number(item.priceCalculated || item.price || item.basePrice || 0);
+                                      const extras = Array.isArray(item.extras) ? item.extras : [];
+                                      return (
+                                        <li key={idx} className="px-4 py-3 flex items-start gap-3 text-[13px]">
+                                          <span className="w-8 shrink-0 font-bold text-stone-900 tabular-nums">{qty}x</span>
+                                          <div className="flex-1 min-w-0">
+                                            <p className="font-semibold text-stone-900">{formatItemNameForPrint(item)}</p>
+                                            {extras.length > 0 && (
+                                              <p className="mt-1 text-[12px] text-stone-500">
+                                                {extras.map((ext: any) => `+ ${ext.name}${Number(ext.price) ? ` (${brl(Number(ext.price))})` : ''}`).join(' · ')}
+                                              </p>
+                                            )}
+                                            {item.notes && <p className="mt-1 text-[12px] text-amber-700">Obs: {item.notes}</p>}
+                                          </div>
+                                          <span className="font-semibold text-stone-900 tabular-nums whitespace-nowrap">{brl(unitPrice * qty)}</span>
+                                        </li>
+                                      );
+                                    })}
+                                  </ul>
+                                  <div className="px-4 py-3 bg-stone-50 border-t border-stone-100 flex flex-wrap items-center justify-between gap-2 text-[13px]">
+                                    <span className="text-stone-600">
+                                      {normPayment}
+                                      {troco > 0 && <span className="text-stone-400"> · troco para {brl(troco)}</span>}
+                                      <span className="text-stone-400"> · {format(orderDate, "dd/MM/yyyy 'às' HH:mm")}</span>
+                                    </span>
+                                    <span className="font-bold text-stone-900 tabular-nums text-[15px]">Total {brl(totalAmt)}</span>
                                   </div>
                                 </div>
                               </div>
 
-                              {/* Tabela de Itens do Pedido */}
-                              <div className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-2xs">
-                                <div className="p-2 bg-stone-50 border-b border-stone-200 font-bold font-mono text-[10px] text-stone-700 uppercase tracking-wider flex items-center justify-between">
-                                  <span>Itens Deste Pedido ({items.length})</span>
-                                  <span className="text-stone-400 font-normal lowercase">valores calculados por produto</span>
+                              {order.notes && (
+                                <div className="mt-4 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-[13px]">
+                                  <strong>Observação do pedido:</strong> {order.notes}
                                 </div>
-
-                                <div className="overflow-x-auto">
-                                  <table className="w-full text-left border-collapse">
-                                    <thead>
-                                      <tr className="border-b border-stone-100 bg-stone-50/50 text-[9px] font-mono text-stone-500 uppercase">
-                                        <th className="py-1.5 px-2 w-10 text-center">Qtd</th>
-                                        <th className="py-1.5 px-2">Item / Descrição</th>
-                                        <th className="py-1.5 px-2">Adicionais</th>
-                                        <th className="py-2 px-3 text-right">Preço Unit.</th>
-                                        <th className="py-2 px-3 text-right">Subtotal</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-stone-100 text-xs">
-                                      {items.map((item: any, idx: number) => {
-                                        const qty = Number(item.quantity || 1);
-                                        const unitPrice = Number(item.priceCalculated || item.price || item.basePrice || 0);
-                                        const subTotal = unitPrice * qty;
-                                        const extras = Array.isArray(item.extras) ? item.extras : [];
-
-                                        return (
-                                          <tr key={idx} className="hover:bg-stone-50/60 transition-colors">
-                                            <td className="py-2.5 px-3 text-center font-mono font-bold text-stone-800 bg-stone-50/30">
-                                              {qty}x
-                                            </td>
-                                            <td className="py-2.5 px-3">
-                                              <div className="font-bold text-stone-900">{formatItemNameForPrint(item)}</div>
-                                              {item.notes && (
-                                                <div className="text-[10.5px] text-amber-700 italic mt-0.5">
-                                                  Obs: {item.notes}
-                                                </div>
-                                              )}
-                                              {item.flavors && Array.isArray(item.flavors) && item.flavors.length > 0 && (
-                                                <div className="text-[10px] text-stone-500 font-mono mt-0.5">
-                                                  Sabores: {item.flavors.join(' + ')}
-                                                </div>
-                                              )}
-                                            </td>
-                                            <td className="py-2.5 px-3">
-                                              {extras.length > 0 ? (
-                                                <div className="space-y-0.5">
-                                                  {extras.map((ext: any, extIdx: number) => (
-                                                    <span 
-                                                      key={extIdx} 
-                                                      className="inline-flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 mr-1"
-                                                    >
-                                                      + {ext.name} (R$ {Number(ext.price || 0).toFixed(2)})
-                                                    </span>
-                                                  ))}
-                                                </div>
-                                              ) : (
-                                                <span className="text-stone-300 font-mono text-[11px]">—</span>
-                                              )}
-                                            </td>
-                                            <td className="py-2.5 px-3 text-right font-mono text-stone-600">
-                                              R$ {unitPrice.toFixed(2)}
-                                            </td>
-                                            <td className="py-2.5 px-3 text-right font-mono font-semibold text-stone-800">
-                                              R$ {subTotal.toFixed(2)}
-                                            </td>
-                                          </tr>
-                                        );
-                                      })}
-                                    </tbody>
-                                  </table>
-                                </div>
-                              </div>
-
+                              )}
                             </div>
                           )}
                         </div>
@@ -829,35 +714,21 @@ export default function CashSessionDetailsModal({ session, onClose }: CashSessio
                   </div>
                 )}
               </div>
-
             </div>
           )}
         </div>
 
-        {/* ========================================================= */}
-        {/* RODAPÉ EXECUTIVO */}
-        {/* ========================================================= */}
-        <div className="px-3.5 py-2 border-t border-stone-200 bg-white flex flex-col sm:flex-row justify-between items-center gap-2 shrink-0">
-          <div className="text-[11px] font-mono text-stone-500 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span>Auditoria concluída • <strong>{summary.totalOrdersCount} pedidos</strong> registrados</span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setActiveTab(activeTab === 'balanco' ? 'pedidos' : 'balanco')}
-              className="px-3.5 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-800 text-[11px] font-bold rounded-lg transition-colors cursor-pointer font-mono border border-stone-300"
-            >
-              {activeTab === 'balanco' ? `Ver Pedidos (${summary.totalOrdersCount})` : 'Ver Balanço Financeiro'}
-            </button>
-
-            <button
-              onClick={onClose}
-              className="px-4 py-1.5 bg-stone-950 hover:bg-stone-800 text-white text-[11px] font-bold rounded-lg transition-colors cursor-pointer font-mono shadow-xs"
-            >
-              Fechar Janela
-            </button>
-          </div>
+        {/* RODAPÉ */}
+        <div className="px-5 sm:px-7 py-3.5 border-t border-stone-200 bg-white flex items-center justify-between gap-3 shrink-0">
+          <p className="text-[13px] text-stone-500">
+            {summary.totalOrdersCount} {summary.totalOrdersCount === 1 ? 'pedido' : 'pedidos'} · {brl(summary.totalRevenue)}
+          </p>
+          <button
+            onClick={onClose}
+            className="h-10 px-5 bg-stone-900 hover:bg-stone-800 text-white text-[13px] font-semibold rounded-xl transition-colors cursor-pointer"
+          >
+            Fechar
+          </button>
         </div>
 
       </div>
