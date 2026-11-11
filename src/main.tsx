@@ -1,11 +1,13 @@
 import React, { StrictMode, ReactNode, ErrorInfo } from 'react';
 import { createRoot } from 'react-dom/client';
 
+// Só registra no console: erros soltos (inclusive de extensões do navegador, como MetaMask)
+// não podem derrubar a tela. Erros de tela do React ficam com o ErrorBoundary abaixo.
 window.addEventListener('error', (e) => {
-  document.body.innerHTML = `<div style="background:red;color:white;padding:20px;font-size:20px;">Global Error: ${e.message}<br><pre>${e.error?.stack}</pre></div>`;
+  console.error('[erro global]', e.message, e.error);
 });
 window.addEventListener('unhandledrejection', (e) => {
-  document.body.innerHTML = `<div style="background:red;color:white;padding:20px;font-size:20px;">Unhandled Rejection: ${e.reason}</div>`;
+  console.error('[promessa rejeitada]', e.reason);
 });
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import App from './App.tsx';
