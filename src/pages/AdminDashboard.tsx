@@ -583,8 +583,10 @@ export default function AdminDashboard() {
       }
       setFilteredCashSessions(filteredCashAgg);
 
+      // Pedido cancelado não é venda: fica fora do faturamento, da contagem e dos rankings
+      const pedidosValidos = allOrdersAgg.filter(o => !/cancel/i.test(String(o.status || '')));
       let faturamentoBruto = 0;
-      let totalPedidos = allOrdersAgg.length;
+      let totalPedidos = pedidosValidos.length;
       let faturamentoNumerario = 0;
       let faturamentoPIX = 0;
       let faturamentoCartao = 0;
@@ -597,7 +599,7 @@ export default function AdminDashboard() {
       const daysCounts: Record<string, {orders: number, revenue: number}> = {};
       dayNames.forEach(d => daysCounts[d] = { orders: 0, revenue: 0 });
       
-      allOrdersAgg.forEach(order => {
+      pedidosValidos.forEach(order => {
         const amt = Number(order.totalAmount) || 0;
         faturamentoBruto += amt;
         // Pagamento dividido: cada parte conta na sua forma
@@ -728,7 +730,7 @@ export default function AdminDashboard() {
       const allDaysVolumeData = weeklyDailySalesData;
 
       
-      const uniqueCustomers = new Set(allOrdersAgg.map(o => o.customerName)).size;
+      const uniqueCustomers = new Set(pedidosValidos.map(o => o.customerName)).size;
       const ticketMedio = totalPedidos > 0 ? (faturamentoBruto / totalPedidos) : 0;
       
       const paymentMethodsData = Object.entries(paymentMethodCounts)
