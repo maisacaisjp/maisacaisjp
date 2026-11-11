@@ -38,7 +38,7 @@ import {
 import { useAnalytics } from '../hooks/useAnalytics';
 import { getCashbackConfig, getCustomerCashbackInfo, dataCurta, DEFAULT_CASHBACK_PERCENT } from '../utils/cashback';
 import PixPaymentCard from './PixPaymentCard';
-import { gerarPixCopiaECola, PIX_CONFIG_PADRAO } from '../utils/pix';
+import { PIX_CONFIG_PADRAO } from '../utils/pix';
 
 const ENDERECO_LOJA = "Rua Almirante Alexandrino, 909, sala 02 – Parque da Fonte";
 const MAPA_LOJA = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent("Rua Almirante Alexandrino, 909, São José dos Pinhais - PR")}`;
@@ -490,16 +490,12 @@ export default function Cart({
       text += `(Levar maquininha de cartão)\n`;
     }
     if (pagamento === "PIX") {
-      const pixCodigo = gerarPixCopiaECola({
-        valor: totalFinal,
-        identificador: trackingCode || String(newOrderId || orderNumber)
-      });
+      // O código Copia e Cola fica só na tela de pedido enviado (com QR Code), não no resumo do WhatsApp
       text += `\n🔑 *DADOS PARA PAGAMENTO PIX:*\n`;
       text += `• Chave (Celular): *${PIX_CONFIG_PADRAO.telefoneFormatado}*\n`;
       text += `• Conta: *Mais Açaí* (${PIX_CONFIG_PADRAO.banco})\n`;
       text += `• Na confirmação pode aparecer *${PIX_CONFIG_PADRAO.nomesNaConfirmacao}*: é a mesma conta da loja\n`;
-      text += `• Valor: *R$ ${totalFinal.toFixed(2)}*\n\n`;
-      text += `📋 *Código Copia e Cola:*\n${pixCodigo}\n`;
+      text += `• Valor: *R$ ${totalFinal.toFixed(2)}*\n`;
     }
     text += `-----------------------------------`;
     if (trackingUrl) {
