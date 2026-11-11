@@ -394,10 +394,10 @@ export default function Cart({
       text += `Endereço: ${morada}\n`;
       text += `Complemento: ${zona}\n`;
       text += `-----------------------------------\n`;
-      text += `🛵 Tempo est. de entrega:\n   ${deliveryTimeEstimate}\n`;
+      text += `Tempo est. de entrega:\n   ${deliveryTimeEstimate}\n`;
     } else {
       text += `-----------------------------------\n`;
-      text += `⏱️ Tempo est. de prep:\n   ${pickupTimeEstimate}\n`;
+      text += `Tempo est. de preparo:\n   ${pickupTimeEstimate}\n`;
     }
 
     const orderDateObj = new Date();
@@ -449,7 +449,7 @@ export default function Cart({
         text += `   *Subtotal item: R$ ${(item.priceCalculated * item.quantity).toFixed(2)}*\n`;
       }
       if (item.notes) {
-        text += `   📝 Obs: ${item.notes}\n`;
+        text += `   Obs: ${item.notes}\n`;
       }
       text += `\n`;
     });
@@ -466,7 +466,7 @@ export default function Cart({
 
     if (cashbackConfig.enabled) {
       text += `-----------------------------------\n`;
-      text += `🎁 FIDELIDADE & CASHBACK (${cashbackConfig.percent}%)\n`;
+      text += `[FIDELIDADE E CASHBACK - ${cashbackConfig.percent}%]\n`;
       if (descontoFinal > 0) {
         text += `Desconto Cashback Utilizado: -R$ ${descontoFinal.toFixed(2)}\n`;
       }
@@ -490,16 +490,17 @@ export default function Cart({
       text += `(Levar maquininha de cartão)\n`;
     }
     if (pagamento === "PIX") {
-      // O código Copia e Cola fica só na tela de pedido enviado (com QR Code), não no resumo do WhatsApp
-      text += `\n🔑 *DADOS PARA PAGAMENTO PIX:*\n`;
-      text += `• Chave (Celular): *${PIX_CONFIG_PADRAO.telefoneFormatado}*\n`;
-      text += `• Conta: *Mais Açaí* (${PIX_CONFIG_PADRAO.banco})\n`;
-      text += `• Na confirmação pode aparecer *${PIX_CONFIG_PADRAO.nomesNaConfirmacao}*: é a mesma conta da loja\n`;
-      text += `• Valor: *R$ ${totalFinal.toFixed(2)}*\n`;
+      // Só chave, beneficiário e banco + link para copiar a chave (sem Copia e Cola e sem emojis)
+      const linkPix = `${baseUrl}/pix?v=${totalFinal.toFixed(2)}&p=${encodeURIComponent(trackingCode || String(newOrderId || orderNumber))}`;
+      text += `\n*DADOS PARA PAGAMENTO PIX*\n`;
+      text += `Chave PIX (celular): *${PIX_CONFIG_PADRAO.chave}*\n`;
+      text += `Beneficiário: ${PIX_CONFIG_PADRAO.nomesNaConfirmacao}\n`;
+      text += `Banco: ${PIX_CONFIG_PADRAO.banco}\n`;
+      text += `Copiar a chave: ${linkPix}\n`;
     }
     text += `-----------------------------------`;
     if (trackingUrl) {
-      text += `\n\n📍 *ACOMPANHE SEU PEDIDO EM MEUS PEDIDOS:*\n${trackingUrl}\n`;
+      text += `\n\n*ACOMPANHE SEU PEDIDO EM MEUS PEDIDOS:*\n${trackingUrl}\n`;
     }
 
     const encoded = encodeURIComponent(text);

@@ -11,6 +11,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import App from './App.tsx';
 import AdminDashboard from './pages/AdminDashboard.tsx';
 import OrderTracking from './pages/OrderTracking.tsx';
+import PixPagina from './pages/PixPagina.tsx';
 import './index.css';
 
 interface Props {
@@ -82,6 +83,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/Admin" element={<AdminDashboard />} />
           <Route path="/Admin/:tab" element={<AdminDashboard />} />
           <Route path="/track/:code" element={<OrderTracking />} />
+          <Route path="/pix" element={<PixPagina />} />
         </Routes>
       </BrowserRouter>
     </ErrorBoundary>
