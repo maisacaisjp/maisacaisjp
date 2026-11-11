@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { MenuItem, ALL_MENU_ITEMS } from '../data/menu';
-import { Plus, Edit2, Trash2, Save, X, Image as ImageIcon, Search, ChevronDown, Check } from 'lucide-react';
+import { Plus, Edit2, Trash2, Save, X, Image as ImageIcon, Search, ChevronDown, Check, GripVertical, Loader2 } from 'lucide-react';
+import { Reorder, useDragControls } from 'motion/react';
 import { CATEGORIA_CREMES, CREMES_GELADOS } from '../data/variacoes';
 import { getSizeOptions } from '../utils/produto';
 import { nomeBonito, tituloCategoria } from '../utils/formatacao';
@@ -75,6 +76,8 @@ export default function MenuManager() {
   const [searchTerm, setSearchTerm] = useState('');
   const [feedback, setFeedback] = useState("");
   const [pausedItems, setPausedItems] = useState<string[]>([]);
+  const [ordemSalvando, setOrdemSalvando] = useState<'' | 'salvando' | 'salvo'>('');
+  const timerOrdem = useRef<any>(null);
 
   // Category dropdown combobox state
   const [isCatDropdownOpen, setIsCatDropdownOpen] = useState(false);
@@ -113,7 +116,7 @@ export default function MenuManager() {
       const [catsResult, itemsResult, pausedResult] = await Promise.race([
         Promise.all([
           supabase.from('categories').select('*').neq('id', 'system_config').order('order_index'),
-          supabase.from('menu_items').select('*').neq('category', 'system_config').order('id'),
+          supabase.from('menu_items').select('*').neq('category', 'system_config').order('sort_order', { nullsFirst: false }).order('id'),
           supabase.from('paused_items').select('id')
         ]),
         timeout
@@ -424,6 +427,39 @@ export default function MenuManager() {
   const filteredItems = (activeCategory === 'all' ? items : items.filter(i => i.category === activeCategory))
     .filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase()) || String(i.id).toLowerCase().includes(searchTerm.toLowerCase()) || (i.ingredients && i.ingredients.toLowerCase().includes(searchTerm.toLowerCase())));
 
+  // Arrastar para ordenar: só dentro de uma categoria e sem busca ativa
+  const podeOrdenar = activeCategory !== 'all' && !searchTerm.trim() && filteredItems.length > 1;
+
+  const salvarOrdem = (lista: any[]) => {
+    clearTimeout(timerOrdem.current);
+    timerOrdem.current = setTimeout(async () => {
+      setOrdemSalvando('salvando');
+      try {
+        const resultados = await Promise.all(
+          lista.map((it, i) => supabase.from('menu_items').update({ sort_order: i + 1 }).eq('id', it.id))
+        );
+        const erro = resultados.find((r: any) => r.error)?.error;
+        if (erro) throw erro;
+        setOrdemSalvando('salvo');
+        setTimeout(() => setOrdemSalvando(''), 2500);
+      } catch (err: any) {
+        setOrdemSalvando('');
+        setFeedback('Erro ao salvar a ordem: ' + (err?.message || String(err)));
+        setTimeout(() => setFeedback(''), 4000);
+        loadData();
+      }
+    }, 700);
+  };
+
+  const handleReorderProdutos = (novaOrdem: any[]) => {
+    const comOrdem = novaOrdem.map((it, i) => ({ ...it, sort_order: i + 1 }));
+    const porId = new Map(comOrdem.map((it) => [it.id, it]));
+    // Mantém os outros produtos no lugar e encaixa a categoria na nova ordem
+    let k = 0;
+    setItems((atual) => atual.map((it) => (it.category === activeCategory ? comOrdem[k++] ?? porId.get(it.id) ?? it : it)));
+    salvarOrdem(comOrdem);
+  };
+
   if (loading) return <div className="p-8 text-center text-stone-500">Carregando produtos…</div>;
 
   const itensDaCategoria = activeCategory === 'all' ? [] : items.filter(i => i.category === activeCategory);
@@ -479,16 +515,26 @@ export default function MenuManager() {
             <p className="text-[13px] text-stone-600">
               <span className="font-semibold text-stone-900">{tituloCategoria(categories.find(c => c.id === activeCategory)?.name || activeCategory)}</span>
               {' · '}{itensDaCategoria.length} {itensDaCategoria.length === 1 ? 'produto' : 'produtos'}
+              {podeOrdenar && (
+                <span className="text-stone-500"> · arraste a alça <GripVertical className="inline w-3.5 h-3.5 -mt-0.5 text-stone-400" /> para mudar a ordem no cardápio</span>
+              )}
               {activeCategory === CATEGORIA_CREMES && (
                 <span className="text-stone-500"> · sabores do copo e dos combos: pausou aqui, some do cardápio e do PDV na hora.</span>
               )}
             </p>
+            <div className="flex items-center gap-2">
+            {ordemSalvando && (
+              <span className={`inline-flex items-center gap-1.5 text-[12px] font-semibold px-2.5 h-8 rounded-full border ${ordemSalvando === 'salvo' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-white text-stone-500 border-stone-200'}`}>
+                {ordemSalvando === 'salvando' ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Salvando ordem...</> : <><Check className="w-3.5 h-3.5" /> Ordem salva</>}
+              </span>
+            )}
             <button
               onClick={() => togglePauseCategory(activeCategory, categoriaToda)}
               className={`h-8 px-3 rounded-lg font-semibold text-[13px] transition-colors cursor-pointer ${categoriaToda ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-white text-rose-700 hover:bg-rose-50 border border-rose-200'}`}
             >
               {categoriaToda ? 'Ativar categoria inteira' : 'Pausar categoria inteira'}
             </button>
+            </div>
           </div>
         )}
       </div>
@@ -517,16 +563,18 @@ export default function MenuManager() {
               <th className="h-9 pl-3 pr-4 font-semibold text-right bg-white">Ações</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-stone-100">
+          <CorpoTabela ordenavel={podeOrdenar} itens={filteredItems} onReorder={handleReorderProdutos}>
             {filteredItems.map(item => {
               const isPaused = pausedItems.includes(item.id);
               const tamanhos = tamanhosDoItem(item);
               const precoUnico = item.price_single !== null && item.price_single !== undefined && item.price_single !== '';
               const imagem = item.image_url ? (item.image_url.startsWith('http') || item.image_url.startsWith('/') ? item.image_url : '/' + item.image_url) : '';
               return (
-                <tr key={item.id} className={`h-14 transition-colors ${isPaused ? 'bg-stone-50/70' : 'hover:bg-brand-50/40'}`}>
+                <LinhaProduto key={item.id} item={item} ordenavel={podeOrdenar} className={`h-14 transition-colors ${isPaused ? 'bg-stone-50' : 'bg-white hover:bg-brand-50/40'}`}>
+                  {(alca) => (<>
                   <td className="pl-4 pr-3 py-2">
                     <div className="flex items-center gap-3 min-w-0">
+                      {alca}
                       <div className={`w-10 h-10 rounded-lg bg-stone-100 flex items-center justify-center overflow-hidden shrink-0 ring-1 ring-stone-200/70 ${isPaused ? 'opacity-50 grayscale' : ''}`}>
                         {imagem ? <img src={imagem} alt="" loading="lazy" className="w-full h-full object-cover" /> : <ImageIcon size={16} className="text-stone-400" />}
                       </div>
@@ -611,10 +659,11 @@ export default function MenuManager() {
                       </button>
                     </div>
                   </td>
-                </tr>
+                  </>)}
+                </LinhaProduto>
               );
             })}
-          </tbody>
+          </CorpoTabela>
         </table>
 
         {items.length > 0 && filteredItems.length === 0 && (
@@ -844,5 +893,43 @@ export default function MenuManager() {
         </div>
       )}
     </div>
+  );
+}
+
+// Corpo da tabela: vira lista arrastável quando dá para ordenar
+function CorpoTabela({ ordenavel, itens, onReorder, children }: { ordenavel: boolean; itens: any[]; onReorder: (l: any[]) => void; children: React.ReactNode }) {
+  if (!ordenavel) return <tbody className="divide-y divide-stone-100">{children}</tbody>;
+  return (
+    <Reorder.Group as="tbody" axis="y" values={itens} onReorder={onReorder} className="divide-y divide-stone-100">
+      {children}
+    </Reorder.Group>
+  );
+}
+
+function LinhaProduto({ item, ordenavel, className, children }: { key?: React.Key; item: any; ordenavel: boolean; className: string; children: (alca: React.ReactNode) => React.ReactNode }) {
+  const controls = useDragControls();
+  if (!ordenavel) return <tr className={className}>{children(null)}</tr>;
+  const alca = (
+    <button
+      type="button"
+      onPointerDown={(e) => controls.start(e)}
+      className="shrink-0 cursor-grab active:cursor-grabbing p-1.5 -ml-1.5 -mr-1 rounded-lg text-stone-400 hover:text-brand-600 hover:bg-brand-50 transition-colors touch-none"
+      title="Arraste para mudar a ordem"
+      aria-label={`Mudar a ordem de ${item.name}`}
+    >
+      <GripVertical className="w-5 h-5" />
+    </button>
+  );
+  return (
+    <Reorder.Item
+      as="tr"
+      value={item}
+      dragListener={false}
+      dragControls={controls}
+      whileDrag={{ boxShadow: '0 16px 32px -12px rgba(28,25,23,0.28)', zIndex: 30, position: 'relative' } as any}
+      className={className + ' select-none'}
+    >
+      {children(alca)}
+    </Reorder.Item>
   );
 }
