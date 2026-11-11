@@ -166,6 +166,11 @@ export default function Cart({
     }
   }, []);
 
+  // Entrega só aceita PIX: se escolheu entrega (ou voltou com cartão/dinheiro salvo), troca para PIX
+  useEffect(() => {
+    if (orderType === "Delivery" && pagamento !== "PIX") setPagamento("PIX");
+  }, [orderType, pagamento]);
+
   // Save changes to localStorage
   const saveCustomerData = (updates: Partial<{
     name: string;
@@ -665,6 +670,9 @@ export default function Cart({
     { valor: "Dinheiro", rotulo: "Dinheiro" },
   ];
 
+  // Entrega só com PIX (motoboys parceiros): retirada continua com todas as formas
+  const pagamentosDisponiveis = orderType === "Delivery" ? PAGAMENTOS.filter((p) => p.valor === "PIX") : PAGAMENTOS;
+
   const campoCls =
     "w-full h-12 bg-white rounded-xl px-3.5 text-[16px] text-stone-900 placeholder:text-stone-400 ring-1 ring-stone-200 focus:ring-2 focus:ring-brand-600 outline-none transition-shadow";
   const rotuloCls = "flex items-center gap-1.5 text-[13px] font-semibold text-stone-700 mb-1.5";
@@ -1033,8 +1041,8 @@ export default function Cart({
                 {/* Pagamento */}
                 <fieldset>
                   <legend className={rotuloCls}>Forma de pagamento</legend>
-                  <div className="grid grid-cols-4 gap-2">
-                    {PAGAMENTOS.map((p) => (
+                  <div className={`grid gap-2 ${pagamentosDisponiveis.length === 1 ? "grid-cols-1" : "grid-cols-4"}`}>
+                    {pagamentosDisponiveis.map((p) => (
                       <button
                         key={p.valor}
                         type="button"
@@ -1051,7 +1059,9 @@ export default function Cart({
 
                   {pagamento === "PIX" && (
                     <p className="mt-2 text-[13px] text-brand-700 bg-brand-50 rounded-xl px-3 py-2">
-                      O código PIX com o valor final aparece assim que você enviar o pedido.
+                      {orderType === "Delivery"
+                        ? "Nas entregas o pagamento é somente via PIX. O código com o valor final aparece assim que você enviar o pedido."
+                        : "O código PIX com o valor final aparece assim que você enviar o pedido."}
                     </p>
                   )}
 

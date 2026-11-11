@@ -77,6 +77,10 @@ export async function criarPedido(p: NovoPedido) {
   const entrega = tipo === 'Delivery';
   const itens = limparItens(p.items);
   const bairro = entrega ? texto(p.delivery_zone, 80) : null;
+  // Entregas são feitas por motoboys parceiros (iFood/Uber): só pagamento antecipado via PIX
+  if (entrega && !/pix/i.test(texto(p.payment_method, 40) || 'PIX')) {
+    throw new ErroPedido(400, 'As entregas são pagas somente via PIX. Escolha PIX ou retire na loja.');
+  }
 
   // Taxa de entrega: vale a do banco (bairro ativo); se o bairro não existir, a informada
   let taxa = 0;
