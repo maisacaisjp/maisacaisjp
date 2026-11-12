@@ -176,7 +176,7 @@ async function relatorioDre(mesEntrada: string) {
   const [dados, { cardapio, adicionais }, pedidos, totais, despesas] = await Promise.all([
     carregarFinanceiro(),
     cardapioFinanceiro(),
-    pedidosValidos(inicio(de), inicio(ate), 'id,status,order_type,total_amount,created_at,items'),
+    pedidosValidos(inicio(de), inicio(ate), 'id,status,order_type,total_amount,created_at,items,motoboy_fee'),
     pedidosValidos(`${mesIni}-01T00:00:00${FUSO}`, inicio(ate), 'total_amount,created_at,status'),
     despesasPeriodo(de, ate),
   ]);

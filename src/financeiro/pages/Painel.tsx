@@ -87,7 +87,7 @@ export default function Painel() {
             <Linha sinal="-" rotulo="Impostos sobre vendas" valor={dre.impostos} sub={dre.faturamento ? pct(dre.impostos / dre.faturamento) : undefined} />
             <Linha sinal="-" rotulo="CMV (ingredientes e embalagens)" valor={dre.cmvEstimado} sub={dre.cobertura < 1 ? `${pct(dre.cmvPct)} medido em ${pct(dre.cobertura)} das vendas, aplicado ao total` : undefined} />
             <Linha sinal="-" rotulo="Taxas de pagamento" valor={dre.taxas} sub={`${dados.config.taxaPagamento}%`} />
-            <Linha sinal="-" rotulo="Custo variável de entrega" valor={dre.entregas} sub={`${r.entregas} × ${brl(dados.config.custoPorEntrega)}`} />
+            <Linha sinal="-" rotulo="Custo variável de entrega" valor={dre.entregas} sub={r.entregas === 0 ? 'nenhuma entrega no mês' : `${r.entregasComValor} de ${r.entregas} com valor lançado no pedido${r.entregas > r.entregasComValor ? ' ⚠' : ''}`} />
             <Linha sinal="=" forte rotulo="Margem de contribuição" valor={dre.margemContribuicao} sub={pct(dre.faturamento ? dre.margemContribuicao / dre.faturamento : NaN)} />
             <Linha sinal="-" rotulo="Custos fixos" valor={dre.fixos} />
             <Linha sinal="-" rotulo="Outras despesas (lançamentos e caixa)" valor={dre.outrasDespesas} />

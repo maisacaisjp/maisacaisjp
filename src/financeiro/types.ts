@@ -230,4 +230,5 @@ export interface Pedido {
   total_amount: number;
   created_at: string;
   items: ItemPedido[] | null;
+  motoboy_fee?: number | null; // valor pago ao entregador parceiro (lançado no pedido)
 }

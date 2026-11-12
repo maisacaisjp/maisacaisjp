@@ -90,6 +90,7 @@ import UsersManager from '../components/UsersManager';
 import BannerManager from '../components/BannerManager';
 import ReviewsManager from '../components/ReviewsManager';
 import AgentManager from '../components/AgentManager';
+import CampoEntregaParceiro from '../components/admin/CampoEntregaParceiro';
 import MotoboyManager from '../components/MotoboyManager';
 import KitchenDisplay from '../components/KitchenDisplay';
 import HistoricalSalesModal from '../components/HistoricalSalesModal';
@@ -273,6 +274,13 @@ export default function AdminDashboard() {
     return { text: `há ${diffHours}h`, minutes: diffMinutes, urgency: diffMinutes >= 60 ? 'danger' : 'normal' };
   };
 
+  // Valor pago ao entregador parceiro: atualiza a tela sem recarregar
+  const aoSalvarEntregaParceiro = (id: any, v: number) => {
+    const aplica = (o: any) => (o.id === id ? { ...o, motoboyFee: v, motoboy_fee: v } : o);
+    setAllOrders((prev: any[]) => prev.map(aplica));
+    setFilteredOrders((prev: any[]) => prev.map(aplica));
+  };
+
   const handleSaveOrderEdit = async (updatedOrder: any) => {
     // 1. Atualização Otimista Imediata no Estado React (Gestor, Comanda e Gráficos atualizam sem recarregar página)
     const normPm = (updatedOrder.payment_method || updatedOrder.paymentMethod || 'Dinheiro').toString().trim();
@@ -430,7 +438,9 @@ export default function AdminDashboard() {
         notes: o.notes || '',
         updatedAt: o.updated_at,
         createdAt: o.created_at,
-        cashSessionId: o.cash_session_id
+        cashSessionId: o.cash_session_id,
+        motoboyFee: Number(o.motoboy_fee) || 0,
+        motoboy_name: o.motoboy_name || null
       }));
       setAllOrders(allDbOrders);
 
@@ -3106,6 +3116,9 @@ export default function AdminDashboard() {
                                   </div>
                                 </div>
                               )}
+                              {isDelivery && (
+                                <CampoEntregaParceiro pedidoId={order.id} valor={(order as any).motoboyFee} onSalvo={(v) => aoSalvarEntregaParceiro(order.id, v)} />
+                              )}
 
                               {/* Pagamento e Troco */}
                               <div className="flex items-center justify-between gap-2 text-xs flex-wrap">
@@ -3454,6 +3467,10 @@ export default function AdminDashboard() {
                                         </div>
                                       </div>
 
+                                      {isDelivery && (
+                                        <CampoEntregaParceiro compacto pedidoId={order.id} valor={(order as any).motoboyFee} onSalvo={(v) => aoSalvarEntregaParceiro(order.id, v)} />
+                                      )}
+
                                       {/* Resumo dos Itens (até 3) */}
                                       <div className="text-[11px] font-mono text-stone-700 bg-stone-50 p-2 rounded border border-stone-100 space-y-1">
                                         {items.slice(0, 3).map((it: any, iIdx: number) => {
@@ -3599,6 +3616,11 @@ export default function AdminDashboard() {
                                   {isDelivery && order.deliveryZone && (
                                     <div className="mt-1.5 text-[12px] text-stone-500 leading-none truncate" title={order.deliveryAddress || order.deliveryZone}>
                                       {order.deliveryZone}
+                                    </div>
+                                  )}
+                                  {isDelivery && (
+                                    <div className="mt-1.5">
+                                      <CampoEntregaParceiro compacto pedidoId={order.id} valor={(order as any).motoboyFee} onSalvo={(v) => aoSalvarEntregaParceiro(order.id, v)} />
                                     </div>
                                   )}
                                 </td>

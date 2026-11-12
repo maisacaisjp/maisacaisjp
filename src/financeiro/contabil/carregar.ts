@@ -45,7 +45,7 @@ export function usePeriodoContabil(de: string, ate: string) {
     setEstado((s) => ({ ...s, carregando: true, erro: null }));
     const mesIni = somarMeses(de.slice(0, 7), -12);
     Promise.all([
-      lerPedidos(inicioDia(de), inicioDia(ate), 'id,status,order_type,total_amount,created_at,items'),
+      lerPedidos(inicioDia(de), inicioDia(ate), 'id,status,order_type,total_amount,created_at,items,motoboy_fee'),
       lerPedidos(`${mesIni}-01T00:00:00-03:00`, inicioDia(ate), 'total_amount,created_at,status'),
       lerDespesas(de, ate).then((d) => ({ d, erro: null as string | null })).catch((e) => ({ d: [] as DespesaCaixa[], erro: String(e.message ?? e) })),
     ])

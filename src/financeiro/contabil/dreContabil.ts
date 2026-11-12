@@ -94,7 +94,16 @@ export function calcularDreContabil({ de, ate, resumo, despesas, dados, fat, rec
 
   // Parâmetros variáveis
   add('6.1.01', { origem: 'Parâmetro', nome: `Taxas de pagamento (${cfg.taxaPagamento}% do faturamento)`, valor: (receita * cfg.taxaPagamento) / 100 });
-  add('6.1.02', { origem: 'Parâmetro', nome: `Custo por entrega (${resumo.entregas} × R$ ${cfg.custoPorEntrega.toFixed(2).replace('.', ',')})`, valor: resumo.entregas * cfg.custoPorEntrega });
+  // Entregas: valor real pago ao parceiro, lançado em cada pedido; as que ficaram sem valor usam o custo padrão dos Ajustes (se houver)
+  const semValor = Math.max(0, resumo.entregas - (resumo.entregasComValor ?? 0));
+  const lancado = resumo.custoEntregasLancado ?? 0;
+  const estimado = semValor * cfg.custoPorEntrega;
+  const brl2 = (v: number) => v.toFixed(2).replace('.', ',');
+  add('6.1.02', {
+    origem: 'Parâmetro',
+    nome: `Entregas parceiras (${resumo.entregasComValor ?? 0} lançadas = R$ ${brl2(lancado)}${semValor ? ` · ${semValor} sem valor${cfg.custoPorEntrega ? ` × R$ ${brl2(cfg.custoPorEntrega)}` : ''}` : ''})`,
+    valor: lancado + estimado,
+  });
 
   // Custos fixos: valor mensal proporcional aos dias do período
   const fracaoMeses = dias.reduce((s, d) => s + 1 / diasNoMes(d.slice(0, 7)), 0);

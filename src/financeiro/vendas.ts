@@ -20,6 +20,8 @@ export interface VendaProduto {
 export interface ResumoVendas {
   pedidos: number;
   entregas: number;
+  entregasComValor: number; // entregas com o valor do parceiro lançado no pedido
+  custoEntregasLancado: number; // soma dos valores pagos aos entregadores
   faturamento: number;
   receitaItens: number;
   receitaComFicha: number;
@@ -71,7 +73,7 @@ export function analisarVendas(pedidos: Pedido[], cardapio: ProdutoCardapio[], a
   });
 
   const mapa = new Map<string, VendaProduto>();
-  const r: ResumoVendas = { pedidos: pedidos.length, entregas: 0, faturamento: 0, receitaItens: 0, receitaComFicha: 0, custoComFicha: 0, produtos: [], porDia: {} };
+  const r: ResumoVendas = { pedidos: pedidos.length, entregas: 0, entregasComValor: 0, custoEntregasLancado: 0, faturamento: 0, receitaItens: 0, receitaComFicha: 0, custoComFicha: 0, produtos: [], porDia: {} };
 
   const somar = (v: Omit<VendaProduto, 'qtd' | 'receita' | 'custo'>, qtd: number, receita: number, custo: number | null) => {
     const atual = mapa.get(v.chave) ?? { ...v, qtd: 0, receita: 0, custo: custo === null ? null : 0 };
@@ -88,7 +90,14 @@ export function analisarVendas(pedidos: Pedido[], cardapio: ProdutoCardapio[], a
 
   for (const ped of pedidos) {
     r.faturamento += Number(ped.total_amount) || 0;
-    if (/deliver|entrega/i.test(ped.order_type || '')) r.entregas++;
+    if (/deliver|entrega/i.test(ped.order_type || '')) {
+      r.entregas++;
+      const fee = Number(ped.motoboy_fee) || 0;
+      if (fee > 0) {
+        r.entregasComValor++;
+        r.custoEntregasLancado += fee;
+      }
+    }
     const dia = new Date(ped.created_at).toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
     r.porDia[dia] = (r.porDia[dia] || 0) + (Number(ped.total_amount) || 0);
 

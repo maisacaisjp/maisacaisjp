@@ -14,7 +14,7 @@ const CAMPOS: Array<{ chave: keyof Config; rotulo: string; dica: string }> = [
   { chave: 'fator1L', rotulo: 'Fator dos adicionais no Pote 1L Recheado (2x)', dica: '2,00 = o dobro do 330ml (100 g viram 200 g). Chocolates por unidade não mudam com o tamanho.' },
   { chave: 'cmvMeta', rotulo: 'Meta de CMV (%)', dica: 'Açaiteria costuma trabalhar entre 28% e 35%.' },
   { chave: 'taxaPagamento', rotulo: 'Taxa média de pagamento (%)', dica: 'Média cobrada por maquininha/cartão sobre o faturamento (PIX e dinheiro não têm taxa).' },
-  { chave: 'custoPorEntrega', rotulo: 'Custo variável por entrega (R$)', dica: 'Use se o motoboy ou o combustível for pago por entrega.' },
+  { chave: 'custoPorEntrega', rotulo: 'Custo padrão por entrega sem valor lançado (R$)', dica: 'O custo real vem do valor da entrega lançado em cada pedido (tela Pedidos). Este valor só entra nas entregas que ficaram sem valor. Deixe 0 para não estimar.' },
   { chave: 'diasTrabalhados', rotulo: 'Dias trabalhados por mês', dica: 'Usado no custo fixo por dia.' },
 ];
 

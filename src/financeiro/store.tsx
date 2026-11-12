@@ -237,7 +237,7 @@ export function usePedidos(mes: string) {
   useEffect(() => {
     let vivo = true;
     setEstado((s) => ({ ...s, carregando: true, erro: null }));
-    lerPedidos(inicioMes(mes), inicioMes(proximoMes(mes)), 'id,status,order_type,total_amount,created_at,items')
+    lerPedidos(inicioMes(mes), inicioMes(proximoMes(mes)), 'id,status,order_type,total_amount,created_at,items,motoboy_fee')
       .then((p) => vivo && setEstado({ pedidos: p, carregando: false, erro: null }))
       .catch((e) => vivo && setEstado({ pedidos: [], carregando: false, erro: String(e.message ?? e) }));
     return () => {
