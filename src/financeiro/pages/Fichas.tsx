@@ -4,6 +4,7 @@ import { ROTULO_TAMANHO, custoFicha, pendenciasFicha, tamanhoRef, tamanhosDa } f
 import { brl, norm, pct, uid } from '../format';
 import { ReceitaEditor } from '../ReceitaEditor';
 import { resumirPendencias } from '../pendencias';
+import { supabase } from '../../lib/supabase';
 import { useDados } from '../store';
 import type { AdicionalCardapio, Ficha, ProdutoCardapio } from '../types';
 import { Btn, Card, Num, Sel, Selo, Txt, Vazio, tomCmv } from '../ui';
@@ -312,7 +313,12 @@ function EditorFicha({ ficha }: { ficha: Ficha }) {
 // Quadro "O que falta": tudo que impede as fichas de terem o custo 100% calculado, agrupado
 function OQueFalta() {
   const { dados, cardapio, adicionais, irPara, setFichaSel } = useDados();
-  const r = useMemo(() => resumirPendencias(dados, cardapio, adicionais), [dados, cardapio, adicionais]);
+  // Itens pausados no cardápio não entram em "sem ficha" (não estão sendo vendidos)
+  const [pausados, setPausados] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    supabase.from('paused_items').select('id').then(({ data }) => setPausados(new Set((data || []).map((p: { id: string }) => String(p.id)))));
+  }, []);
+  const r = useMemo(() => resumirPendencias(dados, cardapio, adicionais, pausados), [dados, cardapio, adicionais, pausados]);
   const totalItens = r.insumosSemPreco.length + r.preparos.length + r.bases.length;
   const tudoOk = totalItens === 0 && r.fichas.length === 0 && r.produtosSemFicha.length === 0;
   const [aberto, setAberto] = useState(!tudoOk);

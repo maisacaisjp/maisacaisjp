@@ -24,7 +24,7 @@ const semPreco = (d: Dados, id: string) => {
   return !!i && !i.semCusto && (!i.precoEmbalagem || !i.qtdEmbalagem);
 };
 
-export function resumirPendencias(d: Dados, cardapio: ProdutoCardapio[], adicionais: AdicionalCardapio[]): ResumoPendencias {
+export function resumirPendencias(d: Dados, cardapio: ProdutoCardapio[], adicionais: AdicionalCardapio[], pausados: Set<string> = new Set()): ResumoPendencias {
   const insumos = new Map<string, Set<string>>();
   const preparos = new Map<string, { motivo: string; fichas: Set<string> }>();
   const bases = new Map<string, { motivo: string; fichas: Set<string> }>();
@@ -89,14 +89,14 @@ export function resumirPendencias(d: Dados, cardapio: ProdutoCardapio[], adicion
     preparos: ordenar([...preparos].map(([id, v]) => ({ id, nome: d.preparos.find((x) => x.id === id)?.nome ?? id, motivo: v.motivo, fichas: [...v.fichas] }))),
     bases: ordenar([...bases].map(([id, v]) => ({ id, nome: d.bases.find((x) => x.id === id)?.nome ?? id, motivo: v.motivo, fichas: [...v.fichas] }))),
     fichas: fichas.sort((a, b) => a.nome.localeCompare(b.nome, 'pt', { numeric: true })),
-    // Só o que é vendido: ativo e com preço. Sabores de creme e opções de escolha (sem preço próprio) não precisam de ficha.
+    // Só o que é vendido: ativo, não pausado e com preço. Sabores de creme e opções de escolha (sem preço próprio) não precisam de ficha.
     produtosSemFicha: [
       ...cardapio
-        .filter((p) => p.is_active !== false && Boolean(p.price_single || p.price_p || p.price_m || p.price_g))
+        .filter((p) => p.is_active !== false && !pausados.has(p.id) && Boolean(p.price_single || p.price_p || p.price_m || p.price_g))
         .filter((p) => !temFicha(p.id, p.name))
         .map((p) => ({ id: p.id, nome: p.name })),
       ...adicionais
-        .filter((a) => a.is_active !== false && Number(a.price) > 0)
+        .filter((a) => a.is_active !== false && !pausados.has(a.id) && Number(a.price) > 0)
         .filter((a) => !temFicha(`extra:${a.id}`, a.name))
         .map((a) => ({ id: `extra:${a.id}`, nome: `${a.name} (adicional)` })),
     ].sort((a, b) => a.nome.localeCompare(b.nome, 'pt')),
