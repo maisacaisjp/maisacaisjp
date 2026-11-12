@@ -18,7 +18,7 @@ import { CartItem } from "./types";
 import { playVictorySound } from "./utils/sound";
 import { getStoreDate } from "./utils/date";
 import { hapticLight, hapticMedium, hapticSuccess } from "./utils/haptics";
-import { Search, ShoppingBag, X, MapPin, ArrowUp, Clock, Bike, Check, ChevronLeft, ChevronRight, Receipt, Star } from "lucide-react";
+import { Search, ShoppingBag, X, MapPin, ArrowUp, Bike, Check, ChevronLeft, ChevronRight, Receipt, Star, Store } from "lucide-react";
 import { brl, nomeBonito, tituloCategoria } from "./utils/formatacao";
 import Cart from "./components/Cart";
 import MenuItemCard from "./components/MenuItemCard";
@@ -258,16 +258,20 @@ function App({ abrirConta = false }: { abrirConta?: boolean }) {
     }
   }, [menuLoading, pausedItemsLoaded, menuItems, pausedItems, hasOpenedPromoAutomatically]);
 
-  // Tempo de entrega cadastrado no gestor (o mesmo que aparece no checkout)
+  // Tempos de entrega e de retirada cadastrados no gestor (Configurações → Entregas & Prazos), os mesmos do checkout
   const [tempoEntrega, setTempoEntrega] = useState("45 a 75 min");
+  const [tempoRetirada, setTempoRetirada] = useState("20 a 30 min");
   useEffect(() => {
     supabase
       .from('settings')
-      .select('value')
-      .eq('key', 'delivery_time_estimate')
-      .maybeSingle()
+      .select('key, value')
+      .in('key', ['delivery_time_estimate', 'pickup_time_estimate'])
       .then(({ data }) => {
-        if (data?.value) setTempoEntrega(String(data.value));
+        for (const row of data || []) {
+          if (!row?.value) continue;
+          if (row.key === 'delivery_time_estimate') setTempoEntrega(String(row.value));
+          if (row.key === 'pickup_time_estimate') setTempoRetirada(String(row.value));
+        }
       });
   }, []);
 
@@ -730,11 +734,11 @@ function App({ abrirConta = false }: { abrirConta?: boolean }) {
                   {aberto ? "Aberto agora" : "Fechado agora"}
                 </span>
               )}
-              <span className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-stone-100 text-stone-700">
-                <Clock className="w-3.5 h-3.5" /> {tempoEntrega}
+              <span className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-stone-100 text-stone-700" title="Tempo estimado de entrega">
+                <Bike className="w-3.5 h-3.5" /> Entrega <b className="font-semibold">{tempoEntrega}</b>
               </span>
-              <span className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-stone-100 text-stone-700">
-                <Bike className="w-3.5 h-3.5" /> Delivery e retirada
+              <span className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-stone-100 text-stone-700" title="Tempo estimado para retirar na loja">
+                <Store className="w-3.5 h-3.5" /> Retirada <b className="font-semibold">{tempoRetirada}</b>
               </span>
               <span className="hidden sm:inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-stone-100 text-stone-700">
                 <MapPin className="w-3.5 h-3.5" /> São José dos Pinhais
