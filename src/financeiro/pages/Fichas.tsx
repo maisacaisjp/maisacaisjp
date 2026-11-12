@@ -1,8 +1,9 @@
-import { AlertTriangle, Copy, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ChevronDown, Copy, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { ROTULO_TAMANHO, custoFicha, pendenciasFicha, tamanhoRef, tamanhosDa } from '../calc';
 import { brl, norm, pct, uid } from '../format';
 import { ReceitaEditor } from '../ReceitaEditor';
+import { resumirPendencias } from '../pendencias';
 import { useDados } from '../store';
 import type { AdicionalCardapio, Ficha, ProdutoCardapio } from '../types';
 import { Btn, Card, Num, Sel, Selo, Txt, Vazio, tomCmv } from '../ui';
@@ -77,6 +78,8 @@ export default function Fichas() {
   };
 
   return (
+    <div className="space-y-4">
+    <OQueFalta />
     <div className="grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
       <Card className="h-fit">
         <div className="mb-3 space-y-2">
@@ -163,6 +166,7 @@ export default function Fichas() {
       </Card>
 
       {sel ? <EditorFicha key={sel.id} ficha={sel} /> : <Vazio>Escolha ou crie uma ficha.</Vazio>}
+    </div>
     </div>
   );
 }
@@ -302,5 +306,105 @@ function EditorFicha({ ficha }: { ficha: Ficha }) {
       )}
       {produto && ehCopo(produto) && ficha.tipo !== 'copo' && <p className="text-xs text-amber-700">Este produto tem preços por tamanho no cardápio, mas a ficha está como tamanho único.</p>}
     </div>
+  );
+}
+
+// Quadro "O que falta": tudo que impede as fichas de terem o custo 100% calculado, agrupado
+function OQueFalta() {
+  const { dados, cardapio, adicionais, irPara, setFichaSel } = useDados();
+  const r = useMemo(() => resumirPendencias(dados, cardapio, adicionais), [dados, cardapio, adicionais]);
+  const totalItens = r.insumosSemPreco.length + r.preparos.length + r.bases.length;
+  const tudoOk = totalItens === 0 && r.fichas.length === 0 && r.produtosSemFicha.length === 0;
+  const [aberto, setAberto] = useState(!tudoOk);
+  const pctOk = r.totalFichas ? Math.round((r.fichasOk / r.totalFichas) * 100) : 0;
+  const nomes = (l: string[]) => (l.length <= 3 ? l.join(', ') : `${l.slice(0, 3).join(', ')} e mais ${l.length - 3}`);
+
+  if (tudoOk) {
+    return (
+      <Card>
+        <p className="flex items-center gap-2 text-sm font-semibold text-emerald-700"><CheckCircle2 size={16} /> Todas as {r.totalFichas} fichas estão 100% calculadas e todo o cardápio tem ficha.</p>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <button type="button" onClick={() => setAberto((v) => !v)} className="flex w-full cursor-pointer items-center gap-3 text-left">
+        <AlertTriangle size={18} className="shrink-0 text-amber-500" />
+        <span className="flex-1">
+          <span className="block text-sm font-bold text-stone-900">O que falta para fechar 100% das fichas</span>
+          <span className="block text-xs text-stone-500">
+            {r.fichasOk} de {r.totalFichas} fichas completas ({pctOk}%)
+            {r.insumosSemPreco.length > 0 && ` · ${r.insumosSemPreco.length} insumo${r.insumosSemPreco.length > 1 ? 's' : ''} sem preço`}
+            {r.preparos.length + r.bases.length > 0 && ` · ${r.preparos.length + r.bases.length} base${r.preparos.length + r.bases.length > 1 ? 's' : ''} incompleta${r.preparos.length + r.bases.length > 1 ? 's' : ''}`}
+            {r.produtosSemFicha.length > 0 && ` · ${r.produtosSemFicha.length} item${r.produtosSemFicha.length > 1 ? 's' : ''} do cardápio sem ficha`}
+          </span>
+        </span>
+        <span className="hidden h-2 w-32 overflow-hidden rounded-full bg-stone-100 sm:block"><span className="block h-full rounded-full bg-emerald-500" style={{ width: `${pctOk}%` }} /></span>
+        <ChevronDown size={16} className={`shrink-0 text-stone-400 transition-transform ${aberto ? 'rotate-180' : ''}`} />
+      </button>
+
+      {aberto && (
+        <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {r.insumosSemPreco.length > 0 && (
+            <section>
+              <h3 className="mb-1 text-xs font-bold uppercase tracking-wider text-stone-500">1. Insumos sem preço <span className="font-normal normal-case">(resolve mais fichas primeiro)</span></h3>
+              <ul className="divide-y divide-stone-100 text-sm">
+                {r.insumosSemPreco.map((i) => (
+                  <li key={i.id}>
+                    <button type="button" onClick={() => irPara('insumos')} className="w-full cursor-pointer py-1.5 text-left hover:text-[#6a2092]" title={`Usado em: ${i.fichas.join(', ')}`}>
+                      <span className="flex items-center justify-between gap-2"><span className="font-medium">{i.nome}</span><Selo tom="alerta">{i.fichas.length} ficha{i.fichas.length > 1 ? 's' : ''}</Selo></span>
+                      <span className="block truncate text-xs text-stone-400">{nomes(i.fichas)}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+          {(r.preparos.length > 0 || r.bases.length > 0) && (
+            <section>
+              <h3 className="mb-1 text-xs font-bold uppercase tracking-wider text-stone-500">2. Bases incompletas</h3>
+              <ul className="divide-y divide-stone-100 text-sm">
+                {r.bases.map((b) => (
+                  <li key={`b-${b.id}`} className="py-1.5">
+                    <span className="flex items-center justify-between gap-2"><span className="font-medium">{b.nome}</span><Selo tom="alerta">{b.motivo}</Selo></span>
+                    <span className="block truncate text-xs text-stone-400">{nomes(b.fichas)}</span>
+                  </li>
+                ))}
+                {r.preparos.map((p) => (
+                  <li key={`p-${p.id}`}>
+                    <button type="button" onClick={() => irPara('preparos')} className="w-full cursor-pointer py-1.5 text-left hover:text-[#6a2092]">
+                      <span className="flex items-center justify-between gap-2"><span className="font-medium">{p.nome}</span><Selo tom="alerta">{p.motivo}</Selo></span>
+                      <span className="block truncate text-xs text-stone-400">{nomes(p.fichas)}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+          {r.fichas.length > 0 && (
+            <section>
+              <h3 className="mb-1 text-xs font-bold uppercase tracking-wider text-stone-500">3. Fichas com pendência ({r.fichas.length})</h3>
+              <ul className="max-h-72 divide-y divide-stone-100 overflow-y-auto pr-1 text-sm adm-rolagem">
+                {r.fichas.map((f) => (
+                  <li key={f.id}>
+                    <button type="button" onClick={() => setFichaSel(f.id)} className="w-full cursor-pointer py-1.5 text-left hover:text-[#6a2092]">
+                      <span className="block font-medium">{f.nome}</span>
+                      <span className="block text-xs text-stone-400">{f.motivos.join(' · ')}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+          {r.produtosSemFicha.length > 0 && (
+            <section className="md:col-span-2 xl:col-span-3">
+              <h3 className="mb-1 text-xs font-bold uppercase tracking-wider text-stone-500">4. Itens do cardápio sem ficha ({r.produtosSemFicha.length}) <span className="font-normal normal-case">— crie pelo campo "Nova ficha a partir do cardápio"</span></h3>
+              <p className="text-sm text-stone-600">{r.produtosSemFicha.map((p) => p.nome).join(' · ')}</p>
+            </section>
+          )}
+        </div>
+      )}
+    </Card>
   );
 }
