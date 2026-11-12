@@ -1,6 +1,7 @@
 // Resumo de tudo que impede as fichas técnicas de fecharem 100% (custo real em todas).
 // Junta as pendências de todas as fichas por insumo, base e preparo, para resolver na ordem certa.
 import { ROTULO_TAMANHO, tamanhosDa } from './calc';
+import { norm } from './format';
 import type { AdicionalCardapio, Dados, Ficha, ItemReceita, ProdutoCardapio } from './types';
 
 export interface InsumoPendente { id: string; nome: string; fichas: string[] }
@@ -79,15 +80,25 @@ export function resumirPendencias(d: Dados, cardapio: ProdutoCardapio[], adicion
 
   const ordenar = <T extends { fichas: string[]; nome: string }>(l: T[]) => l.sort((a, b) => b.fichas.length - a.fichas.length || a.nome.localeCompare(b.nome, 'pt'));
   const comFicha = new Set(d.fichas.map((f: Ficha) => f.produtoId).filter(Boolean));
+  // O mesmo adicional pode existir em duas tabelas (produtos e adicionais): ficha com o mesmo nome também vale
+  const nomeFicha = new Set(d.fichas.map((f: Ficha) => norm(f.nome)));
+  const temFicha = (id: string, nome: string) => comFicha.has(id) || nomeFicha.has(norm(nome));
 
   return {
     insumosSemPreco: ordenar([...insumos].map(([id, s]) => ({ id, nome: d.insumos.find((x) => x.id === id)?.nome ?? id, fichas: [...s] }))),
     preparos: ordenar([...preparos].map(([id, v]) => ({ id, nome: d.preparos.find((x) => x.id === id)?.nome ?? id, motivo: v.motivo, fichas: [...v.fichas] }))),
     bases: ordenar([...bases].map(([id, v]) => ({ id, nome: d.bases.find((x) => x.id === id)?.nome ?? id, motivo: v.motivo, fichas: [...v.fichas] }))),
     fichas: fichas.sort((a, b) => a.nome.localeCompare(b.nome, 'pt', { numeric: true })),
+    // Só o que é vendido: ativo e com preço. Sabores de creme e opções de escolha (sem preço próprio) não precisam de ficha.
     produtosSemFicha: [
-      ...cardapio.filter((p) => !comFicha.has(p.id)).map((p) => ({ id: p.id, nome: p.name })),
-      ...adicionais.filter((a) => !comFicha.has(`extra:${a.id}`)).map((a) => ({ id: `extra:${a.id}`, nome: `${a.name} (adicional)` })),
+      ...cardapio
+        .filter((p) => p.is_active !== false && Boolean(p.price_single || p.price_p || p.price_m || p.price_g))
+        .filter((p) => !temFicha(p.id, p.name))
+        .map((p) => ({ id: p.id, nome: p.name })),
+      ...adicionais
+        .filter((a) => a.is_active !== false && Number(a.price) > 0)
+        .filter((a) => !temFicha(`extra:${a.id}`, a.name))
+        .map((a) => ({ id: `extra:${a.id}`, nome: `${a.name} (adicional)` })),
     ].sort((a, b) => a.nome.localeCompare(b.nome, 'pt')),
     fichasOk,
     totalFichas: d.fichas.length,
