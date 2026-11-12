@@ -48,7 +48,10 @@ import {
   List,
   CheckCircle2,
   Star,
-  ChefHat
+  ChefHat,
+  Eye,
+  EyeOff,
+  SlidersHorizontal
 } from "lucide-react";
 import {
   AreaChart,
@@ -1233,6 +1236,21 @@ export default function AdminDashboard() {
   };
 
   // ── Menu lateral (mesmas permissões de antes, agrupado por tarefa) ──────────
+  // Seções que o usuário escolheu ocultar do menu (salvo neste navegador)
+  const [menuOculto, setMenuOculto] = useState<string[]>(() => {
+    try {
+      const v = JSON.parse(localStorage.getItem('menuOculto') || '[]');
+      return Array.isArray(v) ? v.filter((x: unknown) => typeof x === 'string') : [];
+    } catch { return []; }
+  });
+  const [organizandoMenu, setOrganizandoMenu] = useState(false);
+  const alternarOculto = (id: string) => {
+    setMenuOculto(prev => {
+      const novo = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
+      try { localStorage.setItem('menuOculto', JSON.stringify(novo)); } catch {}
+      return novo;
+    });
+  };
   const pedidosNovos = (dashboardData?.recentOrders || []).filter((o: any) => o.status === 'Pendente').length;
   const verCardapio = hasPermission('gerenciar_produtos') || hasPermission('gerenciar_categorias');
   const gruposMenu: { titulo: string; itens: { id: string; rotulo: string; Icone: any; mostrar: boolean; badge?: number; palavras?: string }[] }[] = [
@@ -1276,8 +1294,11 @@ export default function AdminDashboard() {
     },
   ];
   const itensMenu = gruposMenu.flatMap(g => g.itens.filter(i => i.mostrar).map(i => ({ ...i, grupo: g.titulo })));
+  // Seções ocultas só saem do menu lateral; continuam funcionando e acessíveis pelo "Buscar ou ir para" (Ctrl+K)
+  const itensVisiveisMenu = itensMenu.filter(i => !menuOculto.includes(i.id));
+  const qtdOcultas = itensMenu.length - itensVisiveisMenu.length;
   const atalhoDoItem = (id: string) => {
-    const n = itensMenu.findIndex(i => i.id === id);
+    const n = itensVisiveisMenu.findIndex(i => i.id === id);
     return n >= 0 && n < 9 ? `Alt ${n + 1}` : undefined;
   };
 
@@ -1290,8 +1311,8 @@ export default function AdminDashboard() {
   ];
 
   // Estado mais recente para os atalhos de teclado (sem recriar o listener)
-  const atalhosRef = useRef({ itensMenu, podePDV });
-  atalhosRef.current = { itensMenu, podePDV };
+  const atalhosRef = useRef({ itensMenu: itensVisiveisMenu, podePDV });
+  atalhosRef.current = { itensMenu: itensVisiveisMenu, podePDV };
 
   // Visual do gestor (classe usada no index.css) só enquanto o gestor está aberto
   useEffect(() => {
@@ -1579,45 +1600,45 @@ export default function AdminDashboard() {
                 {isOwner && (
                   <button 
                     onClick={() => { setActiveTab("visao-geral"); setIsMobileMenuOpen(false); }} 
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'visao-geral' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
+                    className={`${menuOculto.includes('visao-geral') ? 'hidden' : 'flex'} w-full items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'visao-geral' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
                   >
                     Visão Geral
                   </button>
                 )}
                 <button 
                   onClick={() => { setActiveTab("pedidos"); setIsMobileMenuOpen(false); }} 
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'pedidos' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
+                  className={`${menuOculto.includes('pedidos') ? 'hidden' : 'flex'} w-full items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'pedidos' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
                 >
                   Pedidos
                 </button>
                 <button 
                   onClick={() => { setActiveTab("cozinha-kds"); setIsMobileMenuOpen(false); }} 
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'cozinha-kds' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
+                  className={`${menuOculto.includes('cozinha-kds') ? 'hidden' : 'flex'} w-full items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'cozinha-kds' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
                 >
                   Cozinha (KDS)
                 </button>
                 <button 
                   onClick={() => { setActiveTab("motoboys"); setIsMobileMenuOpen(false); }} 
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'motoboys' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
+                  className={`${menuOculto.includes('motoboys') ? 'hidden' : 'flex'} w-full items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'motoboys' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
                 >
                   Motoboys & Entregas
                 </button>
                 <button 
                   onClick={() => { setActiveTab("caixa"); setIsMobileMenuOpen(false); }} 
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'caixa' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
+                  className={`${menuOculto.includes('caixa') ? 'hidden' : 'flex'} w-full items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'caixa' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
                 >
                   Caixa
                 </button>
                 <button 
                   onClick={() => { setActiveTab("despesas"); setIsMobileMenuOpen(false); }} 
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'despesas' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
+                  className={`${menuOculto.includes('despesas') ? 'hidden' : 'flex'} w-full items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'despesas' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
                 >
                   Despesas
                 </button>
                 {isOwner && (
                   <button 
                     onClick={() => { setActiveTab("relatorios"); setIsMobileMenuOpen(false); }} 
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'relatorios' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
+                    className={`${menuOculto.includes('relatorios') ? 'hidden' : 'flex'} w-full items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'relatorios' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
                   >
                     Relatórios
                   </button>
@@ -1625,7 +1646,7 @@ export default function AdminDashboard() {
                 {isOwner && (
                   <button 
                     onClick={() => { setActiveTab("funil"); setIsMobileMenuOpen(false); }} 
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'funil' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
+                    className={`${menuOculto.includes('funil') ? 'hidden' : 'flex'} w-full items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'funil' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
                   >
                     Funil de Vendas
                   </button>
@@ -1633,7 +1654,7 @@ export default function AdminDashboard() {
                 {isOwner && (
                   <button 
                     onClick={() => { setActiveTab("clientes"); setIsMobileMenuOpen(false); }} 
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'clientes' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
+                    className={`${menuOculto.includes('clientes') ? 'hidden' : 'flex'} w-full items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'clientes' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
                   >
                     Clientes
                   </button>
@@ -1641,7 +1662,7 @@ export default function AdminDashboard() {
                 {isOwner && (
                   <button
                     onClick={() => { setActiveTab("financeiro"); setIsMobileMenuOpen(false); }}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'financeiro' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
+                    className={`${menuOculto.includes('financeiro') ? 'hidden' : 'flex'} w-full items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'financeiro' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
                   >
                     Financeiro
                     {alertasContabeis.length > 0 && <span className="ml-auto rounded-full bg-amber-400 px-1.5 text-[10px] font-bold leading-4 text-[#3d0a5c]" title="Obrigações contábeis pendentes">{alertasContabeis.length}</span>}
@@ -1667,27 +1688,27 @@ export default function AdminDashboard() {
                     <p className="px-3 text-[10px] font-mono font-bold text-white/50 uppercase tracking-wider mb-1">Cardápio</p>
                     <button 
                       onClick={() => { setActiveTab("gestao-cardapio"); setIsMobileMenuOpen(false); }} 
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'gestao-cardapio' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
+                      className={`${menuOculto.includes('gestao-cardapio') ? 'hidden' : 'flex'} w-full items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'gestao-cardapio' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
                     >
                       Produtos
                     </button>
                     <button 
                       onClick={() => { setActiveTab("categorias"); setIsMobileMenuOpen(false); }} 
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'categorias' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
+                      className={`${menuOculto.includes('categorias') ? 'hidden' : 'flex'} w-full items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'categorias' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
                     >
                       Categorias
                     </button>
                     {hasPermission('gerenciar_produtos') && (
                       <button
                         onClick={() => { setActiveTab("fichas-tecnicas"); setIsMobileMenuOpen(false); }}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'fichas-tecnicas' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
+                        className={`${menuOculto.includes('fichas-tecnicas') ? 'hidden' : 'flex'} w-full items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'fichas-tecnicas' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
                       >
                         Ficha Técnica & CMV
                       </button>
                     )}
                     <button
                       onClick={() => { setActiveTab("banner-promocional"); setIsMobileMenuOpen(false); }} 
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'banner-promocional' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
+                      className={`${menuOculto.includes('banner-promocional') ? 'hidden' : 'flex'} w-full items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'banner-promocional' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
                     >
                       Banner Promocional
                     </button>
@@ -1699,13 +1720,13 @@ export default function AdminDashboard() {
                     <p className="px-3 text-[10px] font-mono font-bold text-white/50 uppercase tracking-wider mb-1">Sistema</p>
                     <button 
                       onClick={() => { setActiveTab("configuracoes"); setIsMobileMenuOpen(false); }} 
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'configuracoes' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
+                      className={`${menuOculto.includes('configuracoes') ? 'hidden' : 'flex'} w-full items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'configuracoes' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
                     >
                       Configurações
                     </button>
                     <button 
                       onClick={() => { setActiveTab("usuarios"); setIsMobileMenuOpen(false); }} 
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'usuarios' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
+                      className={`${menuOculto.includes('usuarios') ? 'hidden' : 'flex'} w-full items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'usuarios' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
                     >
                       Usuários
                     </button>
@@ -1808,8 +1829,13 @@ export default function AdminDashboard() {
 
         {/* Menu */}
         <nav className="adm-nav flex-1 overflow-y-auto px-3 pb-2 space-y-3 [@media(max-height:820px)]:space-y-2" aria-label="Menu do gestor">
+          {organizandoMenu && (
+            <div className="mx-1 px-3 py-2 rounded-lg bg-amber-400/10 border border-amber-300/30 text-[12px] leading-snug text-amber-100">
+              Toque no olho para ocultar ou mostrar. Seções ocultas continuam funcionando e podem ser abertas pelo <b>Buscar ou ir para</b>.
+            </div>
+          )}
           {gruposMenu.map(g => {
-            const visiveis = g.itens.filter(i => i.mostrar);
+            const visiveis = g.itens.filter(i => i.mostrar && (organizandoMenu || !menuOculto.includes(i.id)));
             if (visiveis.length === 0) return null;
             return (
               <div key={g.titulo}>
@@ -1818,6 +1844,24 @@ export default function AdminDashboard() {
                   {visiveis.map(i => {
                     const ativo = activeTab === i.id;
                     const atalho = atalhoDoItem(i.id);
+                    if (organizandoMenu) {
+                      const oculto = menuOculto.includes(i.id);
+                      return (
+                        <button
+                          key={i.id}
+                          onClick={() => alternarOculto(i.id)}
+                          title={oculto ? `Mostrar "${i.rotulo}" no menu` : `Ocultar "${i.rotulo}" do menu`}
+                          aria-pressed={!oculto}
+                          className={`group w-full h-9 [@media(max-height:820px)]:h-8 px-3 rounded-lg flex items-center gap-3 text-[14px] [@media(max-height:820px)]:text-[13px] transition-colors cursor-pointer hover:bg-white/[0.08] ${oculto ? 'text-white/35' : 'text-white/85'}`}
+                        >
+                          <i.Icone size={18} className={oculto ? 'text-white/25' : 'text-white/60'} />
+                          <span className={`truncate ${oculto ? 'line-through' : ''}`}>{i.rotulo}</span>
+                          {oculto
+                            ? <EyeOff size={16} className="ml-auto text-white/40" />
+                            : <Eye size={16} className="ml-auto text-emerald-300" />}
+                        </button>
+                      );
+                    }
                     return (
                       <button
                         key={i.id}
@@ -1844,7 +1888,19 @@ export default function AdminDashboard() {
           })}
         </nav>
 
-        <div className="px-3 py-2 border-t border-white/10 shrink-0">
+        <div className="px-3 py-2 border-t border-white/10 shrink-0 space-y-px">
+          <button
+            onClick={() => setOrganizandoMenu(v => !v)}
+            className={`w-full h-9 [@media(max-height:820px)]:h-8 px-3 rounded-lg flex items-center gap-3 text-[14px] font-medium transition-colors cursor-pointer ${organizandoMenu ? 'bg-amber-400 text-[#2a0a3f] font-semibold hover:bg-amber-300' : 'text-white/60 hover:text-white hover:bg-white/[0.08]'}`}
+          >
+            {organizandoMenu ? <Check size={18} /> : <SlidersHorizontal size={18} />}
+            {organizandoMenu ? 'Concluir' : 'Organizar menu'}
+            {!organizandoMenu && qtdOcultas > 0 && (
+              <span className="ml-auto text-[11px] text-white/45 tabular-nums">
+                {qtdOcultas} oculta{qtdOcultas > 1 ? 's' : ''}
+              </span>
+            )}
+          </button>
           <button
             onClick={handleLogout}
             className="w-full h-9 [@media(max-height:820px)]:h-8 px-3 rounded-lg flex items-center gap-3 text-[14px] font-medium text-white/60 hover:text-rose-200 hover:bg-rose-500/10 transition-colors cursor-pointer"
