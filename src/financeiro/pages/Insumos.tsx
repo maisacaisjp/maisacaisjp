@@ -7,7 +7,6 @@ import { faltandoMultipedidos, importarMultipedidos } from '../insumosMultipedid
 import { useDados } from '../store';
 import type { Insumo, Unidade } from '../types';
 import { Btn, Card, Num, Sel, Selo, Txt, Vazio } from '../ui';
-import { Paginacao, useListaQueCabe } from '../../components/admin/ui';
 
 const UNIDADES: Array<{ value: Unidade; label: string }> = [
   { value: 'g', label: 'g' },
@@ -30,8 +29,6 @@ export default function Insumos() {
     .sort((a, b) => a.nome.localeCompare(b.nome));
   const pendentes = dados.insumos.filter(semPreco).length;
   const faltando = faltandoMultipedidos(dados).length;
-  // Só as linhas que cabem na tela; o resto vai para as próximas páginas
-  const pag = useListaQueCabe(lista, 50, { reserva: 120, resetar: [busca, soPendentes] });
 
   return (
     <Card
@@ -76,9 +73,10 @@ export default function Insumos() {
         <Vazio>Nenhum insumo ainda. Clique em "Novo insumo" ou importe as suas fichas.</Vazio>
       ) : (
         <>
-        <div ref={pag.ref} className="overflow-x-auto">
+        {/* Todos os insumos numa lista só: desce com a rolagem, cabeçalho fica fixo (igual a Produtos) */}
+        <div className="overflow-x-auto md:overflow-y-auto md:max-h-[calc(100dvh-300px)] md:min-h-[400px] adm-rolagem">
           <table className="fin-tabela">
-            <thead>
+            <thead className="sticky top-0 bg-white z-10 shadow-[0_1px_0_rgba(0,0,0,0.06)]">
               <tr>
                 <th className="min-w-44">Insumo</th>
                 <th>Categoria</th>
@@ -92,7 +90,7 @@ export default function Insumos() {
               </tr>
             </thead>
             <tbody>
-              {pag.itens.map((i) => (
+              {lista.map((i) => (
                 <tr key={i.id} className={semPreco(i) ? 'bg-amber-50/50' : ''}>
                   <td className="min-w-40 fin-cheio" data-label="Insumo"><Txt value={i.nome} onChange={(v) => mudar(i.id, { nome: v })} /></td>
                   <td className="w-40" data-label="Categoria"><Sel value={i.categoria} onChange={(v) => mudar(i.id, { categoria: v })} opcoes={[...new Set([...CATEGORIAS_INSUMO, i.categoria])].map((c) => ({ value: c, label: c }))} /></td>
@@ -124,7 +122,6 @@ export default function Insumos() {
             </tbody>
           </table>
         </div>
-        <Paginacao {...pag.paginacao} rotulo="insumos" className="mt-1" />
         </>
       )}
     </Card>

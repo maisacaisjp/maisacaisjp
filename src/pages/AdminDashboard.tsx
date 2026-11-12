@@ -76,7 +76,6 @@ import { formatItemNameForPrint, getItemNameTextForPrint } from '../utils/printH
 import { motion } from 'framer-motion';
 import MenuManager from '../components/MenuManager';
 import CategoryManager from '../components/CategoryManager';
-import RecipeManager from '../components/RecipeManager';
 import FinanceiroManager from '../components/FinanceiroManager';
 import { BannerContabil, useAlertasContabeis } from '../components/AlertasContabeis';
 import { SalesFunnelManager } from '../components/SalesFunnelManager';
@@ -193,7 +192,6 @@ export default function AdminDashboard() {
     'caixa': { title: 'Caixa', subtitle: 'Abertura, fechamento e conferência do turno.' },
     'gestao-cardapio': { title: 'Produtos', subtitle: 'Gerencie o cardápio, preços e fotos.' },
     'categorias': { title: 'Categorias', subtitle: 'Organize as categorias do cardápio.' },
-    'fichas-tecnicas': { title: 'Ficha Técnica & CMV', subtitle: 'Gestão de insumos, custo de produção e margem real por produto.' },
     'relatorios': { title: 'Relatórios', subtitle: 'Vendas, ticket médio e produtos mais vendidos.' },
     'clientes': { title: 'Clientes', subtitle: 'Histórico e cadastro de clientes.' },
     'avaliacoes': { title: 'Avaliações de Clientes', subtitle: 'Gestão de notas, comentários, elogios e respostas públicas.' },
@@ -1000,7 +998,6 @@ export default function AdminDashboard() {
       'caixa': 'gerenciar_caixa',
       'gestao-cardapio': 'gerenciar_produtos',
       'categorias': 'gerenciar_categorias',
-      'fichas-tecnicas': 'gerenciar_produtos',
       'relatorios': 'ver_relatorios',
       'clientes': 'ver_clientes',
       'avaliacoes': 'ver_clientes',
@@ -1279,14 +1276,13 @@ export default function AdminDashboard() {
       itens: [
         { id: 'gestao-cardapio', rotulo: 'Produtos', Icone: Package, mostrar: hasPermission('gerenciar_produtos'), palavras: 'pausar preco sabores cremes' },
         { id: 'categorias', rotulo: 'Categorias', Icone: FolderTree, mostrar: hasPermission('gerenciar_categorias') },
-        { id: 'fichas-tecnicas', rotulo: 'Ficha técnica e CMV', Icone: Layers, mostrar: hasPermission('gerenciar_produtos'), palavras: 'insumos custo' },
         { id: 'banner-promocional', rotulo: 'Banner promocional', Icone: Megaphone, mostrar: verCardapio, palavras: 'promocao popup' },
       ],
     },
     {
       titulo: 'Gestão',
       itens: [
-        { id: 'financeiro', rotulo: 'Financeiro', Icone: Wallet, mostrar: isOwner, badge: alertasContabeis.length, palavras: 'dre contabil custos' },
+        { id: 'financeiro', rotulo: 'Financeiro', Icone: Wallet, mostrar: isOwner, badge: alertasContabeis.length, palavras: 'dre contabil custos ficha tecnica cmv insumos' },
         { id: 'configuracoes', rotulo: 'Configurações', Icone: Settings, mostrar: hasPermission('gerenciar_configuracoes'), palavras: 'horario impressora entrega' },
         { id: 'agente-ia', rotulo: 'Agente IA', Icone: BotMessageSquare, mostrar: hasPermission('gerenciar_configuracoes'), palavras: 'whatsapp robo atendimento' },
         { id: 'usuarios', rotulo: 'Usuários e acesso', Icone: Shield, mostrar: hasPermission('gerenciar_usuarios'), palavras: 'funcionarios senha permissoes' },
@@ -1547,7 +1543,6 @@ export default function AdminDashboard() {
               {activeTab === 'clientes' && 'Clientes'}
               {activeTab === 'gestao-cardapio' && 'Produtos'}
               {activeTab === 'categorias' && 'Categorias'}
-              {activeTab === 'fichas-tecnicas' && 'Ficha Técnica & CMV'}
               {activeTab === 'financeiro' && 'Financeiro'}
               {activeTab === 'banner-promocional' && 'Banner promocional'}
               {activeTab === 'configuracoes' && 'Configurações'}
@@ -1698,14 +1693,6 @@ export default function AdminDashboard() {
                     >
                       Categorias
                     </button>
-                    {hasPermission('gerenciar_produtos') && (
-                      <button
-                        onClick={() => { setActiveTab("fichas-tecnicas"); setIsMobileMenuOpen(false); }}
-                        className={`${menuOculto.includes('fichas-tecnicas') ? 'hidden' : 'flex'} w-full items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'fichas-tecnicas' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
-                      >
-                        Ficha Técnica & CMV
-                      </button>
-                    )}
                     <button
                       onClick={() => { setActiveTab("banner-promocional"); setIsMobileMenuOpen(false); }} 
                       className={`${menuOculto.includes('banner-promocional') ? 'hidden' : 'flex'} w-full items-center gap-2.5 px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'banner-promocional' ? 'bg-white text-[#4d0471] font-bold shadow-xs' : 'text-white/75 hover:text-white hover:bg-white/10'}`}
@@ -1966,12 +1953,6 @@ export default function AdminDashboard() {
         {activeTab === "categorias" && hasPermission('gerenciar_categorias') && (
           <div className="mt-1">
             <CategoryManager />
-          </div>
-        )}
-
-        {activeTab === "fichas-tecnicas" && hasPermission('gerenciar_produtos') && (
-          <div className="mt-1">
-            <RecipeManager menuItems={menuItems} />
           </div>
         )}
 
