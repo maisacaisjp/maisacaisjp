@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import Comanda, { ComandaTexto } from "../components/Comanda";
+import Comanda from "../components/Comanda";
 import {
   X, TrendingUp, TrendingDown, Filter, Layers, RefreshCw, ChevronDown, Key,
   DollarSign,
@@ -229,25 +229,9 @@ export default function AdminDashboard() {
   const [pausedItems, setPausedItems] = useState<string[]>([]);
   const [printOrder, setPrintOrder] = useState<any>(null);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
-  // Modelo da comanda neste computador:
-  //  "direto"    -> ESC/POS pela ponte de impressão (impressora/ponte.mjs), estilo iFood, sem janela do Chrome
-  //  "texto"     -> pelo Chrome, driver Generic / Text Only
-  //  "formatado" -> pelo Chrome, driver da Bematech
-  type ModoImpressora = 'direto' | 'texto' | 'formatado';
-  const [modoImpressora, setModoImpressora] = useState<ModoImpressora>(() => {
-    try {
-      const m = localStorage.getItem('modoImpressoraV2');
-      return m === 'texto' || m === 'formatado' ? m : 'direto';
-    } catch { return 'direto'; }
-  });
-  const modoImpressoraRef = useRef(modoImpressora);
-  modoImpressoraRef.current = modoImpressora;
+  // Impressão padrão Bematech MP-4200 TH (ESC/POS estilo iFood via ponte local)
   const [situacaoPonte, setSituacaoPonte] = useState<StatusPonte | null>(null);
   const [imprimindoDireto, setImprimindoDireto] = useState(false);
-  const trocarModoImpressora = (m: ModoImpressora) => {
-    setModoImpressora(m);
-    try { localStorage.setItem('modoImpressoraV2', m); } catch {}
-  };
   const [cardapioSearchTerm, setCardapioSearchTerm] = useState("");
   const [autoPrint, setAutoPrint] = useState(() => localStorage.getItem("autoPrint") === "true");
   const autoPrintRef = useRef(autoPrint);
@@ -857,12 +841,11 @@ export default function AdminDashboard() {
   }, [showPrintPreview]);
 
   const handleConfirmPrint = async () => {
-    if (modoImpressora !== 'direto') return window.print();
     setImprimindoDireto(true);
     const ok = await imprimirNaPonte(printOrder);
     setImprimindoDireto(false);
     if (ok) return handleClosePrintPreview();
-    alert('A ponte de impressão não respondeu (ela fica ligada neste computador). Vou abrir a impressão pelo Chrome.');
+    alert('A ponte de impressão não respondeu (ela fica ligada neste computador). Vou abrir a impressão pelo navegador.');
     window.print();
   };
 
@@ -886,8 +869,8 @@ export default function AdminDashboard() {
     try {
       while (filaImpressao.current.length) {
         const pedido = filaImpressao.current.shift();
-        // direto na Bematech pela ponte; se ela não responder, cai na impressão pelo Chrome
-        if (modoImpressoraRef.current === 'direto' && (await imprimirNaPonte(pedido))) continue;
+        // direto na Bematech pela ponte; se ela não responder, cai na impressão do navegador
+        if (await imprimirNaPonte(pedido)) continue;
         setShowPrintPreview(false);
         setPrintOrder(pedido);
         // espera a comanda aparecer na página antes de mandar imprimir
@@ -4492,29 +4475,19 @@ export default function AdminDashboard() {
             </div>
             {/* Receipt Content */}
             <div style={{ padding: '10px 8px', flexGrow: 1, overflowY: 'auto' }}>
-              <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', fontSize: '11px' }}>
-                {([['direto', 'Direto na Bematech (estilo iFood)'], ['texto', 'Chrome: somente texto'], ['formatado', 'Chrome: driver Bematech']] as const).map(([m, rotulo]) => (
-                  <button key={m} type="button" onClick={() => trocarModoImpressora(m)}
-                    style={{ flex: 1, padding: '6px', borderRadius: '8px', border: modoImpressora === m ? '2px solid #6a2092' : '1px solid #d1d5db', background: modoImpressora === m ? '#f5edfb' : '#fff', fontWeight: 700, cursor: 'pointer', color: '#111' }}>
-                    {rotulo}
-                  </button>
-                ))}
+              <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '10px', padding: '6px 8px', borderRadius: '8px', background: !situacaoPonte ? '#f3f4f6' : situacaoPonte.ponte && situacaoPonte.online && situacaoPonte.papel !== 'acabou' ? '#ecfdf5' : '#fef2f2', color: '#111' }}>
+                {!situacaoPonte
+                  ? 'Verificando a impressora...'
+                  : !situacaoPonte.ponte
+                    ? '⚠️ Ponte de impressão desligada neste computador. Imprimirá pelo navegador.'
+                    : !situacaoPonte.online
+                      ? '⚠️ Bematech sem resposta: confira se está ligada e na rede.'
+                      : situacaoPonte.papel === 'acabou'
+                        ? '⚠️ Bematech sem papel.'
+                        : `✅ Bematech online${situacaoPonte.papel === 'acabando' ? ' (papel acabando)' : ''}`}
               </div>
-              {modoImpressora === 'direto' && (
-                <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '10px', padding: '6px 8px', borderRadius: '8px', background: !situacaoPonte ? '#f3f4f6' : situacaoPonte.ponte && situacaoPonte.online && situacaoPonte.papel !== 'acabou' ? '#ecfdf5' : '#fef2f2', color: '#111' }}>
-                  {!situacaoPonte
-                    ? 'Verificando a impressora...'
-                    : !situacaoPonte.ponte
-                      ? '⚠️ Ponte de impressão desligada neste computador. Vai imprimir pelo Chrome.'
-                      : !situacaoPonte.online
-                        ? '⚠️ Bematech sem resposta: confira se está ligada e na rede.'
-                        : situacaoPonte.papel === 'acabou'
-                          ? '⚠️ Bematech sem papel.'
-                          : `✅ Bematech online${situacaoPonte.papel === 'acabando' ? ' (papel acabando)' : ''}`}
-                </div>
-              )}
               <div style={{ width: '72mm', margin: '0 auto' }}>
-                {modoImpressora === 'texto' ? <ComandaTexto pedido={printOrder} /> : <Comanda pedido={printOrder} />}
+                <Comanda pedido={printOrder} />
               </div>
             </div>
             {/* Modal Actions */}
@@ -4540,8 +4513,7 @@ export default function AdminDashboard() {
       {/* Hidden receipt for actual printing */}
       {printOrder && (
         <div className="print-only">
-          {/* "direto" só usa o Chrome se a ponte falhar; aí a impressora está no driver Text Only */}
-          {modoImpressora === 'formatado' ? <Comanda pedido={printOrder} /> : <ComandaTexto pedido={printOrder} />}
+          <Comanda pedido={printOrder} />
         </div>
       )}
     {editingOrder && (
