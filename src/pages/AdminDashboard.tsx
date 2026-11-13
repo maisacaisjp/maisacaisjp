@@ -100,7 +100,6 @@ import HistoricalSalesModal from '../components/HistoricalSalesModal';
 import { startOfDay, endOfDay } from 'date-fns';
 import { brl, nomeBonito } from '../utils/formatacao';
 import PaletaComandos, { ComandoPaleta } from '../components/PaletaComandos';
-import { Paginacao, useLinhasQueCabem } from '../components/admin/ui';
 
 
 
@@ -923,14 +922,6 @@ export default function AdminDashboard() {
   }, [showPrintPreview, reportModal.isOpen, isPasswordModalOpen, selectedSessionForDetails, isMobileMenuOpen]);
 
   const [activeTab, setActiveTab] = useState("visao-geral");
-  // Lista de pedidos: quantas linhas cabem na tela (o resto vai para as próximas páginas)
-  const pedidosListaRef = useRef<HTMLDivElement>(null);
-  const pedidosPorPagina = useLinhasQueCabem(pedidosListaRef, 57, { reserva: 128, min: 3, deps: [activeTab, ordersViewMode, ordersStatusFilter] });
-  const [pedidosPagina, setPedidosPagina] = useState(1);
-  // Comandas (cards grandes): fileiras que cabem na tela × colunas da grade
-  const comandasRef = useRef<HTMLDivElement>(null);
-  const fileirasComandas = useLinhasQueCabem(comandasRef, 432, { reserva: 64, min: 1, max: 6, deps: [activeTab, ordersViewMode, ordersStatusFilter] });
-  useEffect(() => setPedidosPagina(1), [ordersStatusFilter, ordersSearchTerm, ordersViewMode]);
   // Alertas da agenda contábil (Financeiro → Contábil), só para o dono
   const alertasContabeis = useAlertasContabeis(isAuthenticated && isOwner, activeTab);
   const [entradaFinanceiro, setEntradaFinanceiro] = useState<{ chave: number; contabil: boolean }>({ chave: 0, contabil: false });
@@ -2826,16 +2817,6 @@ export default function AdminDashboard() {
                 Finalizado: 'bg-emerald-50 text-emerald-800 border-emerald-200',
                 Cancelado: 'bg-rose-50 text-rose-700 border-rose-200',
               };
-              const totalPagPedidos = Math.max(1, Math.ceil(filteredList.length / pedidosPorPagina));
-              const pagPedidos = Math.min(pedidosPagina, totalPagPedidos);
-              const inicioPedidos = (pagPedidos - 1) * pedidosPorPagina;
-              const pedidosDaPagina = filteredList.slice(inicioPedidos, inicioPedidos + pedidosPorPagina);
-              const colunasComandas = typeof window !== 'undefined' ? (window.innerWidth >= 1280 ? 3 : window.innerWidth >= 768 ? 2 : 1) : 3;
-              const porPaginaComandas = Math.max(1, fileirasComandas * colunasComandas);
-              const totalPagComandas = Math.max(1, Math.ceil(filteredList.length / porPaginaComandas));
-              const pagComandas = Math.min(pedidosPagina, totalPagComandas);
-              const inicioComandas = (pagComandas - 1) * porPaginaComandas;
-              const comandasDaPagina = filteredList.slice(inicioComandas, inicioComandas + porPaginaComandas);
               const modos = [
                 { id: 'table', rotulo: 'Lista', Icone: List },
                 { id: 'cards', rotulo: 'Comandas', Icone: LayoutGrid },
@@ -2999,9 +2980,9 @@ export default function AdminDashboard() {
 
                   {/* VISUALIZAÇÃO EM CARDS (COMANDA OPERACIONAL DE ALTA USABILIDADE) */}
                   {ordersViewMode === 'cards' && filteredList.length > 0 && (
-                    <div>
-                    <div ref={comandasRef} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pt-1 [@media(max-height:780px)]:max-h-[calc(100dvh-340px)] [@media(max-height:780px)]:overflow-y-auto [@media(max-height:780px)]:pr-1 adm-rolagem">
-                      {comandasDaPagina.map((order: any) => {
+                    <div className="overflow-y-auto max-h-[calc(100dvh-295px)] min-h-[400px] pr-1 adm-rolagem">
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pt-1">
+                        {filteredList.map((order: any) => {
                         const dataCriacao = order.createdAt || order.created_at;
                         const elapsed = getElapsedTime(dataCriacao);
                         const isDelivery = order.orderType === 'entrega' || order.orderType === 'Delivery';
@@ -3372,17 +3353,7 @@ export default function AdminDashboard() {
                           </div>
                         );
                       })}
-                    </div>
-                    <Paginacao
-                      className="mt-3 rounded-xl border border-stone-200/80"
-                      pagina={pagComandas}
-                      totalPaginas={totalPagComandas}
-                      inicio={inicioComandas}
-                      mostrando={comandasDaPagina.length}
-                      total={filteredList.length}
-                      onIr={(p) => setPedidosPagina(Math.max(1, Math.min(totalPagComandas, p)))}
-                      rotulo={filteredList.length === 1 ? 'pedido' : 'pedidos'}
-                    />
+                      </div>
                     </div>
                   )}
 
@@ -3605,10 +3576,10 @@ export default function AdminDashboard() {
                     );
                   })()}
 
-                  {/* VISUALIZAÇÃO EM TABELA (LIMPA, SEM ENDEREÇOS POLUINDO A PÁGINA PRINCIPAL) */}
+                  {/* VISUALIZAÇÃO EM TABELA (ROLAGEM VERTICAL CONTÍNUA EM PÁGINA ÚNICA, IGUAL EM PRODUTOS) */}
                   {ordersViewMode === 'table' && filteredList.length > 0 && (
                     <div className="rounded-xl border border-stone-200/80 overflow-hidden">
-                      <div ref={pedidosListaRef} className="overflow-x-auto">
+                      <div className="overflow-x-auto overflow-y-auto max-h-[calc(100dvh-295px)] min-h-[400px] adm-rolagem">
                       <table className="w-full table-fixed text-left">
                         <colgroup>
                           <col className="w-[130px]" />
@@ -3619,19 +3590,19 @@ export default function AdminDashboard() {
                           <col className="w-[196px]" />
                           <col className="w-[250px]" />
                         </colgroup>
-                        <thead>
-                          <tr className="border-b border-stone-100 text-[11px] font-semibold text-stone-400 uppercase tracking-wider bg-stone-50/60">
-                            <th className="h-10 pl-5 pr-3 font-semibold">Pedido</th>
-                            <th className="h-10 px-3 font-semibold">Cliente</th>
-                            <th className="h-10 px-3 font-semibold">Tipo</th>
-                            <th className="h-10 px-3 font-semibold">Pagamento</th>
-                            <th className="h-10 px-3 font-semibold text-right">Valor</th>
-                            <th className="h-10 pl-5 pr-3 font-semibold">Status</th>
-                            <th className="h-10 pl-3 pr-5 font-semibold text-right">Ações</th>
+                        <thead className="sticky top-0 bg-stone-50 z-10 shadow-[0_1px_0_rgba(0,0,0,0.06)]">
+                          <tr className="border-b border-stone-100 text-[11px] font-semibold text-stone-400 uppercase tracking-wider bg-stone-50">
+                            <th className="h-10 pl-5 pr-3 font-semibold bg-stone-50">Pedido</th>
+                            <th className="h-10 px-3 font-semibold bg-stone-50">Cliente</th>
+                            <th className="h-10 px-3 font-semibold bg-stone-50">Tipo</th>
+                            <th className="h-10 px-3 font-semibold bg-stone-50">Pagamento</th>
+                            <th className="h-10 px-3 font-semibold text-right bg-stone-50">Valor</th>
+                            <th className="h-10 pl-5 pr-3 font-semibold bg-stone-50">Status</th>
+                            <th className="h-10 pl-3 pr-5 font-semibold text-right bg-stone-50">Ações</th>
                           </tr>
                         </thead>
                         <tbody className="text-[13px] divide-y divide-stone-100">
-                          {pedidosDaPagina.map((order: any) => {
+                          {filteredList.map((order: any) => {
                             const dataCriacao = order.createdAt || order.created_at;
                             const elapsed = getElapsedTime(dataCriacao);
                             const isDelivery = order.orderType === 'entrega' || order.orderType === 'Delivery';
@@ -3809,15 +3780,6 @@ export default function AdminDashboard() {
                         </tbody>
                       </table>
                       </div>
-                      <Paginacao
-                        pagina={pagPedidos}
-                        totalPaginas={totalPagPedidos}
-                        inicio={inicioPedidos}
-                        mostrando={pedidosDaPagina.length}
-                        total={filteredList.length}
-                        onIr={(p) => setPedidosPagina(Math.max(1, Math.min(totalPagPedidos, p)))}
-                        rotulo={filteredList.length === 1 ? 'pedido' : 'pedidos'}
-                      />
                     </div>
                   )}
                 </div>
