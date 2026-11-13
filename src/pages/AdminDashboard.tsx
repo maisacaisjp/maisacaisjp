@@ -2862,6 +2862,22 @@ export default function AdminDashboard() {
                     </span>
 
                     <div className="ml-auto flex items-center gap-2">
+                      {/* Botão de Auto-Impressão Direto no Topo dos Pedidos */}
+                      <button
+                        type="button"
+                        onClick={toggleAutoPrint}
+                        title={autoPrint ? "Auto-Imprimir ATIVADO: pedidos novos imprimem sozinhos na Bematech" : "Auto-Imprimir DESATIVADO: clique para ativar"}
+                        className={`h-9 px-3 rounded-xl text-[13px] font-semibold transition-all cursor-pointer flex items-center gap-2 border ${
+                          autoPrint
+                            ? 'bg-emerald-50 border-emerald-300 text-emerald-800 shadow-sm'
+                            : 'bg-stone-100 border-stone-200 text-stone-600 hover:text-stone-900 hover:bg-stone-200/80'
+                        }`}
+                      >
+                        <Printer size={15} className={autoPrint ? 'text-emerald-600' : 'text-stone-400'} />
+                        <span className="hidden sm:inline">Auto-Imprimir</span>
+                        <span className={`w-2 h-2 rounded-full ${autoPrint ? 'bg-emerald-500 animate-pulse' : 'bg-stone-300'}`} />
+                      </button>
+
                       <div className="flex items-center bg-stone-100 rounded-xl p-1" role="tablist" aria-label="Modo de visualização">
                         {modos.map(m => (
                           <button
