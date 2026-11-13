@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 import { ArrowLeft, Check, MessageCircle, Receipt, Star } from 'lucide-react';
 import { formatItemNameForPrint } from '../utils/printHelpers';
 import { brl } from '../utils/formatacao';
-import { etapasDoPedido, rotuloStatus, textoDoStatus } from '../utils/contaCliente';
+import { etapasDoPedido, normalizarStatus, rotuloStatus, textoDoStatus } from '../utils/contaCliente';
 import { RESTAURANT_WHATSAPP_PHONE } from '../data/menu';
 import OrderReviewModal from '../components/OrderReviewModal';
 
@@ -79,7 +79,7 @@ export default function OrderTracking() {
 
   const cancelado = order.status === 'Cancelado';
   const etapas = etapasDoPedido(order.orderType);
-  const atual = Math.max(0, etapas.indexOf(order.status));
+  const atual = Math.max(0, etapas.indexOf(normalizarStatus(order.status)));
   const finalizado = order.status === 'Finalizado';
   const msgLoja = encodeURIComponent(`Olá! Quero falar sobre o meu pedido #${order.id}.`);
 

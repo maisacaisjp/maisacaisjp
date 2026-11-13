@@ -142,10 +142,21 @@ export const esquecerUltimoPedido = () => gravar(CHAVE_ULTIMO_PEDIDO, null);
 
 export const STATUS_FINAIS = ['Finalizado', 'Cancelado'];
 
+/** Nomes antigos (tela da cozinha) viram os nomes oficiais. */
+export function normalizarStatus(status: string | null | undefined): string {
+  const s = String(status || '').trim();
+  if (!s) return 'Pendente';
+  const k = s.toLowerCase();
+  if (k === 'em preparo' || k === 'preparando') return 'Em Preparo';
+  if (k === 'pronto' || k.startsWith('pronto para') || k === 'pedido pronto') return 'Pronto';
+  if (k === 'recebido') return 'Pendente';
+  return s;
+}
+
 export function etapasDoPedido(orderType: string) {
   return orderType === 'Delivery'
-    ? ['Pendente', 'Em Preparo', 'Saiu para Entrega', 'Finalizado']
-    : ['Pendente', 'Em Preparo', 'Finalizado'];
+    ? ['Pendente', 'Em Preparo', 'Pronto', 'Saiu para Entrega', 'Finalizado']
+    : ['Pendente', 'Em Preparo', 'Pronto', 'Finalizado'];
 }
 
 export function rotuloStatus(status: string, orderType: string): string {
@@ -153,11 +164,12 @@ export function rotuloStatus(status: string, orderType: string): string {
   const mapa: Record<string, string> = {
     Pendente: 'Recebido',
     'Em Preparo': 'Em preparo',
+    Pronto: 'Pronto',
     'Saiu para Entrega': 'Saiu para entrega',
     Finalizado: retirada ? 'Retirado' : 'Entregue',
     Cancelado: 'Cancelado',
   };
-  return mapa[status] || status;
+  return mapa[normalizarStatus(status)] || status;
 }
 
 export function textoDoStatus(status: string, orderType: string): string {
@@ -165,11 +177,12 @@ export function textoDoStatus(status: string, orderType: string): string {
   const mapa: Record<string, string> = {
     Pendente: 'Recebemos seu pedido e já vamos começar.',
     'Em Preparo': retirada ? 'Estamos preparando. Avisamos quando estiver pronto para retirar.' : 'Estamos preparando seu pedido com carinho.',
+    Pronto: retirada ? 'Seu pedido está pronto! Pode vir retirar na loja.' : 'Seu pedido está pronto e já vai sair para entrega.',
     'Saiu para Entrega': 'Seu pedido está a caminho!',
     Finalizado: retirada ? 'Pedido retirado. Bom apetite!' : 'Pedido entregue. Bom apetite!',
     Cancelado: 'Este pedido foi cancelado. Fale com a loja se tiver dúvida.',
   };
-  return mapa[status] || '';
+  return mapa[normalizarStatus(status)] || '';
 }
 
 /** Pedido feito hoje (horário de Brasília). */

@@ -92,6 +92,7 @@ import BannerManager from '../components/BannerManager';
 import ReviewsManager from '../components/ReviewsManager';
 import AgentManager from '../components/AgentManager';
 import CampoEntregaParceiro from '../components/admin/CampoEntregaParceiro';
+import { normalizarStatus } from '../utils/contaCliente';
 import MotoboyManager from '../components/MotoboyManager';
 import KitchenDisplay from '../components/KitchenDisplay';
 import HistoricalSalesModal from '../components/HistoricalSalesModal';
@@ -253,7 +254,7 @@ export default function AdminDashboard() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<any | null>(null);
   const [ordersViewMode, setOrdersViewMode] = useState<'cards' | 'table' | 'kanban'>('table');
-  const [ordersStatusFilter, setOrdersStatusFilter] = useState<'todos' | 'Pendente' | 'Em Preparo' | 'Saiu para Entrega' | 'Finalizado' | 'Cancelado'>('todos');
+  const [ordersStatusFilter, setOrdersStatusFilter] = useState<'todos' | 'Pendente' | 'Em Preparo' | 'Pronto' | 'Saiu para Entrega' | 'Finalizado' | 'Cancelado'>('todos');
   const [ordersSearchTerm, setOrdersSearchTerm] = useState('');
 
   const getElapsedTime = (createdAt: string | Date) => {
@@ -420,7 +421,7 @@ export default function AdminDashboard() {
         customerPhone: o.customer_phone || '',
         orderType: o.order_type || 'balcao',
         paymentMethod: o.payment_method || 'Outros',
-        status: o.status || 'Pendente',
+        status: normalizarStatus(o.status),
         totalAmount: Number(o.total_amount) || 0,
         deliveryAddress: o.delivery_address || '',
         deliveryZone: o.delivery_zone || '',
@@ -2802,15 +2803,17 @@ export default function AdminDashboard() {
               const countAll = allRecent.length;
               const countPendente = allRecent.filter((o: any) => o.status === 'Pendente').length;
               const countPreparo = allRecent.filter((o: any) => o.status === 'Em Preparo').length;
+              const countPronto = allRecent.filter((o: any) => o.status === 'Pronto').length;
               const countEntrega = allRecent.filter((o: any) => o.status === 'Saiu para Entrega').length;
               const countFinalizado = allRecent.filter((o: any) => o.status === 'Finalizado').length;
               const countCancelado = allRecent.filter((o: any) => o.status === 'Cancelado').length;
-              const countAtivos = countPendente + countPreparo + countEntrega;
+              const countAtivos = countPendente + countPreparo + countPronto + countEntrega;
 
               const filtrosStatus = [
                 { id: 'todos', rotulo: 'Todos', n: countAll, cor: '' },
                 { id: 'Pendente', rotulo: 'Pendentes', n: countPendente, cor: 'bg-amber-400' },
                 { id: 'Em Preparo', rotulo: 'Em preparo', n: countPreparo, cor: 'bg-violet-500' },
+                { id: 'Pronto', rotulo: 'Prontos', n: countPronto, cor: 'bg-teal-500' },
                 { id: 'Saiu para Entrega', rotulo: 'Em rota', n: countEntrega, cor: 'bg-sky-500' },
                 { id: 'Finalizado', rotulo: 'Concluídos', n: countFinalizado, cor: 'bg-emerald-500' },
                 { id: 'Cancelado', rotulo: 'Cancelados', n: countCancelado, cor: 'bg-rose-500' },
@@ -2818,6 +2821,7 @@ export default function AdminDashboard() {
               const COR_STATUS: Record<string, string> = {
                 Pendente: 'bg-amber-50 text-amber-800 border-amber-200',
                 'Em Preparo': 'bg-violet-50 text-violet-800 border-violet-200',
+                Pronto: 'bg-teal-50 text-teal-800 border-teal-200',
                 'Saiu para Entrega': 'bg-sky-50 text-sky-800 border-sky-200',
                 Finalizado: 'bg-emerald-50 text-emerald-800 border-emerald-200',
                 Cancelado: 'bg-rose-50 text-rose-700 border-rose-200',
@@ -2988,6 +2992,7 @@ export default function AdminDashboard() {
                         const items = safeParseItems(order.items);
                         const isPending = order.status === 'Pendente';
                         const isInPrep = order.status === 'Em Preparo';
+                        const isReady = order.status === 'Pronto';
                         const isInRoute = order.status === 'Saiu para Entrega';
                         const isDone = order.status === 'Finalizado';
                         const isCanceled = order.status === 'Cancelado';
@@ -2997,6 +3002,8 @@ export default function AdminDashboard() {
                           ? 'border-t-amber-400'
                           : isInPrep
                           ? 'border-t-amber-500'
+                          : isReady
+                          ? 'border-t-teal-500'
                           : isInRoute
                           ? 'border-t-sky-500'
                           : isDone
@@ -3065,6 +3072,8 @@ export default function AdminDashboard() {
                                       ? 'bg-amber-100 text-amber-900 border-amber-300'
                                       : isInPrep
                                       ? 'bg-[#6a2092] text-white border-[#6a2092]'
+                                      : isReady
+                                      ? 'bg-teal-100 text-teal-900 border-teal-300'
                                       : isInRoute
                                       ? 'bg-sky-100 text-sky-900 border-sky-300'
                                       : isDone
@@ -3078,6 +3087,8 @@ export default function AdminDashboard() {
                                         ? 'bg-amber-500'
                                         : isInPrep
                                         ? 'bg-[#6a2092]'
+                                        : isReady
+                                        ? 'bg-teal-500'
                                         : isInRoute
                                         ? 'bg-sky-500'
                                         : isDone
@@ -3241,11 +3252,23 @@ export default function AdminDashboard() {
                               {isInPrep && (
                                 <button
                                   type="button"
+                                  onClick={() => updateOrderStatus(order.id, 'Pronto')}
+                                  className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white font-mono font-black text-xs shadow-2xs transition-all cursor-pointer border border-teal-800"
+                                >
+                                  <Check size={14} />
+                                  <span>PEDIDO PRONTO</span>
+                                  <ArrowRight size={14} />
+                                </button>
+                              )}
+
+                              {isReady && (
+                                <button
+                                  type="button"
                                   onClick={() => updateOrderStatus(order.id, isDelivery ? 'Saiu para Entrega' : 'Finalizado')}
                                   className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-[#6a2092] hover:bg-[#521872] active:bg-[#4d0471] text-white font-mono font-black text-xs shadow-2xs transition-all cursor-pointer border border-stone-800"
                                 >
                                   {isDelivery ? <Bike size={14} /> : <Check size={14} />}
-                                  <span>{isDelivery ? 'DESPACHAR (MOTOBOY)' : 'FINALIZAR PEDIDO'}</span>
+                                  <span>{isDelivery ? 'DESPACHAR (MOTOBOY)' : 'ENTREGUE AO CLIENTE'}</span>
                                   <ArrowRight size={14} />
                                 </button>
                               )}
@@ -3283,6 +3306,7 @@ export default function AdminDashboard() {
                                 >
                                   <option value="Pendente">Pendente</option>
                                   <option value="Em Preparo">Em Preparo</option>
+                                  <option value="Pronto">Pronto</option>
                                   <option value="Saiu para Entrega">Saiu para Entrega</option>
                                   <option value="Finalizado">Finalizado</option>
                                   <option value="Cancelado">Cancelado</option>
@@ -3368,8 +3392,17 @@ export default function AdminDashboard() {
                         pedidos: filteredList.filter((o: any) => o.status === 'Em Preparo'),
                       },
                       {
+                        id: 'Pronto',
+                        titulo: 'Prontos',
+                        corBorda: 'border-t-teal-500',
+                        bgHeader: 'bg-teal-50/80',
+                        textCor: 'text-teal-950',
+                        badgeBg: 'bg-teal-200 text-teal-900',
+                        pedidos: filteredList.filter((o: any) => o.status === 'Pronto'),
+                      },
+                      {
                         id: 'Saiu para Entrega',
-                        titulo: 'Em Rota / Balcão',
+                        titulo: 'Em Rota',
                         corBorda: 'border-t-sky-500',
                         bgHeader: 'bg-sky-50/80',
                         textCor: 'text-sky-950',
@@ -3388,7 +3421,7 @@ export default function AdminDashboard() {
                     ];
 
                     return (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3.5 pt-1">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3.5 pt-1">
                         {colunas.map(col => (
                           <div
                             key={col.id}
@@ -3420,6 +3453,7 @@ export default function AdminDashboard() {
                                   const items = safeParseItems(order.items);
                                   const isPending = order.status === 'Pendente';
                                   const isInPrep = order.status === 'Em Preparo';
+                                  const isReady = order.status === 'Pronto';
                                   const isInRoute = order.status === 'Saiu para Entrega';
                                   const isAtivo = order.status !== 'Finalizado' && order.status !== 'Cancelado';
                                   const nomeCliente = order.customerName || order.customer_name || 'Cliente';
@@ -3514,11 +3548,22 @@ export default function AdminDashboard() {
                                         {isInPrep && (
                                           <button
                                             type="button"
+                                            onClick={() => updateOrderStatus(order.id, 'Pronto')}
+                                            className="w-full py-1.5 px-2 bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white text-[11px] font-mono font-black rounded-md flex items-center justify-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+                                          >
+                                            <Check size={12} />
+                                            <span>PRONTO</span>
+                                            <ArrowRight size={12} />
+                                          </button>
+                                        )}
+                                        {isReady && (
+                                          <button
+                                            type="button"
                                             onClick={() => updateOrderStatus(order.id, isDelivery ? 'Saiu para Entrega' : 'Finalizado')}
                                             className="w-full py-1.5 px-2 bg-[#6a2092] hover:bg-[#521872] active:bg-[#4d0471] text-white text-[11px] font-mono font-black rounded-md flex items-center justify-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
                                           >
                                             {isDelivery ? <Bike size={12} /> : <Check size={12} />}
-                                            <span>{isDelivery ? 'DESPACHAR' : 'CONCLUIR'}</span>
+                                            <span>{isDelivery ? 'DESPACHAR' : 'ENTREGUE'}</span>
                                             <ArrowRight size={12} />
                                           </button>
                                         )}
@@ -3659,6 +3704,7 @@ export default function AdminDashboard() {
                                   >
                                     <option value="Pendente">Pendente</option>
                                     <option value="Em Preparo">Em preparo</option>
+                                    <option value="Pronto">Pronto</option>
                                     <option value="Saiu para Entrega">Em rota</option>
                                     <option value="Finalizado">Finalizado</option>
                                     <option value="Cancelado">Cancelado</option>
@@ -3679,11 +3725,20 @@ export default function AdminDashboard() {
                                     )}
                                     {order.status === 'Em Preparo' && (
                                       <button
+                                        onClick={() => updateOrderStatus(order.id, 'Pronto')}
+                                        className="h-8 px-3 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-[13px] font-semibold transition-colors cursor-pointer shadow-sm whitespace-nowrap"
+                                        title="Marcar como pedido pronto"
+                                      >
+                                        Pronto
+                                      </button>
+                                    )}
+                                    {order.status === 'Pronto' && (
+                                      <button
                                         onClick={() => updateOrderStatus(order.id, isDelivery ? 'Saiu para Entrega' : 'Finalizado')}
                                         className="h-8 px-3 rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-[13px] font-semibold transition-colors cursor-pointer shadow-sm whitespace-nowrap"
-                                        title={isDelivery ? 'Despachar para o motoboy' : 'Finalizar pedido'}
+                                        title={isDelivery ? 'Despachar para o motoboy' : 'Cliente retirou o pedido'}
                                       >
-                                        {isDelivery ? 'Despachar' : 'Finalizar'}
+                                        {isDelivery ? 'Despachar' : 'Entregue'}
                                       </button>
                                     )}
                                     {order.status === 'Saiu para Entrega' && (

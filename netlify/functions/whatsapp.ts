@@ -48,7 +48,7 @@ export default async (req, context) => {
         const duplicateOrder = recentOrders.find(o => {
           const oDigits = String(o.customer_phone || '').replace(/\D/g, '');
           const samePhone = oDigits.endsWith(lastDigits) || (lastDigits.length >= 8 && oDigits.includes(lastDigits));
-          const isPending = o.status === 'Pendente' || o.status === 'Preparando';
+          const isPending = o.status === 'Pendente' || o.status === 'Preparando' || o.status === 'Em Preparo' || o.status === 'Pronto';
           return samePhone && isPending;
         });
 

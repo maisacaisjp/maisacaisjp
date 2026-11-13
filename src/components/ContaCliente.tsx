@@ -15,6 +15,7 @@ import {
   rotuloStatus,
   textoDoStatus,
   ehDeHoje,
+  normalizarStatus,
 } from '../utils/contaCliente';
 import { getCashbackConfig, getCustomerCashbackInfo, dataCurta } from '../utils/cashback';
 
@@ -33,7 +34,9 @@ const corDoStatus = (status: string) =>
       ? 'bg-stone-100 text-stone-600'
       : status === 'Saiu para Entrega'
         ? 'bg-sky-50 text-sky-700'
-        : 'bg-amber-50 text-amber-800';
+        : normalizarStatus(status) === 'Pronto'
+          ? 'bg-teal-50 text-teal-700'
+          : 'bg-amber-50 text-amber-800';
 
 function quando(iso: string) {
   const d = new Date(iso);
@@ -322,7 +325,7 @@ export default function ContaCliente({ isOpen, onClose, onRepetir }: Props) {
         {/* Pedido em andamento */}
         {ativos.map(p => {
           const etapas = etapasDoPedido(p.order_type);
-          const atual = Math.max(0, etapas.indexOf(p.status));
+          const atual = Math.max(0, etapas.indexOf(normalizarStatus(p.status)));
           return (
             <section key={p.id} className="mx-5 mt-5 rounded-2xl bg-brand-900 text-white p-4 shadow-[0_12px_30px_rgba(38,1,58,0.25)]">
               <div className="flex items-center justify-between gap-3">

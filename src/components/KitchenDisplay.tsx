@@ -1,3 +1,4 @@
+import { normalizarStatus } from '../utils/contaCliente';
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { 
@@ -76,15 +77,14 @@ export default function KitchenDisplay() {
 
   // Avançar status do pedido
   const advanceStatus = async (order: KdsOrder) => {
-    let nextStatus = 'Em preparo';
-    if (order.status === 'Pendente' || order.status === 'Recebido') {
-      nextStatus = 'Em preparo';
-    } else if (order.status === 'Em preparo') {
-      const isDelivery = String(order.order_type || '').toLowerCase().includes('deliver');
-      nextStatus = isDelivery ? 'Pronto para entrega' : 'Pronto para retirada';
-    } else {
-      nextStatus = 'Finalizado';
-    }
+    // Mesmos status do gestor e do acompanhamento do cliente
+    const atual = normalizarStatus(order.status);
+    const isDelivery = String(order.order_type || '').toLowerCase().includes('deliver');
+    let nextStatus = 'Em Preparo';
+    if (atual === 'Pendente') nextStatus = 'Em Preparo';
+    else if (atual === 'Em Preparo') nextStatus = 'Pronto';
+    else if (atual === 'Pronto') nextStatus = isDelivery ? 'Saiu para Entrega' : 'Finalizado';
+    else nextStatus = 'Finalizado';
 
     try {
       await supabase.from('orders').update({ status: nextStatus, updated_at: new Date().toISOString() }).eq('id', order.id);
@@ -307,11 +307,13 @@ export default function KitchenDisplay() {
                     className="w-full py-2.5 rounded-xl font-black text-xs text-white bg-[#4d0471] hover:bg-[#3b0357] shadow-xs flex items-center justify-center gap-1.5 transition-all"
                   >
                     <CheckCircle2 size={16} />
-                    {order.status === 'Em preparo' 
-                      ? (isDelivery ? 'Pronto p/ Entrega 🛵' : 'Pronto p/ Retirada 🛍️') 
-                      : order.status === 'Pendente' || order.status === 'Recebido' 
-                        ? 'Iniciar Preparo 🍧' 
-                        : 'Finalizar Pedido ✅'}
+                    {normalizarStatus(order.status) === 'Em Preparo'
+                      ? 'Pedido Pronto ✅'
+                      : normalizarStatus(order.status) === 'Pendente'
+                        ? 'Iniciar Preparo 🍧'
+                        : normalizarStatus(order.status) === 'Pronto'
+                          ? (isDelivery ? 'Saiu p/ Entrega 🛵' : 'Entregue ao Cliente 🛍️')
+                          : 'Finalizar Pedido ✅'}
                   </button>
                 </div>
               </div>
