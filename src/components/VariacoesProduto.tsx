@@ -81,7 +81,9 @@ export default function VariacoesProduto({
     hapticLight();
     if (delta > 0) {
       if (totalAdicionais >= regraAd.max || qtdDe(extra.id) >= regraAd.maxPorItem) return;
-      onExtrasChange([...extras, extra]);
+      // A foto é só para a tela: não vai para o pedido
+      const { imageUrl: _foto, ...semFoto } = extra;
+      onExtrasChange([...extras, semFoto]);
     } else {
       const idx = extras.map(e => e.id).lastIndexOf(extra.id);
       if (idx < 0) return;
@@ -174,6 +176,17 @@ export default function VariacoesProduto({
                 const podeMais = totalAdicionais < regraAd.max && q < regraAd.maxPorItem;
                 return (
                   <li key={extra.id} className="flex items-center justify-between gap-3 py-3 min-h-[64px]">
+                    {extra.imageUrl && (
+                      <button
+                        type="button"
+                        onClick={() => podeMais && mudarQtd(extra, 1)}
+                        className={`shrink-0 w-12 h-12 rounded-xl overflow-hidden bg-stone-100 ring-1 ring-stone-200/70 ${podeMais ? 'cursor-pointer' : 'cursor-default'}`}
+                        tabIndex={-1}
+                        aria-hidden="true"
+                      >
+                        <img src={extra.imageUrl} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" onError={(e) => { (e.currentTarget.parentElement as HTMLElement).style.display = 'none'; }} />
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => podeMais && mudarQtd(extra, 1)}

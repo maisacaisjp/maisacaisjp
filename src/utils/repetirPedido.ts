@@ -91,7 +91,7 @@ export function montarItensParaRepetir(
     if (regras.adicionais) {
       (it.extras || []).forEach(e => {
         const atual = ctx.extras.find(x => x.id === e.id);
-        if (atual) extras.push(atual);
+        if (atual) extras.push({ id: atual.id, name: atual.name, price: atual.price }); // sem a foto
       });
     }
     const removidos = (it.extras || []).length - extras.length;

@@ -25,6 +25,8 @@ export interface ExtraIngredient {
   id: string;
   name: string;
   price: number;
+  /** Foto cadastrada no gestor (Produtos → Adicionais); só para mostrar no cardápio, não vai no pedido */
+  imageUrl?: string;
 }
 
 export const RESTAURANT_WHATSAPP_PHONE = '5541997349076';
