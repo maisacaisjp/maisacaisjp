@@ -2848,22 +2848,26 @@ export default function AdminDashboard() {
                       <span className="font-semibold text-stone-800 tabular-nums">{countAll}</span> no período
                     </span>
 
-                    {/* Resumo Contábil: Faturamento, Custo das Entregas e Líquido */}
-                    <div className="hidden lg:flex items-center gap-2 bg-stone-50 border border-stone-200/90 px-3 py-1 rounded-xl text-xs font-mono shadow-2xs">
-                      <span className="text-stone-500 font-sans font-medium">Bruto:</span>
-                      <span className="font-bold text-stone-900">{brl(faturamentoTotalPeriodo)}</span>
-                      {totalPagoEntregasPeriodo > 0 && (
-                        <>
-                          <span className="text-stone-300">|</span>
-                          <span className="text-amber-800 font-sans font-medium flex items-center gap-1">
-                            <Bike size={12} className="text-amber-600" /> Pago Entregas:
-                          </span>
-                          <span className="font-bold text-amber-900">-{brl(totalPagoEntregasPeriodo)}</span>
-                          <span className="text-stone-300">|</span>
-                          <span className="text-emerald-800 font-sans font-semibold">Líquido:</span>
-                          <span className="font-black text-emerald-700">{brl(totalLiquidoPeriodo)}</span>
-                        </>
-                      )}
+                    {/* Resumo Contábil: Faturamento, Custo das Entregas e Líquido com Design Executivo */}
+                    <div className="hidden lg:flex items-center gap-3 bg-white border border-stone-200/90 rounded-xl px-3.5 py-1.5 shadow-2xs">
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-stone-400 tracking-wider block">Faturamento</span>
+                        <span className="text-[13px] font-mono font-black text-stone-900 leading-none">{brl(faturamentoTotalPeriodo)}</span>
+                      </div>
+                      <div className="h-6 w-px bg-stone-200" />
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-amber-700 tracking-wider block flex items-center gap-1">
+                          <Bike size={11} className="text-amber-600" /> Entregas
+                        </span>
+                        <span className="text-[13px] font-mono font-bold text-amber-900 leading-none">
+                          {totalPagoEntregasPeriodo > 0 ? `-${brl(totalPagoEntregasPeriodo)}` : 'R$ 0,00'}
+                        </span>
+                      </div>
+                      <div className="h-6 w-px bg-stone-200" />
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-emerald-700 tracking-wider block">Líquido Loja</span>
+                        <span className="text-[13px] font-mono font-black text-emerald-700 leading-none">{brl(totalLiquidoPeriodo)}</span>
+                      </div>
                     </div>
 
                     <div className="ml-auto flex items-center gap-2">
@@ -3122,7 +3126,7 @@ export default function AdminDashboard() {
                               </div>
                             </div>
 
-                            {/* Informações do Cliente e Pagamento */}
+                            {/* Informações do Cliente e Endereço de Entrega (Sem misturar com financeiro) */}
                             <div className="p-3.5 py-2.5 space-y-2 border-b border-stone-100">
                               <div className="flex items-center justify-between gap-2">
                                 <span className="font-black text-stone-900 text-sm truncate">{order.customerName}</span>
@@ -3138,58 +3142,26 @@ export default function AdminDashboard() {
                                 )}
                               </div>
 
-                              {/* Endereço de Entrega Resumido & Limpo */}
+                              {/* Endereço de Entrega Destacado & Respirável */}
                               {isDelivery && order.deliveryAddress && (
-                                <div className="flex items-start gap-1.5 text-xs text-stone-700 bg-sky-50/50 p-2 rounded-lg border border-sky-100">
-                                  <MapPin size={13} className="text-sky-600 shrink-0 mt-0.5" />
-                                  <div className="leading-snug">
-                                    <span className="font-medium text-stone-800">{order.deliveryAddress}</span>
+                                <div className="text-xs text-stone-700 bg-stone-50/80 p-2.5 rounded-lg border border-stone-200/80 space-y-1">
+                                  <div className="flex items-start gap-1.5 leading-snug">
+                                    <MapPin size={13} className="text-brand-600 shrink-0 mt-0.5" />
+                                    <span className="font-bold text-stone-900">{order.deliveryAddress}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2 pl-4 text-[11px] text-stone-500">
                                     {order.deliveryZone && (
-                                      <span className="block text-[11px] font-bold text-sky-800 mt-0.5">
-                                        Zona: {order.deliveryZone}
+                                      <span>
+                                        Bairro: <strong className="text-stone-700">{order.deliveryZone}</strong>
                                       </span>
                                     )}
                                     {(order as any).motoboy_name && (
-                                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-900 bg-purple-100/80 px-2 py-0.5 rounded border border-purple-200 mt-1">
-                                        <Bike size={12} className="text-purple-700" />
-                                        Entregador: {(order as any).motoboy_name}
+                                      <span className="inline-flex items-center gap-1 text-[10.5px] font-bold text-purple-900 bg-purple-100/80 px-1.5 py-0.2 rounded border border-purple-200">
+                                        <Bike size={11} className="text-purple-700" />
+                                        {(order as any).motoboy_name}
                                       </span>
                                     )}
                                   </div>
-                                </div>
-                              )}
-
-                              {/* Pagamento e Troco */}
-                              <div className="flex items-center justify-between gap-2 text-xs flex-wrap">
-                                <div className="flex items-center gap-1.5 text-stone-600 font-mono">
-                                  <CreditCard size={12} className="text-stone-400" />
-                                  <span className="font-bold text-stone-800">{order.paymentMethod || 'Dinheiro'}</span>
-                                  {order.nif && (
-                                    <span className="text-[10px] font-bold bg-stone-100 text-stone-600 px-1 rounded border border-stone-200">
-                                      NIF: {order.nif}
-                                    </span>
-                                  )}
-                                </div>
-
-                                {order.changeFor && Number(order.changeFor) > 0 && (
-                                  <span className="text-[11px] font-mono font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded border border-amber-300">
-                                    Troco p/ {brl(Number(Number(order.changeFor)))}
-                                  </span>
-                                )}
-                              </div>
-
-                              {/* Lançamento do Custo da Entrega Parceira (Separado dos Dados do Cliente) */}
-                              {isDelivery && (
-                                <div className="flex items-center justify-between gap-2 pt-2 border-t border-stone-100/80 bg-stone-50/60 p-2 rounded-lg">
-                                  <CampoEntregaParceiro pedidoId={order.id} valor={(order as any).motoboyFee} onSalvo={(v) => aoSalvarEntregaParceiro(order.id, v)} />
-                                  {Number((order as any).motoboyFee) > 0 && (
-                                    <div className="text-right font-mono text-[11px]">
-                                      <span className="text-stone-400 block text-[9.5px] uppercase font-bold tracking-wider">Líquido</span>
-                                      <span className="font-black text-emerald-700 text-xs">
-                                        {brl(Math.max(0, Number(order.totalAmount || 0) - Number((order as any).motoboyFee)))}
-                                      </span>
-                                    </div>
-                                  )}
                                 </div>
                               )}
                             </div>
@@ -3267,8 +3239,42 @@ export default function AdminDashboard() {
                               )}
                             </div>
 
+                            {/* Faixa Financeira Unificada (Pagamento + Custo de Entrega + Líquido) */}
+                            <div className="px-3 py-2 border-t border-stone-100 bg-stone-50/80 flex items-center justify-between gap-2 flex-wrap">
+                              <div className="flex items-center gap-1.5 text-xs text-stone-600 font-mono">
+                                <CreditCard size={12} className="text-stone-400" />
+                                <span className="font-bold text-stone-800">{order.paymentMethod || 'Dinheiro'}</span>
+                                {order.changeFor && Number(order.changeFor) > 0 && (
+                                  <span className="text-[10px] font-mono font-bold text-amber-900 bg-amber-100/90 px-1.5 py-0.2 rounded border border-amber-300">
+                                    Troco p/ {brl(Number(order.changeFor))}
+                                  </span>
+                                )}
+                              </div>
+
+                              {isDelivery ? (
+                                <div className="flex items-center gap-2 ml-auto">
+                                  <CampoEntregaParceiro
+                                    compacto
+                                    pedidoId={order.id}
+                                    valor={(order as any).motoboyFee}
+                                    onSalvo={(v) => aoSalvarEntregaParceiro(order.id, v)}
+                                  />
+                                  {Number((order as any).motoboyFee) > 0 && (
+                                    <div className="text-right font-mono">
+                                      <span className="text-stone-400 block text-[9px] uppercase font-bold tracking-wider -mb-0.5">Líq</span>
+                                      <span className="font-mono font-black text-xs text-emerald-700">
+                                        {brl(Math.max(0, Number(order.totalAmount || 0) - Number((order as any).motoboyFee)))}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-[11px] font-mono text-stone-400 font-medium ml-auto">Balcão</span>
+                              )}
+                            </div>
+
                             {/* Rodapé do Card: Ações Operacionais */}
-                            <div className="p-3 pt-2 border-t border-stone-100 bg-stone-50/50 space-y-2">
+                            <div className="p-3 pt-2 border-t border-stone-100 bg-white space-y-2">
                               {/* Botão de Avanço Rápido */}
                               {isPending && (
                                 <button
