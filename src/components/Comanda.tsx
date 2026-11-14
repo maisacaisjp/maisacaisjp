@@ -118,9 +118,11 @@ export function textoComanda(pedido: any, colunas = 44): string {
   if (pedido.customerPhone) texto(`Tel: ${telefone(pedido.customerPhone)}`);
   if (c.entrega && (pedido.deliveryAddress || pedido.deliveryZone)) {
     L.push('');
-    L.push('ENTREGAR EM:');
-    if (pedido.deliveryAddress) texto(String(pedido.deliveryAddress).toUpperCase());
-    if (pedido.deliveryZone) texto(`Bairro: ${pedido.deliveryZone}`);
+    linha('=');
+    centro('>>> ENDERECO DE ENTREGA (MOTOBOY) <<<');
+    if (pedido.deliveryAddress) texto(`ENDERECO: ${String(pedido.deliveryAddress).toUpperCase()}`);
+    if (pedido.deliveryZone) texto(`BAIRRO: ${String(pedido.deliveryZone).toUpperCase()}`);
+    linha('=');
   }
   linha();
   par(`ITENS (${c.qtdItens})`, 'VALOR');
@@ -197,10 +199,20 @@ export default function Comanda({ pedido }: { pedido: any }) {
       <div style={T.forte}>{pedido.customerName || 'Cliente'}</div>
       {pedido.customerPhone && <div style={T.detalhe}>{telefone(pedido.customerPhone)}</div>}
       {entrega && (pedido.deliveryAddress || pedido.deliveryZone) && (
-        <div style={{ marginTop: '5px' }}>
-          <p style={T.rotulo}>ENTREGAR EM</p>
-          {pedido.deliveryAddress && <div style={T.forte}>{pedido.deliveryAddress}</div>}
-          {pedido.deliveryZone && <div style={T.detalhe}>Bairro: {pedido.deliveryZone}</div>}
+        <div style={{ marginTop: '8px', padding: '8px', border: '2px solid #000', borderRadius: '4px', background: '#f8f8f8', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' } as any}>
+          <p style={{ ...T.rotulo, fontSize: '9pt', fontWeight: 900, textTransform: 'uppercase', marginBottom: '3px' }}>
+            📍 ENDEREÇO DE ENTREGA (MOTOBOY)
+          </p>
+          {pedido.deliveryAddress && (
+            <div style={{ fontSize: '13pt', fontWeight: 900, lineHeight: 1.25, color: '#000', letterSpacing: '-0.3px' }}>
+              {pedido.deliveryAddress}
+            </div>
+          )}
+          {pedido.deliveryZone && (
+            <div style={{ fontSize: '11pt', fontWeight: 700, marginTop: '3px', color: '#000' }}>
+              Bairro: {pedido.deliveryZone}
+            </div>
+          )}
         </div>
       )}
       <div style={S.linha} />

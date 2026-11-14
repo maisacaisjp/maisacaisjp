@@ -4,7 +4,8 @@ import {
   Bike, Plus, Trash2, Edit2, Phone, DollarSign, 
   Calendar, CheckCircle2, Clock, AlertTriangle, 
   Copy, Check, Send, ChevronRight, RefreshCw, X,
-  UserCheck, UserX, ArrowRightLeft, MapPin, Receipt
+  UserCheck, UserX, ArrowRightLeft, MapPin, Receipt,
+  Search
 } from 'lucide-react';
 import { brl } from '../utils/formatacao';
 
@@ -16,6 +17,14 @@ export interface Motoboy {
   default_fee: number;
   active: boolean;
   created_at?: string;
+}
+
+export interface DeliveryZone {
+  id: string;
+  name: string;
+  fee: number;
+  is_active: boolean;
+  sort_order: number;
 }
 
 interface OrderDelivery {
@@ -37,9 +46,9 @@ interface OrderDelivery {
 export default function MotoboyManager() {
   const [motoboys, setMotoboys] = useState<Motoboy[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeSubTab, setActiveSubTab] = useState<'acerto' | 'cadastro'>('acerto');
+  const [activeSubTab, setActiveSubTab] = useState<'acerto' | 'cadastro' | 'taxas'>('acerto');
   
-  // Modal de cadastro
+  // Modal de cadastro de motoboy
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formName, setFormName] = useState('');
@@ -47,6 +56,18 @@ export default function MotoboyManager() {
   const [formPix, setFormPix] = useState('');
   const [formFee, setFormFee] = useState('6.00');
   const [saving, setSaving] = useState(false);
+
+  // Gestão de Bairros e Taxas de Entrega
+  const [zones, setZones] = useState<DeliveryZone[]>([]);
+  const [loadingZones, setLoadingZones] = useState(false);
+  const [zoneSearch, setZoneSearch] = useState('');
+  const [showZoneModal, setShowZoneModal] = useState(false);
+  const [editingZoneId, setEditingZoneId] = useState<string | null>(null);
+  const [zoneName, setZoneName] = useState('');
+  const [zoneFee, setZoneFee] = useState('9.99');
+  const [zoneActive, setZoneActive] = useState(true);
+  const [savingZone, setSavingZone] = useState(false);
+  const [zoneFeedback, setZoneFeedback] = useState<string | null>(null);
 
   // Filtros de acerto
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -93,13 +114,129 @@ export default function MotoboyManager() {
     }
   };
 
+  // Carregar zonas de entrega
+  const fetchZones = async () => {
+    setLoadingZones(true);
+    try {
+      const { data, error } = await supabase
+        .from('delivery_zones')
+        .select('*')
+        .order('sort_order', { ascending: true })
+        .order('name', { ascending: true });
+      if (!error && data) {
+        setZones(data.map((z: any) => ({
+          id: z.id,
+          name: z.name,
+          fee: Number(z.fee) || 0,
+          is_active: z.is_active !== false,
+          sort_order: Number(z.sort_order) || 0,
+        })));
+      }
+    } catch (e) {
+      console.error('Erro ao buscar taxas de bairros:', e);
+    } finally {
+      setLoadingZones(false);
+    }
+  };
+
   useEffect(() => {
     fetchMotoboys();
+    fetchZones();
   }, []);
 
   useEffect(() => {
     fetchOrders();
   }, [selectedDate]);
+
+  // Gestão de Bairros (Salvar, Alternar, Excluir)
+  const handleSaveZone = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!zoneName.trim()) return;
+    setSavingZone(true);
+    try {
+      const feeNum = parseFloat(zoneFee.replace(',', '.')) || 0;
+      if (editingZoneId) {
+        const { error } = await supabase
+          .from('delivery_zones')
+          .update({
+            name: zoneName.trim(),
+            fee: feeNum,
+            is_active: zoneActive,
+          })
+          .eq('id', editingZoneId);
+        if (error) throw error;
+        setZones(prev => prev.map(z => z.id === editingZoneId ? { ...z, name: zoneName.trim(), fee: feeNum, is_active: zoneActive } : z));
+        setZoneFeedback('Bairro atualizado com sucesso!');
+      } else {
+        const maxOrder = zones.reduce((max, z) => Math.max(max, z.sort_order || 0), 0);
+        const { data, error } = await supabase
+          .from('delivery_zones')
+          .insert({
+            name: zoneName.trim(),
+            fee: feeNum,
+            is_active: zoneActive,
+            sort_order: maxOrder + 1,
+          })
+          .select()
+          .single();
+        if (error) throw error;
+        if (data) {
+          setZones(prev => [...prev, {
+            id: data.id,
+            name: data.name,
+            fee: Number(data.fee) || feeNum,
+            is_active: data.is_active !== false,
+            sort_order: Number(data.sort_order) || (maxOrder + 1),
+          }]);
+        }
+        setZoneFeedback('Novo bairro adicionado com sucesso!');
+      }
+      setTimeout(() => setZoneFeedback(null), 3000);
+      setShowZoneModal(false);
+    } catch (err: any) {
+      console.error('Erro ao salvar bairro:', err);
+      alert('Erro ao salvar bairro: ' + (err?.message || 'Verifique se o nome já não existe.'));
+    } finally {
+      setSavingZone(false);
+    }
+  };
+
+  const handleToggleZoneActive = async (id: string, current: boolean) => {
+    try {
+      const next = !current;
+      const { error } = await supabase
+        .from('delivery_zones')
+        .update({ is_active: next })
+        .eq('id', id);
+      if (error) throw error;
+      setZones(prev => prev.map(z => z.id === id ? { ...z, is_active: next } : z));
+    } catch (e: any) {
+      console.error('Erro ao alternar status do bairro:', e);
+      alert('Erro ao atualizar status: ' + e?.message);
+    }
+  };
+
+  const handleDeleteZone = async (id: string, name: string) => {
+    if (!confirm(`Deseja realmente excluir o bairro "${name}" da tabela de entregas?`)) return;
+    try {
+      const { error } = await supabase.from('delivery_zones').delete().eq('id', id);
+      if (error) throw error;
+      setZones(prev => prev.filter(z => z.id !== id));
+      setZoneFeedback(`Bairro "${name}" excluído com sucesso!`);
+      setTimeout(() => setZoneFeedback(null), 3000);
+    } catch (e: any) {
+      console.error('Erro ao excluir bairro:', e);
+      alert('Erro ao excluir bairro: ' + e?.message);
+    }
+  };
+
+  const openEditZone = (z: DeliveryZone) => {
+    setEditingZoneId(z.id);
+    setZoneName(z.name);
+    setZoneFee(z.fee.toFixed(2));
+    setZoneActive(z.is_active);
+    setShowZoneModal(true);
+  };
 
   // Salvar/Editar Motoboy
   const handleSaveMotoboy = async (e: React.FormEvent) => {
@@ -261,6 +398,14 @@ export default function MotoboyManager() {
     window.open(url, '_blank');
   };
 
+  // Filtragem de bairros
+  const filteredZones = useMemo(() => {
+    return zones.filter(z => {
+      if (!zoneSearch.trim()) return true;
+      return z.name.toLowerCase().includes(zoneSearch.toLowerCase().trim());
+    });
+  }, [zones, zoneSearch]);
+
   return (
     <div className="space-y-6">
       {/* Top Header */}
@@ -271,14 +416,14 @@ export default function MotoboyManager() {
               <Bike size={22} />
             </div>
             <div>
-              <h1 className="text-xl font-black text-stone-900 tracking-tight">Logística & Entregadores Sob Demanda</h1>
-              <p className="text-xs font-semibold text-stone-500">Gestão de motoboys parceiros, taxas e fechamento diário de caixa</p>
+              <h1 className="text-xl font-black text-stone-900 tracking-tight">Logística, Entregadores & Taxas</h1>
+              <p className="text-xs font-semibold text-stone-500">Gestão de motoboys, acertos diários e tabela oficial de bairros para entrega</p>
             </div>
           </div>
         </div>
 
         {/* Subtabs */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setActiveSubTab('acerto')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
@@ -299,6 +444,16 @@ export default function MotoboyManager() {
           >
             🏍️ Entregadores ({motoboys.length})
           </button>
+          <button
+            onClick={() => setActiveSubTab('taxas')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              activeSubTab === 'taxas'
+                ? 'bg-[#4d0471] text-white shadow-xs'
+                : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+            }`}
+          >
+            📍 Bairros & Taxas ({zones.filter(z => z.is_active).length} ativos)
+          </button>
           {activeSubTab === 'cadastro' && (
             <button
               onClick={() => {
@@ -313,6 +468,21 @@ export default function MotoboyManager() {
             >
               <Plus size={16} />
               Novo Entregador
+            </button>
+          )}
+          {activeSubTab === 'taxas' && (
+            <button
+              onClick={() => {
+                setEditingZoneId(null);
+                setZoneName('');
+                setZoneFee('9.99');
+                setZoneActive(true);
+                setShowZoneModal(true);
+              }}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-[#fdde58] text-[#4d0471] hover:brightness-95 shadow-xs"
+            >
+              <Plus size={16} />
+              Novo Bairro
             </button>
           )}
         </div>
@@ -612,7 +782,184 @@ export default function MotoboyManager() {
         </div>
       )}
 
-      {/* MODAL DE CADASTRO / EDIÇÃO */}
+      {/* SUBTAB 3: BAIRROS E TAXAS DE ENTREGA */}
+      {activeSubTab === 'taxas' && (
+        <div className="space-y-6">
+          {zoneFeedback && (
+            <div className="p-3 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <CheckCircle2 size={16} className="text-emerald-600" />
+                {zoneFeedback}
+              </span>
+              <button onClick={() => setZoneFeedback(null)} className="text-emerald-600 hover:text-emerald-900">
+                <X size={14} />
+              </button>
+            </div>
+          )}
+
+          {/* Cards de Resumo */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="bg-white p-4 rounded-2xl border border-stone-200 flex items-center justify-between">
+              <div>
+                <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider block">Bairros Ativos no Site</span>
+                <span className="text-2xl font-black text-emerald-600">{zones.filter(z => z.is_active).length} bairros</span>
+                <span className="text-[11px] text-stone-500 block mt-0.5">Disponíveis no cardápio online</span>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <CheckCircle2 size={20} />
+              </div>
+            </div>
+
+            <div className="bg-white p-4 rounded-2xl border border-stone-200 flex items-center justify-between">
+              <div>
+                <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider block">Total Cadastrado</span>
+                <span className="text-2xl font-black text-[#4d0471]">{zones.length} bairros</span>
+                <span className="text-[11px] text-stone-500 block mt-0.5">({zones.filter(z => !z.is_active).length} desativados)</span>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-[#4d0471]/10 text-[#4d0471] flex items-center justify-center">
+                <MapPin size={20} />
+              </div>
+            </div>
+
+            <div className="bg-white p-4 rounded-2xl border border-stone-200 flex items-center justify-between">
+              <div>
+                <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider block">Faixa de Taxas (MultiPedidos)</span>
+                <span className="text-2xl font-black text-amber-600">R$ 4,99 a R$ 9,99</span>
+                <span className="text-[11px] text-stone-500 block mt-0.5">Valores ativos para entregas</span>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                <DollarSign size={20} />
+              </div>
+            </div>
+          </div>
+
+          {/* Barra de Filtro e Ação */}
+          <div className="bg-white p-4 rounded-2xl border border-stone-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-2 bg-stone-100 px-3 py-2 rounded-xl border border-stone-200 flex-1 max-w-md">
+              <Search size={16} className="text-stone-500" />
+              <input
+                type="text"
+                placeholder="Filtrar por nome do bairro..."
+                value={zoneSearch}
+                onChange={(e) => setZoneSearch(e.target.value)}
+                className="bg-transparent border-none outline-none text-xs font-semibold text-stone-800 placeholder-stone-400 w-full"
+              />
+              {zoneSearch && (
+                <button onClick={() => setZoneSearch('')} className="text-stone-400 hover:text-stone-600">
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={fetchZones}
+                className="p-2.5 rounded-xl border border-stone-200 text-stone-600 hover:bg-stone-50 transition-all flex items-center gap-1.5 text-xs font-bold"
+                title="Recarregar bairros"
+              >
+                <RefreshCw size={14} className={loadingZones ? 'animate-spin' : ''} />
+                <span>Atualizar</span>
+              </button>
+              <button
+                onClick={() => {
+                  setEditingZoneId(null);
+                  setZoneName('');
+                  setZoneFee('9.99');
+                  setZoneActive(true);
+                  setShowZoneModal(true);
+                }}
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold bg-[#4d0471] text-white hover:bg-[#3b0357] shadow-xs"
+              >
+                <Plus size={16} />
+                <span>Adicionar Bairro</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Tabela de Bairros */}
+          <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-xs">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="bg-stone-50 border-b border-stone-200 text-stone-500 uppercase tracking-wider font-bold">
+                    <th className="py-3.5 px-4">Bairro (São José dos Pinhais)</th>
+                    <th className="py-3.5 px-4">Taxa de Entrega</th>
+                    <th className="py-3.5 px-4 text-center">Status no Cardápio</th>
+                    <th className="py-3.5 px-4 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-100">
+                  {loadingZones ? (
+                    <tr>
+                      <td colSpan={4} className="py-8 text-center text-stone-500 font-semibold">
+                        Carregando taxas de entrega...
+                      </td>
+                    </tr>
+                  ) : filteredZones.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="py-8 text-center text-stone-500 font-semibold">
+                        Nenhum bairro encontrado com o filtro "{zoneSearch}".
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredZones.map((z) => (
+                      <tr key={z.id} className={`hover:bg-stone-50/80 transition-colors ${!z.is_active ? 'opacity-60 bg-stone-50/40' : ''}`}>
+                        <td className="py-3.5 px-4 font-bold text-stone-900">
+                          <div className="flex items-center gap-2">
+                            <MapPin size={15} className={z.is_active ? 'text-[#4d0471]' : 'text-stone-400'} />
+                            <span className="text-sm">{z.name}</span>
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className={`inline-flex items-center font-black text-sm px-2.5 py-1 rounded-lg ${
+                            z.fee === 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-stone-100 text-stone-900'
+                          }`}>
+                            {z.fee === 0 ? 'Grátis' : brl(z.fee)}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <button
+                            onClick={() => handleToggleZoneActive(z.id, z.is_active)}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all ${
+                              z.is_active 
+                                ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' 
+                                : 'bg-stone-200 text-stone-600 hover:bg-stone-300'
+                            }`}
+                            title={z.is_active ? 'Clique para desativar do cardápio' : 'Clique para ativar no cardápio'}
+                          >
+                            <span className={`w-2 h-2 rounded-full ${z.is_active ? 'bg-emerald-500' : 'bg-stone-400'}`} />
+                            {z.is_active ? 'Ativo no Cardápio' : 'Inativo (Oculto)'}
+                          </button>
+                        </td>
+                        <td className="py-3.5 px-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => openEditZone(z)}
+                              className="p-1.5 rounded-lg text-stone-500 hover:text-[#4d0471] hover:bg-stone-100 transition-colors"
+                              title="Editar bairro e taxa"
+                            >
+                              <Edit2 size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteZone(z.id, z.name)}
+                              className="p-1.5 rounded-lg text-stone-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                              title="Excluir bairro"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE CADASTRO / EDIÇÃO MOTOBOY */}
       {showModal && (
         <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-stone-100">
@@ -694,6 +1041,96 @@ export default function MotoboyManager() {
                   className="px-5 py-2.5 rounded-xl text-xs font-bold bg-[#4d0471] text-white hover:bg-[#3b0357] shadow-xs"
                 >
                   {saving ? 'Salvando...' : editingId ? 'Salvar Alterações' : 'Cadastrar Entregador'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL NOVO/EDITAR BAIRRO */}
+      {showZoneModal && (
+        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-stone-100 animate-fadeIn">
+            <div className="flex items-center justify-between pb-4 border-b border-stone-100 mb-4">
+              <div className="flex items-center gap-2">
+                <MapPin size={20} className="text-[#4d0471]" />
+                <h3 className="font-bold text-stone-900 text-base">
+                  {editingZoneId ? 'Editar Bairro / Taxa de Entrega' : 'Novo Bairro de Entrega'}
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowZoneModal(false)}
+                className="p-1 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveZone} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-stone-700 mb-1">
+                  Nome do Bairro (São José dos Pinhais) *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ex: Centro, Afonso Pena, Iná..."
+                  value={zoneName}
+                  onChange={(e) => setZoneName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 text-xs font-bold text-stone-900 outline-none focus:border-[#4d0471]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-stone-700 mb-1">
+                  Taxa de Entrega (R$) *
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-2.5 text-xs font-bold text-stone-400">R$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    required
+                    placeholder="9.99"
+                    value={zoneFee}
+                    onChange={(e) => setZoneFee(e.target.value)}
+                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-stone-200 text-xs font-black text-stone-900 outline-none focus:border-[#4d0471]"
+                  />
+                </div>
+                <p className="text-[11px] text-stone-500 mt-1">
+                  Digite 0 caso deseje frete grátis para este bairro.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <input
+                  type="checkbox"
+                  id="chk-zone-active"
+                  checked={zoneActive}
+                  onChange={(e) => setZoneActive(e.target.checked)}
+                  className="w-4 h-4 rounded text-[#4d0471] focus:ring-[#4d0471]"
+                />
+                <label htmlFor="chk-zone-active" className="text-xs font-bold text-stone-700 cursor-pointer">
+                  Ativo no cardápio online (visível para clientes)
+                </label>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-4 border-t border-stone-100">
+                <button
+                  type="button"
+                  onClick={() => setShowZoneModal(false)}
+                  className="px-4 py-2.5 rounded-xl text-xs font-bold text-stone-500 hover:bg-stone-100"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingZone}
+                  className="px-5 py-2.5 rounded-xl text-xs font-bold bg-[#4d0471] text-white hover:bg-[#3b0357] shadow-xs"
+                >
+                  {savingZone ? 'Salvando...' : editingZoneId ? 'Salvar Alterações' : 'Cadastrar Bairro'}
                 </button>
               </div>
             </form>

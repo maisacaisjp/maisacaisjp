@@ -3655,9 +3655,18 @@ export default function AdminDashboard() {
                                     {isDelivery ? <Bike size={13} /> : <Store size={13} />}
                                     {isDelivery ? 'Entrega' : isRetirada ? 'Retirada' : 'Balcão'}
                                   </span>
-                                  {isDelivery && order.deliveryZone && (
-                                    <div className="mt-1.5 text-[12px] text-stone-500 leading-none truncate" title={order.deliveryAddress || order.deliveryZone}>
-                                      {order.deliveryZone}
+                                  {isDelivery && (
+                                    <div className="mt-1.5 text-[11px] text-stone-600 max-w-[220px]" title={order.deliveryAddress || ''}>
+                                      {order.deliveryAddress && (
+                                        <span className="font-bold text-stone-800 block leading-snug">
+                                          📍 {order.deliveryAddress}
+                                        </span>
+                                      )}
+                                      {order.deliveryZone && (
+                                        <span className="text-stone-500 block text-[10px]">
+                                          Bairro: {order.deliveryZone}
+                                        </span>
+                                      )}
                                     </div>
                                   )}
                                   {isDelivery && (
@@ -5627,15 +5636,20 @@ function EditOrderModal({ order, menuItems, onClose, onSave }: { order: any, men
                     {(orderType === 'entrega' || orderType === 'Delivery') && (
                       <div className="pt-2 border-t border-stone-100 space-y-2">
                         <div className="space-y-1">
-                          <label className="block text-[10px] font-bold text-stone-500 uppercase flex items-center gap-1">
-                            <MapPin size={11} className="text-[#6a2092]" /> Endereço de Entrega
+                          <label className="block text-[10px] font-bold text-stone-500 uppercase flex items-center justify-between">
+                            <span className="flex items-center gap-1">
+                              <MapPin size={11} className="text-[#6a2092]" /> Endereço de Entrega (Rua, Número, Comp.)
+                            </span>
+                            <span className="text-[9px] font-normal text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                              Obrigatório ter o número p/ motoboy
+                            </span>
                           </label>
                           <input
                             type="text"
                             value={deliveryAddress}
                             onChange={(e) => setDeliveryAddress(e.target.value)}
-                            className="w-full px-2.5 py-1.5 bg-stone-50 rounded-lg border border-stone-200 text-xs font-medium text-stone-900 outline-none focus:border-[#6a2092] focus:bg-white transition-colors"
-                            placeholder="Rua, número, complemento, bairro..."
+                            className="w-full px-2.5 py-2 bg-stone-50 rounded-lg border border-stone-200 text-xs font-bold text-stone-900 outline-none focus:border-[#6a2092] focus:bg-white transition-colors"
+                            placeholder="Ex: Rua Joinville, 144 - Apto 204"
                           />
                         </div>
                         <div className="space-y-1">

@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import { 
   ChefHat, Clock, AlertTriangle, CheckCircle2, 
   Bike, ShoppingBag, Maximize2, Minimize2, RefreshCw, 
-  Volume2, VolumeX, Sparkles, Filter
+  Volume2, VolumeX, Sparkles, Filter, MapPin
 } from 'lucide-react';
 
 interface KdsItem {
@@ -253,6 +253,16 @@ export default function KitchenDisplay() {
                       </span>
                     )}
                   </div>
+
+                  {/* Endereço & Número para Entrega */}
+                  {isDelivery && order.delivery_address && (
+                    <div className="px-3.5 py-1.5 bg-sky-50 dark:bg-sky-950/40 border-y border-sky-100 dark:border-sky-900/50 flex items-start gap-1.5 text-xs text-sky-950 dark:text-sky-200">
+                      <MapPin size={13} className="text-sky-600 shrink-0 mt-0.5" />
+                      <div className="leading-snug">
+                        <span className="font-bold">{order.delivery_address}</span>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Itens do Pedido (Em destaque gigante para montagem) */}
                   <div className="p-3.5 space-y-3">
