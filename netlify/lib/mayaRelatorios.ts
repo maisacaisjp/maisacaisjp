@@ -478,6 +478,18 @@ function resumoVendas(todos: any[], de: string, ate: string) {
   if (Object.keys(bases).length) linhas.push('• Bases mais pedidas: ' + top(bases, 4));
   if (Object.keys(extras).length) linhas.push('• Adicionais mais pedidos: ' + top(extras, 4));
   if (Object.keys(bairros).length) linhas.push('• Bairros com mais entregas: ' + top(bairros, 3, ' entregas'));
+
+  // Destaque de quem mais gastou e lista rápida de pedidos do dia
+  const validosPorValor = [...validos].sort((a, b) => Number(b.total_amount || 0) - Number(a.total_amount || 0));
+  if (validosPorValor.length) {
+    const top1 = validosPorValor[0];
+    linhas.push(`• 🏆 Maior pedido do período: Pedido #${top1.id} - ${top1.customer_name || 'Cliente'} (${brl(top1.total_amount)})`);
+  }
+  if (validos.length) {
+    const listaRecentes = validos.slice(0, 10).map((o) => `#${o.id} ${o.customer_name || 'Cliente'} (${brl(o.total_amount)})`).join(', ');
+    linhas.push(`• Pedidos recentes: ${listaRecentes}${validos.length > 10 ? ` ...e mais ${validos.length - 10} pedidos` : ''}`);
+  }
+
   linhas.push(abertos.length ? `• Em preparo/aberto agora (${abertos.length}): ` + abertos.map((o) => `#${o.id} ${o.customer_name || 'Cliente'} (${brl(o.total_amount)})`).join(', ') : '• Em aberto no momento: nenhum');
   if (cancelados.length) linhas.push(`• Cancelados: ${cancelados.length} (${brl(cancelados.reduce((a, o) => a + Number(o.total_amount || 0), 0))})`);
   return linhas.join('\n');
@@ -606,12 +618,41 @@ export async function montarRelatorio(inp: EntradaRelatorio): Promise<string> {
       if (!achadas.length) return `Não encontrei ficha técnica para "${termo}". Dica: informe o nome do combo ou produto (ex: Nevado, Favorito, 2 Litros, Magnífico).`;
       return achadas.slice(0, 3).map((f) => linhasFicha(f, d).join('\n')).join('\n\n');
     }
+    if (['embalagem', 'embalagens', 'copo', 'copos', 'descartaveis', 'descartáveis'].includes(tipo)) {
+      const d = await carregarFinanceiro();
+      const busca = termo.toLowerCase();
+      let achados = d.insumos.filter((i) => {
+        const cat = (i.categoria || '').toLowerCase();
+        const n = (i.nome || '').toLowerCase();
+        return (
+          cat.includes('embalag') ||
+          cat.includes('descart') ||
+          /copo|tampa|colher|sacola|guardanapo|pote|canudo|adesivo|lacre|suporte/i.test(n)
+        );
+      });
+      if (busca && !['embalagens', 'embalagem', 'copos', 'copo', 'descartaveis', 'descartáveis'].includes(busca)) {
+        achados = achados.filter((i) => i.nome.toLowerCase().includes(busca));
+      }
+      if (!achados.length) return `Não encontrei embalagens para "${termo}".`;
+      const lista = achados.map((i) => {
+        const un = i.unidade === 'un';
+        const custoUnit = custoUnitInsumo(i);
+        return (
+          `• ${i.nome}:\n` +
+          `  - Custo unitário: ${brl(custoUnit * (un ? 1 : 1000))} ${un ? '/un' : '/kg'}\n` +
+          `  - Pacote/Embalagem: ${i.qtdEmbalagem} ${i.unidade} por ${brl(i.precoEmbalagem)}` +
+          (i.fornecedor ? ` | Fornecedor: ${i.fornecedor}` : '') +
+          (i.obs ? ` | Obs: ${i.obs}` : '')
+        );
+      });
+      return `📦 CUSTOS DE EMBALAGENS E COPOS (${achados.length} itens cadastrados):\n\n` + lista.join('\n\n');
+    }
     if (tipo === 'insumo' || tipo === 'insumos') {
       const d = await carregarFinanceiro();
       const busca = termo.toLowerCase();
       const achados = busca ? d.insumos.filter((i) => i.nome.toLowerCase().includes(busca)) : d.insumos;
       if (!achados.length) return `Não encontrei nenhum insumo com o termo "${termo}".`;
-      const lista = achados.slice(0, 8).map((i) => {
+      const lista = achados.slice(0, 12).map((i) => {
         const un = i.unidade === 'un';
         return (
           `• ${i.nome} (${i.categoria}):\n` +
@@ -696,20 +737,84 @@ export async function montarRelatorio(inp: EntradaRelatorio): Promise<string> {
       });
       return r.mensagem;
     }
-    if (tipo === 'pedido') {
-      const id = String(inp.order_id || inp.termo || '').replace(/\D/g, '');
-      if (!id) return 'Por favor, informe o número do pedido (ex: pedido #4).';
-      const { data } = await sb().from('orders').select('*').eq('id', id).maybeSingle();
-      return data ? textoPedido(data) : `Pedido #${id} não encontrado no sistema.`;
+    if (['pedido', 'pedidos', 'buscar_pedido', 'pedidos_dia', 'pedidos_hoje'].includes(tipo)) {
+      const termoTexto = String(inp.termo || inp.order_id || '').trim();
+      const idDigitos = termoTexto.replace(/\D/g, '');
+
+      // 1) Busca direta por número do pedido (ex: "32", "#32" ou order_id preenchido)
+      if (idDigitos && (/^#?\d+$/.test(termoTexto) || inp.order_id)) {
+        const { data } = await sb().from('orders').select('*').eq('id', idDigitos).maybeSingle();
+        return data ? textoPedido(data) : `Pedido #${idDigitos} não encontrado no sistema.`;
+      }
+
+      // 2) Busca por nome do cliente, telefone ou endereço (ex: "link", "ana paula")
+      const ehPalavraChaveGenerica = !termoTexto || ['pedidos', 'pedido', 'hoje', 'todos', 'pedidos de hoje', 'pedidos do dia'].includes(termoTexto.toLowerCase());
+      if (!ehPalavraChaveGenerica) {
+        const { data, error } = await sb()
+          .from('orders')
+          .select('*')
+          .or(`customer_name.ilike.%${termoTexto}%,delivery_address.ilike.%${termoTexto}%,customer_phone.ilike.%${termoTexto}%`)
+          .order('created_at', { ascending: false })
+          .limit(10);
+        if (error) throw error;
+        if (!data || !data.length) {
+          return `Não encontrei nenhum pedido com o nome ou termo "${termoTexto}".`;
+        }
+        if (data.length === 1) {
+          return textoPedido(data[0]);
+        }
+        return (
+          `Encontrei ${data.length} pedidos correspondentes a "${termoTexto}":\n\n` +
+          data
+            .map(
+              (o) =>
+                `• Pedido #${o.id} (${hora(o.created_at)}): ${o.customer_name || 'Cliente'} — ${brl(o.total_amount)} (${o.status}, ${tipoPedido(o.order_type)}, ${pagamento(o.payment_method)})`
+            )
+            .join('\n') +
+          `\n\nPara ver detalhes completos de algum deles, peça pelo número (ex: "detalhes do pedido #${data[0].id}").`
+        );
+      }
+
+      // 3) Listagem de pedidos do período (padrão: hoje)
+      const ords = await todosPedidos(de, somaDias(ate, 1));
+      if (!ords.length) return `Nenhum pedido registrado no período (${periodoTxt(de, ate)}).`;
+
+      const validos = ords.filter((o) => o.status !== 'Cancelado');
+      const maior = [...validos].sort((a, b) => Number(b.total_amount || 0) - Number(a.total_amount || 0))[0];
+
+      const listaPedidos = ords.slice(0, 15).map((o) => {
+        return `• #${o.id} (${hora(o.created_at)}): ${o.customer_name || 'Cliente'} — ${brl(o.total_amount)} (${o.status}, ${tipoPedido(o.order_type)}, ${pagamento(o.payment_method)})`;
+      }).join('\n');
+
+      let out = `📋 PEDIDOS DO PERÍODO (${periodoTxt(de, ate)} — Total: ${ords.length}):\n`;
+      if (maior) {
+        out += `🏆 Maior pedido: #${maior.id} ${maior.customer_name || 'Cliente'} (${brl(maior.total_amount)})\n\n`;
+      }
+      out += listaPedidos;
+      if (ords.length > 15) {
+        out += `\n... e mais ${ords.length - 15} pedidos.`;
+      }
+      return out;
     }
     if (tipo === 'cliente') {
-      const tel = String(inp.telefone || inp.termo || '').replace(/\D/g, '').slice(-9);
-      if (!tel) return 'Informe o telefone do cliente para consultar o histórico.';
-      const { data } = await sb().from('orders').select('*').ilike('customer_phone', `%${tel}%`).order('created_at', { ascending: false }).limit(20);
+      const termoTexto = String(inp.termo || inp.telefone || '').trim();
+      const tel = termoTexto.replace(/\D/g, '').slice(-9);
+
+      let q = sb().from('orders').select('*').order('created_at', { ascending: false }).limit(20);
+      if (tel.length >= 8) {
+        q = q.ilike('customer_phone', `%${tel}%`);
+      } else if (termoTexto) {
+        q = q.ilike('customer_name', `%${termoTexto}%`);
+      } else {
+        return 'Informe o telefone ou o nome do cliente para consultar o histórico.';
+      }
+
+      const { data, error } = await q;
+      if (error) throw error;
       const ords = data || [];
-      if (!ords.length) return `Nenhum pedido encontrado para o telefone final ${tel}.`;
+      if (!ords.length) return `Nenhum pedido encontrado para o cliente "${termoTexto}".`;
       const total = ords.filter((o) => o.status !== 'Cancelado').reduce((a, o) => a + Number(o.total_amount || 0), 0);
-      return `Histórico de ${ords[0].customer_name || 'Cliente'} (final ${tel}):\nTotal de pedidos: ${ords.length}\nTotal gasto: ${brl(total)}\n\nÚltimos pedidos:\n` + ords.slice(0, 5).map((o) => `• #${o.id} (${hora(o.created_at)}): ${brl(o.total_amount)} - ${o.status}`).join('\n');
+      return `Histórico de ${ords[0].customer_name || 'Cliente'} (${ords[0].customer_phone || termoTexto}):\nTotal de pedidos: ${ords.length}\nTotal gasto: ${brl(total)}\n\nÚltimos pedidos:\n` + ords.slice(0, 5).map((o) => `• #${o.id} (${hora(o.created_at)}): ${brl(o.total_amount)} - ${o.status}`).join('\n');
     }
     if (tipo === 'ranking_clientes') {
       const ords = (await todosPedidos()).filter((o) => o.status !== 'Cancelado');
