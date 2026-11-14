@@ -119,9 +119,11 @@ export function comandaEscPos(pedido: any): Uint8Array {
   p.tamanho(1, 1).negrito(false);
   if (pedido.customerPhone) p.txt(`Tel: ${telefone(pedido.customerPhone)}`).nl();
   if (c.entrega && (pedido.deliveryAddress || pedido.deliveryZone)) {
-    p.nl().txt('ENTREGAR EM').nl();
-    if (pedido.deliveryAddress) p.negrito(true).tamanho(1, 1).texto(String(pedido.deliveryAddress).toUpperCase()).tamanho(1, 1).negrito(false);
-    if (pedido.deliveryZone) p.texto(`Bairro: ${pedido.deliveryZone}`);
+    p.nl().linha('=');
+    p.alinhar('centro').negrito(true).txt('ENDERECO DE ENTREGA (MOTOBOY)').nl().alinhar('esq').negrito(false);
+    if (pedido.deliveryAddress) p.negrito(true).tamanho(1, 2).texto(String(pedido.deliveryAddress).toUpperCase()).tamanho(1, 1).negrito(false);
+    if (pedido.deliveryZone) p.negrito(true).texto(`BAIRRO: ${String(pedido.deliveryZone).toUpperCase()}`).negrito(false);
+    p.linha('=');
   }
   p.linha();
 

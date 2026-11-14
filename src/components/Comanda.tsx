@@ -1,3 +1,5 @@
+import { NEIGHBORHOOD_DELIVERY_FEES } from '../data/menu';
+
 // Comanda para impressora térmica 80 mm (padrão de comanda de delivery):
 // número do pedido em destaque, tipo invertido (preto), cliente, itens com adicionais recuados,
 // totais alinhados e pagamento destacado. A mesma comanda aparece na prévia e na impressão.
@@ -60,7 +62,16 @@ export function calcularComanda(pedido: any) {
   const subtotal = itens.reduce((s, i) => s + Number(i.priceCalculated ?? i.basePrice ?? i.price ?? 0) * Number(i.quantity || 1), 0);
   const adicional = Number(pedido.additionalAmount) || 0;
   const desconto = Number(pedido.discountAmount) || 0;
-  const taxaEntrega = entrega ? Math.max(0, Math.round((total - subtotal - adicional + desconto + descontoCashback) * 100) / 100) : 0;
+  let taxaEntrega = entrega ? Math.max(0, Math.round((total - subtotal - adicional + desconto + descontoCashback) * 100) / 100) : 0;
+  if (entrega && taxaEntrega === 0) {
+    if (pedido.taxa_entrega !== undefined && Number(pedido.taxa_entrega) > 0) {
+      taxaEntrega = Number(pedido.taxa_entrega);
+    } else if (pedido.taxaEntrega !== undefined && Number(pedido.taxaEntrega) > 0) {
+      taxaEntrega = Number(pedido.taxaEntrega);
+    } else if (pedido.deliveryZone && NEIGHBORHOOD_DELIVERY_FEES[pedido.deliveryZone]) {
+      taxaEntrega = NEIGHBORHOOD_DELIVERY_FEES[pedido.deliveryZone];
+    }
+  }
 
   const troco = Number(String(pedido.changeFor || '').replace(/[^\d,.]/g, '').replace(',', '.')) || 0;
   const qtdItens = itens.reduce((s, i) => s + Number(i.quantity || 1), 0);

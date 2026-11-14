@@ -2800,6 +2800,12 @@ export default function AdminDashboard() {
               const countCancelado = allRecent.filter((o: any) => o.status === 'Cancelado').length;
               const countAtivos = countPendente + countPreparo + countPronto + countEntrega;
 
+              // Contabilidade do período: Faturamento Bruto, Custos de Entregas Pagas a Parceiros e Saldo Líquido
+              const pedidosNaoCancelados = filteredList.filter((o: any) => !/cancel/i.test(o.status || ''));
+              const faturamentoTotalPeriodo = pedidosNaoCancelados.reduce((acc: number, o: any) => acc + (Number(o.totalAmount || 0)), 0);
+              const totalPagoEntregasPeriodo = pedidosNaoCancelados.reduce((acc: number, o: any) => acc + (Number((o as any).motoboyFee || 0)), 0);
+              const totalLiquidoPeriodo = Math.max(0, faturamentoTotalPeriodo - totalPagoEntregasPeriodo);
+
               const filtrosStatus = [
                 { id: 'todos', rotulo: 'Todos', n: countAll, cor: '' },
                 { id: 'Pendente', rotulo: 'Pendentes', n: countPendente, cor: 'bg-amber-400' },
@@ -2841,6 +2847,24 @@ export default function AdminDashboard() {
                     <span className="text-[13px] text-stone-500">
                       <span className="font-semibold text-stone-800 tabular-nums">{countAll}</span> no período
                     </span>
+
+                    {/* Resumo Contábil: Faturamento, Custo das Entregas e Líquido */}
+                    <div className="hidden lg:flex items-center gap-2 bg-stone-50 border border-stone-200/90 px-3 py-1 rounded-xl text-xs font-mono shadow-2xs">
+                      <span className="text-stone-500 font-sans font-medium">Bruto:</span>
+                      <span className="font-bold text-stone-900">{brl(faturamentoTotalPeriodo)}</span>
+                      {totalPagoEntregasPeriodo > 0 && (
+                        <>
+                          <span className="text-stone-300">|</span>
+                          <span className="text-amber-800 font-sans font-medium flex items-center gap-1">
+                            <Bike size={12} className="text-amber-600" /> Pago Entregas:
+                          </span>
+                          <span className="font-bold text-amber-900">-{brl(totalPagoEntregasPeriodo)}</span>
+                          <span className="text-stone-300">|</span>
+                          <span className="text-emerald-800 font-sans font-semibold">Líquido:</span>
+                          <span className="font-black text-emerald-700">{brl(totalLiquidoPeriodo)}</span>
+                        </>
+                      )}
+                    </div>
 
                     <div className="ml-auto flex items-center gap-2">
                       {/* Botão de Auto-Impressão Direto no Topo dos Pedidos */}
@@ -3134,9 +3158,6 @@ export default function AdminDashboard() {
                                   </div>
                                 </div>
                               )}
-                              {isDelivery && (
-                                <CampoEntregaParceiro pedidoId={order.id} valor={(order as any).motoboyFee} onSalvo={(v) => aoSalvarEntregaParceiro(order.id, v)} />
-                              )}
 
                               {/* Pagamento e Troco */}
                               <div className="flex items-center justify-between gap-2 text-xs flex-wrap">
@@ -3156,6 +3177,21 @@ export default function AdminDashboard() {
                                   </span>
                                 )}
                               </div>
+
+                              {/* Lançamento do Custo da Entrega Parceira (Separado dos Dados do Cliente) */}
+                              {isDelivery && (
+                                <div className="flex items-center justify-between gap-2 pt-2 border-t border-stone-100/80 bg-stone-50/60 p-2 rounded-lg">
+                                  <CampoEntregaParceiro pedidoId={order.id} valor={(order as any).motoboyFee} onSalvo={(v) => aoSalvarEntregaParceiro(order.id, v)} />
+                                  {Number((order as any).motoboyFee) > 0 && (
+                                    <div className="text-right font-mono text-[11px]">
+                                      <span className="text-stone-400 block text-[9.5px] uppercase font-bold tracking-wider">Líquido</span>
+                                      <span className="font-black text-emerald-700 text-xs">
+                                        {brl(Math.max(0, Number(order.totalAmount || 0) - Number((order as any).motoboyFee)))}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
 
                             {/* Comanda de Produção: Lista dos Itens com Alta Clareza */}
@@ -3498,10 +3534,6 @@ export default function AdminDashboard() {
                                         </div>
                                       </div>
 
-                                      {isDelivery && (
-                                        <CampoEntregaParceiro compacto pedidoId={order.id} valor={(order as any).motoboyFee} onSalvo={(v) => aoSalvarEntregaParceiro(order.id, v)} />
-                                      )}
-
                                       {/* Resumo dos Itens (até 3) */}
                                       <div className="text-[11px] font-mono text-stone-700 bg-stone-50 p-2 rounded border border-stone-100 space-y-1">
                                         {items.slice(0, 3).map((it: any, iIdx: number) => {
@@ -3518,6 +3550,17 @@ export default function AdminDashboard() {
                                           </div>
                                         )}
                                       </div>
+
+                                      {isDelivery && (
+                                        <div className="flex items-center justify-between gap-1 text-[11px] pt-1">
+                                          <CampoEntregaParceiro compacto pedidoId={order.id} valor={(order as any).motoboyFee} onSalvo={(v) => aoSalvarEntregaParceiro(order.id, v)} />
+                                          {Number((order as any).motoboyFee) > 0 && (
+                                            <span className="font-mono font-bold text-emerald-700 text-[10px]">
+                                              Líq: {brl(Math.max(0, Number(order.totalAmount || 0) - Number((order as any).motoboyFee)))}
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
 
                                       {/* Ação Rápida de Avanço na Esteira */}
                                       <div className="pt-1">
@@ -3669,11 +3712,6 @@ export default function AdminDashboard() {
                                       )}
                                     </div>
                                   )}
-                                  {isDelivery && (
-                                    <div className="mt-1.5">
-                                      <CampoEntregaParceiro compacto pedidoId={order.id} valor={(order as any).motoboyFee} onSalvo={(v) => aoSalvarEntregaParceiro(order.id, v)} />
-                                    </div>
-                                  )}
                                 </td>
 
                                 <td className="px-3 py-4 align-middle">
@@ -3687,8 +3725,20 @@ export default function AdminDashboard() {
                                   )}
                                 </td>
 
-                                <td className="px-3 py-4 align-middle text-right font-bold tabular-nums text-stone-900 text-[15px] whitespace-nowrap">
-                                  {brl(Number(Number(order.totalAmount || 0)))}
+                                <td className="px-3 py-4 align-middle text-right whitespace-nowrap">
+                                  <div className="font-bold tabular-nums text-stone-900 text-[15px] leading-tight">
+                                    {brl(Number(Number(order.totalAmount || 0)))}
+                                  </div>
+                                  {isDelivery && (
+                                    <div className="mt-1 flex flex-col items-end gap-0.5">
+                                      <CampoEntregaParceiro compacto pedidoId={order.id} valor={(order as any).motoboyFee} onSalvo={(v) => aoSalvarEntregaParceiro(order.id, v)} />
+                                      {Number((order as any).motoboyFee) > 0 && (
+                                        <span className="text-[10.5px] font-mono font-bold text-emerald-700">
+                                          Líq: {brl(Math.max(0, Number(order.totalAmount || 0) - Number((order as any).motoboyFee)))}
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
                                 </td>
 
                                 <td className="pl-5 pr-3 py-4 align-middle">
