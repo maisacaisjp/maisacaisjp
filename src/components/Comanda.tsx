@@ -50,8 +50,6 @@ export function calcularComanda(pedido: any) {
   const itens = itensDo(pedido.items);
   const tipo = tipoDoPedido(pedido.orderType);
   const entrega = tipo === 'ENTREGA';
-  const total = Number(pedido.totalAmount) || 0;
-
   const notasPedido = String(pedido.notes || '');
   const mCash = notasPedido.match(/Desconto Cashback:\s*R\$\s*([\d.,]+)/i);
   const descontoCashback = mCash ? Number(mCash[1].replace(',', '.')) || 0 : 0;
@@ -60,18 +58,36 @@ export function calcularComanda(pedido: any) {
   if (itens.length === 1 && observacao === String(itens[0]?.name || '').trim()) observacao = '';
 
   const subtotal = itens.reduce((s, i) => s + Number(i.priceCalculated ?? i.basePrice ?? i.price ?? 0) * Number(i.quantity || 1), 0);
-  const adicional = Number(pedido.additionalAmount) || 0;
+  const totalBruto = Number(pedido.totalAmount) || 0;
+  let adicional = Number(pedido.additionalAmount) || 0;
   const desconto = Number(pedido.discountAmount) || 0;
-  let taxaEntrega = entrega ? Math.max(0, Math.round((total - subtotal - adicional + desconto + descontoCashback) * 100) / 100) : 0;
-  if (entrega && taxaEntrega === 0) {
+  const taxaBairro = (entrega && pedido.deliveryZone && NEIGHBORHOOD_DELIVERY_FEES[pedido.deliveryZone])
+    ? Number(NEIGHBORHOOD_DELIVERY_FEES[pedido.deliveryZone])
+    : 0;
+
+  let taxaEntrega = 0;
+  if (entrega) {
     if (pedido.taxa_entrega !== undefined && Number(pedido.taxa_entrega) > 0) {
       taxaEntrega = Number(pedido.taxa_entrega);
     } else if (pedido.taxaEntrega !== undefined && Number(pedido.taxaEntrega) > 0) {
       taxaEntrega = Number(pedido.taxaEntrega);
-    } else if (pedido.deliveryZone && NEIGHBORHOOD_DELIVERY_FEES[pedido.deliveryZone]) {
-      taxaEntrega = NEIGHBORHOOD_DELIVERY_FEES[pedido.deliveryZone];
+    } else {
+      const diffTotal = Math.max(0, Math.round((totalBruto - subtotal + desconto + descontoCashback) * 100) / 100);
+      if (adicional > 0 && Math.abs(diffTotal - adicional) < 0.05) {
+        // Quando o pedido foi editado no modal, a taxa de entrega fica salva em additionalAmount
+        taxaEntrega = adicional;
+        adicional = 0;
+      } else if (diffTotal > 0) {
+        taxaEntrega = Math.max(0, Math.round((diffTotal - adicional) * 100) / 100);
+      }
+      if (taxaEntrega === 0 && taxaBairro > 0) {
+        taxaEntrega = taxaBairro;
+      }
     }
   }
+
+  const totalCalculado = Math.max(0, Math.round((subtotal + (entrega ? taxaEntrega : 0) + adicional - desconto - descontoCashback) * 100) / 100);
+  const total = entrega ? Math.max(totalBruto, totalCalculado) : (totalBruto || totalCalculado);
 
   const troco = Number(String(pedido.changeFor || '').replace(/[^\d,.]/g, '').replace(',', '.')) || 0;
   const qtdItens = itens.reduce((s, i) => s + Number(i.quantity || 1), 0);

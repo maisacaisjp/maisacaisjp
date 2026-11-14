@@ -77,6 +77,15 @@ export async function criarPedido(p: NovoPedido) {
   const entrega = tipo === 'Delivery';
   const itens = limparItens(p.items);
   const bairro = entrega ? texto(p.delivery_zone, 80) : null;
+  const enderecoEntrega = entrega ? texto(p.delivery_address, 300) : null;
+  if (entrega && p.total_pronto === undefined) {
+    if (!enderecoEntrega || enderecoEntrega.replace(/[\s,-]/g, '').length < 3) {
+      throw new ErroPedido(400, 'Por favor, informe o endereço completo de entrega (Rua e Número).');
+    }
+    if (!/\d/.test(enderecoEntrega) && !/\bs\/?n\b/i.test(enderecoEntrega)) {
+      throw new ErroPedido(400, 'Por favor, informe o número da casa/prédio no endereço de entrega (ou digite S/N).');
+    }
+  }
   // Entregas são feitas por motoboys parceiros (iFood/Uber): só pagamento antecipado via PIX
   if (entrega && !/pix/i.test(texto(p.payment_method, 40) || 'PIX')) {
     throw new ErroPedido(400, 'As entregas são pagas somente via PIX. Escolha PIX ou retire na loja.');

@@ -68,7 +68,7 @@ import {
   Cell,
   Legend
 } from "recharts";
-import { ALL_MENU_ITEMS, MenuItem } from "../data/menu";
+import { ALL_MENU_ITEMS, MenuItem, NEIGHBORHOOD_DELIVERY_FEES } from "../data/menu";
 import { useMenu } from "../hooks/useMenu";
 import { supabase } from '../lib/supabase';
 import { normalizeOrderType, isOrderActive, normalizePaymentMethod, paymentParts, detailPaymentMethod } from '../utils/paymentAndOrderHelper';
@@ -3631,13 +3631,13 @@ export default function AdminDashboard() {
                       <div className="overflow-x-auto overflow-y-auto max-h-[calc(100dvh-295px)] min-h-[400px] adm-rolagem">
                       <table className="w-full table-fixed text-left">
                         <colgroup>
-                          <col className="w-[130px]" />
-                          <col />
-                          <col className="w-[150px]" />
-                          <col className="w-[16%]" />
-                          <col className="w-[112px]" />
-                          <col className="w-[196px]" />
-                          <col className="w-[250px]" />
+                          <col className="w-[115px]" />
+                          <col className="w-[175px]" />
+                          <col className="w-[215px]" />
+                          <col className="w-[100px]" />
+                          <col className="w-[155px]" />
+                          <col className="w-[165px]" />
+                          <col className="w-[210px]" />
                         </colgroup>
                         <thead className="sticky top-0 bg-stone-50 z-10 shadow-[0_1px_0_rgba(0,0,0,0.06)]">
                           <tr className="border-b border-stone-100 text-[11px] font-semibold text-stone-400 uppercase tracking-wider bg-stone-50">
@@ -4642,7 +4642,36 @@ function EditOrderModal({ order, menuItems, onClose, onSave }: { order: any, men
   const [customerName, setCustomerName] = useState(cleanName);
   const [customerNif, setCustomerNif] = useState(initialNif);
   const [customerPhone, setCustomerPhone] = useState(order.customerPhone || order.customer_phone || '');
-  const [deliveryAddress, setDeliveryAddress] = useState(order.deliveryAddress || order.delivery_address || '');
+  const initialRawAddress = (order.deliveryAddress || order.delivery_address || '').toString().trim();
+  const parsedAddr = React.useMemo(() => {
+    if (!initialRawAddress) return { street: '', number: '', comp: '' };
+    if (initialRawAddress.includes(',')) {
+      const [st, ...restArr] = initialRawAddress.split(',');
+      const rest = restArr.join(',').trim();
+      const dashIdx = rest.indexOf(' - ');
+      if (dashIdx !== -1) {
+        return { street: st.trim(), number: rest.slice(0, dashIdx).trim(), comp: rest.slice(dashIdx + 3).trim() };
+      }
+      return { street: st.trim(), number: rest, comp: '' };
+    }
+    const m = initialRawAddress.match(/^(.*?)\s+(\d+[A-Za-z]?|S\/N)\s*(?:-\s*(.*))?$/i);
+    if (m) {
+      return { street: m[1].trim(), number: m[2].trim(), comp: (m[3] || '').trim() };
+    }
+    return { street: initialRawAddress, number: '', comp: '' };
+  }, [initialRawAddress]);
+
+  const [addressStreet, setAddressStreet] = useState(parsedAddr.street);
+  const [addressNumber, setAddressNumber] = useState(parsedAddr.number);
+  const [addressComp, setAddressComp] = useState(parsedAddr.comp);
+  const [deliveryAddress, setDeliveryAddress] = useState(initialRawAddress);
+  const syncDeliveryAddress = (st: string, num: string, cp: string) => {
+    const s = st.trim();
+    const n = num.trim();
+    const c = cp.trim();
+    const full = n ? `${s}, ${n}${c ? ` - ${c}` : ''}` : `${s}${c ? ` - ${c}` : ''}`;
+    setDeliveryAddress(full);
+  };
   const [deliveryZone, setDeliveryZone] = useState(order.deliveryZone || order.delivery_zone || '');
   const initialPm = (order.paymentMethod || (order as any).payment_method || 'Dinheiro').toString().trim();
   const [paymentMethod, setPaymentMethod] = useState(initialPm.toLowerCase() === 'mbway' ? 'PIX' : initialPm);
@@ -4657,7 +4686,26 @@ function EditOrderModal({ order, menuItems, onClose, onSave }: { order: any, men
   });
 
   const [discountAmount, setDiscountAmount] = useState<number>(order.discountAmount || order.discount_amount || 0);
-  const [additionalAmount, setAdditionalAmount] = useState<number>(order.additionalAmount || order.additional_amount || 0);
+  const [additionalAmount, setAdditionalAmount] = useState<number>(() => {
+    const savedAdd = Number(order.additionalAmount || order.additional_amount || 0);
+    if (savedAdd > 0) return savedAdd;
+    const isDel = (order.orderType || order.order_type) === 'entrega' || (order.orderType || order.order_type) === 'Delivery';
+    if (!isDel) return 0;
+    let parsedItems: any[] = [];
+    try {
+      parsedItems = typeof order.items === 'string' ? JSON.parse(order.items) : (Array.isArray(order.items) ? order.items : []);
+    } catch {
+      parsedItems = [];
+    }
+    const initSub = parsedItems.reduce((acc, it) => acc + Number(it.priceCalculated ?? it.basePrice ?? it.price ?? 0) * Number(it.quantity || 1), 0);
+    const savedDisc = Number(order.discountAmount || order.discount_amount || 0);
+    const savedTotal = Number(order.totalAmount || order.total_amount || 0);
+    const diff = Math.round((savedTotal - initSub + savedDisc) * 100) / 100;
+    if (diff > 0) return diff;
+    const zone = order.deliveryZone || order.delivery_zone || '';
+    if (zone && NEIGHBORHOOD_DELIVERY_FEES[zone]) return Number(NEIGHBORHOOD_DELIVERY_FEES[zone]);
+    return 0;
+  });
   const [cashProvided, setCashProvided] = useState<number>(order.cashProvided || order.cash_provided || 0);
   const [editReason, setEditReason] = useState(order.editReason || order.edit_reason || '');
   
@@ -5691,34 +5739,87 @@ function EditOrderModal({ order, menuItems, onClose, onSave }: { order: any, men
 
                     {(orderType === 'entrega' || orderType === 'Delivery') && (
                       <div className="pt-2 border-t border-stone-100 space-y-2">
-                        <div className="space-y-1">
-                          <label className="block text-[10px] font-bold text-stone-500 uppercase flex items-center justify-between">
-                            <span className="flex items-center gap-1">
-                              <MapPin size={11} className="text-[#6a2092]" /> Endereço de Entrega (Rua, Número, Comp.)
-                            </span>
-                            <span className="text-[9px] font-normal text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
-                              Obrigatório ter o número p/ motoboy
-                            </span>
-                          </label>
-                          <input
-                            type="text"
-                            value={deliveryAddress}
-                            onChange={(e) => setDeliveryAddress(e.target.value)}
-                            className="w-full px-2.5 py-2 bg-stone-50 rounded-lg border border-stone-200 text-xs font-bold text-stone-900 outline-none focus:border-[#6a2092] focus:bg-white transition-colors"
-                            placeholder="Ex: Rua Joinville, 144 - Apto 204"
-                          />
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="col-span-2 space-y-1">
+                            <label className="block text-[10px] font-bold text-stone-500 uppercase flex items-center gap-1">
+                              <MapPin size={11} className="text-[#6a2092]" /> Rua / Avenida
+                            </label>
+                            <input
+                              type="text"
+                              value={addressStreet}
+                              onChange={(e) => {
+                                setAddressStreet(e.target.value);
+                                syncDeliveryAddress(e.target.value, addressNumber, addressComp);
+                              }}
+                              className="w-full px-2.5 py-2 bg-stone-50 rounded-lg border border-stone-200 text-xs font-bold text-stone-900 outline-none focus:border-[#6a2092] focus:bg-white transition-colors"
+                              placeholder="Ex: Rua Joinville"
+                            />
+                          </div>
+                          <div className="col-span-1 space-y-1">
+                            <label className="block text-[10px] font-bold text-stone-500 uppercase flex items-center justify-between">
+                              <span>Número *</span>
+                              {!addressNumber.trim() && (
+                                <span className="text-[9px] font-bold text-amber-800 bg-amber-100 px-1 rounded">
+                                  Falta Nº
+                                </span>
+                              )}
+                            </label>
+                            <input
+                              type="text"
+                              value={addressNumber}
+                              onChange={(e) => {
+                                setAddressNumber(e.target.value);
+                                syncDeliveryAddress(addressStreet, e.target.value, addressComp);
+                              }}
+                              className={`w-full px-2.5 py-2 rounded-lg border text-xs font-black text-stone-900 outline-none transition-colors ${
+                                !addressNumber.trim()
+                                  ? 'bg-amber-50 border-amber-400 focus:border-[#6a2092] focus:bg-white'
+                                  : 'bg-stone-50 border-stone-200 focus:border-[#6a2092] focus:bg-white'
+                              }`}
+                              placeholder="Nº ou S/N"
+                            />
+                          </div>
                         </div>
-                        <div className="space-y-1">
-                          <label className="block text-[10px] font-bold text-stone-500 uppercase">
-                            Zona / Bairro de Entrega
-                          </label>
-                          <input
-                            type="text"
-                            value={deliveryZone}
-                            onChange={(e) => setDeliveryZone(e.target.value)}
-                            className="w-full px-2.5 py-1.5 bg-stone-50 rounded-lg border border-stone-200 text-xs font-bold text-stone-900 outline-none focus:border-[#6a2092] focus:bg-white transition-colors"
-                            placeholder="Ex: Centro, Afonso Pena..."
-                          />
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <label className="block text-[10px] font-bold text-stone-500 uppercase">
+                              Complemento / Ref.
+                            </label>
+                            <input
+                              type="text"
+                              value={addressComp}
+                              onChange={(e) => {
+                                setAddressComp(e.target.value);
+                                syncDeliveryAddress(addressStreet, addressNumber, e.target.value);
+                              }}
+                              className="w-full px-2.5 py-1.5 bg-stone-50 rounded-lg border border-stone-200 text-xs font-bold text-stone-900 outline-none focus:border-[#6a2092] focus:bg-white transition-colors"
+                              placeholder="Ex: Apto 204, Fundos..."
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="block text-[10px] font-bold text-stone-500 uppercase">
+                              Zona / Bairro de Entrega
+                            </label>
+                            <input
+                              type="text"
+                              list="bairros-entrega-modal"
+                              value={deliveryZone}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setDeliveryZone(val);
+                                if (NEIGHBORHOOD_DELIVERY_FEES[val] !== undefined) {
+                                  setAdditionalAmount(Number(NEIGHBORHOOD_DELIVERY_FEES[val]));
+                                }
+                              }}
+                              className="w-full px-2.5 py-1.5 bg-stone-50 rounded-lg border border-stone-200 text-xs font-bold text-stone-900 outline-none focus:border-[#6a2092] focus:bg-white transition-colors"
+                              placeholder="Ex: Centro, Afonso Pena..."
+                            />
+                            <datalist id="bairros-entrega-modal">
+                              {Object.entries(NEIGHBORHOOD_DELIVERY_FEES).map(([bName, bFee]) => (
+                                <option key={bName} value={bName}>{`${bName} (R$ ${Number(bFee).toFixed(2).replace('.', ',')})`}</option>
+                              ))}
+                            </datalist>
+                          </div>
                         </div>
                       </div>
                     )}
