@@ -83,6 +83,9 @@ export default function Cart({
   // Form State
   const [name, setName] = useState("");
   const [telefone, setTelefone] = useState("");
+  const [rua, setRua] = useState("");
+  const [numero, setNumero] = useState("");
+  const [complemento, setComplemento] = useState("");
   const [morada, setMorada] = useState("");
   const [zona, setZona] = useState("");
   const [nif, setNif] = useState("");
@@ -152,7 +155,29 @@ export default function Cart({
         const parsed = JSON.parse(saved);
         if (parsed.name) setName(parsed.name);
         if (parsed.telefone) setTelefone(parsed.telefone);
-        if (parsed.morada) setMorada(parsed.morada);
+        if (parsed.rua) {
+          setRua(parsed.rua);
+          setNumero(parsed.numero || "");
+          setComplemento(parsed.complemento || "");
+          const comp = parsed.complemento ? ` - ${parsed.complemento.trim()}` : '';
+          setMorada(`${parsed.rua.trim()}, ${(parsed.numero || '').trim()}${comp}`);
+        } else if (parsed.morada) {
+          setMorada(parsed.morada);
+          const parts = parsed.morada.split(',');
+          if (parts.length > 1) {
+            setRua(parts[0].trim());
+            const rest = parts.slice(1).join(',').trim();
+            const dashIdx = rest.indexOf('-');
+            if (dashIdx !== -1) {
+              setNumero(rest.slice(0, dashIdx).trim());
+              setComplemento(rest.slice(dashIdx + 1).trim());
+            } else {
+              setNumero(rest);
+            }
+          } else {
+            setRua(parsed.morada.trim());
+          }
+        }
         if (parsed.zona) setZona(parsed.zona);
         if (parsed.nif) {
           setNif(parsed.nif);
@@ -175,6 +200,9 @@ export default function Cart({
   const saveCustomerData = (updates: Partial<{
     name: string;
     telefone: string;
+    rua: string;
+    numero: string;
+    complemento: string;
     morada: string;
     zona: string;
     nif: string;
@@ -185,6 +213,9 @@ export default function Cart({
       const current = {
         name,
         telefone,
+        rua,
+        numero,
+        complemento,
         morada,
         zona,
         nif,
@@ -273,12 +304,16 @@ export default function Cart({
     if (!name.trim()) {
       errors.push("Por favor, preencha o seu nome.");
     }
+    const enderecoCompleto = `${rua.trim()}, ${numero.trim()}${complemento.trim() ? ` - ${complemento.trim()}` : ''}`;
     if (orderType === "Delivery") {
-      if (!morada.trim()) {
-        errors.push("Por favor, preencha a endereço de entrega.");
+      if (!rua.trim()) {
+        errors.push("Por favor, informe o nome da sua rua / avenida.");
+      }
+      if (!numero.trim()) {
+        errors.push("Por favor, informe o número da casa/prédio (ou digite 'S/N' se não houver).");
       }
       if (!zona.trim()) {
-        errors.push("Por favor, selecione a zona/freguesia de entrega.");
+        errors.push("Por favor, selecione o bairro de entrega.");
       }
     }
 
@@ -309,7 +344,7 @@ export default function Cart({
           customer_phone: telefone,
           order_type: orderType,
           payment_method: pagamento,
-          delivery_address: orderType === 'Delivery' ? morada : null,
+          delivery_address: orderType === 'Delivery' ? enderecoCompleto : null,
           delivery_zone: orderType === 'Delivery' ? zona : null,
           change_for: pagamento === 'Dinheiro' ? trocoPara : null,
           nif: nif.trim() ? nif : null,
@@ -396,8 +431,13 @@ export default function Cart({
 
     if (orderType === "Delivery") {
       text += `[ENDEREÇO DE ENTREGA]\n`;
-      text += `Endereço: ${morada}\n`;
-      text += `Complemento: ${zona}\n`;
+      text += `Rua: ${rua.trim()}\n`;
+      text += `Número: ${numero.trim()}\n`;
+      if (complemento.trim()) {
+        text += `Complemento/Ref: ${complemento.trim()}\n`;
+      }
+      text += `Bairro: ${zona}\n`;
+      text += `Cidade: São José dos Pinhais\n`;
       text += `-----------------------------------\n`;
       text += `Tempo est. de entrega:\n   ${deliveryTimeEstimate}\n`;
     } else {
@@ -999,25 +1039,73 @@ export default function Cart({
                 {/* Endereço e bairro */}
                 {orderType === "Delivery" && (
                   <div className="space-y-2.5">
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="col-span-2">
+                        <label htmlFor="ck-rua" className={rotuloCls}>
+                          <MapPin className="w-4 h-4 text-brand-600" /> Rua / Avenida <span className="text-red-500 font-bold">*</span>
+                        </label>
+                        <input
+                          id="ck-rua"
+                          type="text"
+                          autoComplete="address-line1"
+                          placeholder="Ex: Rua Joinville..."
+                          value={rua}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setRua(val);
+                            const full = `${val.trim()}, ${numero.trim()}${complemento.trim() ? ` - ${complemento.trim()}` : ''}`;
+                            setMorada(full);
+                            saveCustomerData({ rua: val, morada: full });
+                          }}
+                          className={campoCls}
+                        />
+                      </div>
+                      <div className="col-span-1">
+                        <label htmlFor="ck-numero" className={rotuloCls}>
+                          Número <span className="text-red-500 font-bold">*</span>
+                        </label>
+                        <input
+                          id="ck-numero"
+                          type="text"
+                          placeholder="Nº ou S/N"
+                          value={numero}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setNumero(val);
+                            const full = `${rua.trim()}, ${val.trim()}${complemento.trim() ? ` - ${complemento.trim()}` : ''}`;
+                            setMorada(full);
+                            saveCustomerData({ numero: val, morada: full });
+                          }}
+                          className={`${campoCls} font-semibold`}
+                        />
+                      </div>
+                    </div>
+
                     <div>
-                      <label htmlFor="ck-end" className={rotuloCls}>
-                        <MapPin className="w-4 h-4 text-brand-600" /> Endereço
+                      <label htmlFor="ck-comp" className={rotuloCls}>
+                        Complemento / Ponto de Referência <span className="text-xs text-stone-600 font-normal">(opcional)</span>
                       </label>
                       <input
-                        id="ck-end"
+                        id="ck-comp"
                         type="text"
-                        autoComplete="street-address"
-                        placeholder="Rua, número, complemento"
-                        value={morada}
+                        autoComplete="address-line2"
+                        placeholder="Ex: Apto 204, Bloco B, casa dos fundos..."
+                        value={complemento}
                         onChange={(e) => {
-                          setMorada(e.target.value);
-                          saveCustomerData({ morada: e.target.value });
+                          const val = e.target.value;
+                          setComplemento(val);
+                          const full = `${rua.trim()}, ${numero.trim()}${val.trim() ? ` - ${val.trim()}` : ''}`;
+                          setMorada(full);
+                          saveCustomerData({ complemento: val, morada: full });
                         }}
                         className={campoCls}
                       />
                     </div>
+
                     <div>
-                      <label htmlFor="ck-bairro" className={rotuloCls}>Bairro (São José dos Pinhais)</label>
+                      <label htmlFor="ck-bairro" className={rotuloCls}>
+                        Bairro (São José dos Pinhais) <span className="text-red-500 font-bold">*</span>
+                      </label>
                       <select
                         id="ck-bairro"
                         value={zona}
@@ -1027,7 +1115,7 @@ export default function Cart({
                         }}
                         className={`${campoCls} appearance-none bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%2378716c%22 stroke-width=%222%22><path d=%22m6 9 6 6 6-6%22/></svg>')] bg-no-repeat bg-[right_14px_center] pr-10`}
                       >
-                        <option value="">Selecione o bairro</option>
+                        <option value="">Selecione o seu bairro</option>
                         {Object.keys(zonesFees).map((z) => (
                           <option key={z} value={z}>
                             {z} ({zonesFees[z] === 0 ? "entrega grátis" : `+ ${brl(zonesFees[z])}`})

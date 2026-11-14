@@ -34,21 +34,19 @@ export const FREE_DELIVERY_THRESHOLD = Infinity; // Mais Açaí não tem frete g
 export const MIN_DELIVERY_ORDER = 30.0;
 
 export const NEIGHBORHOOD_DELIVERY_FEES: Record<string, number> = {
-  "Parque da Fonte": 0,
-  "Afonso Pena": 5.0,
-  "Centro (SJP)": 6.0,
-  "Boneca do Bigode": 6.0,
-  "Aristocrata": 7.0,
-  "São Pedro": 6.0,
-  "Guatupê": 8.0,
-  "Cruzeiro": 7.0,
-  "Braga": 6.0,
-  "Ouro Fino": 7.0,
-  "Colônia Rio Grande": 8.0,
-  "Borda do Campo": 10.0,
-  "Zacarias": 8.0,
-  "Ipê": 9.0,
-  "Outro Bairro (SJP)": 8.0
+  "Parque da Fonte": 4.99,
+  "Jardim Independência": 5.99,
+  "Afonso Pena": 6.99,
+  "Aviação": 9.99,
+  "Boneca do Iguaçu": 9.99,
+  "Carioca": 9.99,
+  "Centro (SJP)": 9.99,
+  "Cidade Jardim": 9.99,
+  "Cristal": 9.99,
+  "Guatupê": 9.99,
+  "Iná": 9.99,
+  "Ipê": 9.99,
+  "Rio Pequeno": 9.99
 };
 
 // Adicionais e Toppings Oficiais Mais Açaí
