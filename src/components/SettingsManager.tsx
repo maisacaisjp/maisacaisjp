@@ -500,66 +500,8 @@ export default function SettingsManager({
                     <Clock size={16} />
                   </div>
                   <div>
-                    <h2 className="text-sm font-bold text-stone-900">Horários de Funcionamento & Delivery</h2>
-                    <p className="text-xs text-stone-500">Defina os dias de atendimento e controle se a loja realiza entregas próprias hoje.</p>
-                  </div>
-                </div>
-
-                {/* Card de Liga/Desliga do Delivery Próprio */}
-                <div className={`p-4 rounded-2xl border transition-all ${
-                  deliveryEnabled 
-                    ? 'bg-emerald-50/70 border-emerald-200 shadow-2xs' 
-                    : 'bg-amber-50/80 border-amber-300 shadow-2xs'
-                }`}>
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="flex items-start gap-3">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${
-                        deliveryEnabled
-                          ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                          : 'bg-amber-100 text-amber-900 border-amber-300'
-                      }`}>
-                        <Bike className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="text-sm font-bold text-stone-900">Função Entrega (Delivery da Loja)</h3>
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                            deliveryEnabled 
-                              ? 'bg-emerald-600 text-white' 
-                              : 'bg-amber-600 text-white animate-pulse'
-                          }`}>
-                            {deliveryEnabled ? 'LIGADO / ATIVO' : 'DESLIGADO HOJE'}
-                          </span>
-                        </div>
-                        <p className="text-xs text-stone-600 mt-1 max-w-xl">
-                          {deliveryEnabled
-                            ? 'A loja está aceitando entregas normais pelo cardápio digital.'
-                            : 'Entregas suspensas! O cardápio digital exibirá em destaque: "Entregas hoje somente iFood e 99Food" e aceitará apenas pedidos para Retirada no balcão.'}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3 self-end sm:self-center shrink-0 pt-2 sm:pt-0">
-                      <button
-                        type="button"
-                        disabled={savingDeliveryToggle}
-                        onClick={() => handleToggleDelivery(!deliveryEnabled)}
-                        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
-                          deliveryEnabled ? 'bg-emerald-600' : 'bg-stone-300'
-                        } ${savingDeliveryToggle ? 'opacity-50 cursor-wait' : ''}`}
-                        role="switch"
-                        aria-checked={deliveryEnabled}
-                      >
-                        <span
-                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                            deliveryEnabled ? 'translate-x-5' : 'translate-x-0'
-                          }`}
-                        />
-                      </button>
-                      <span className="text-xs font-bold text-stone-800 w-16">
-                        {deliveryEnabled ? 'Ativo' : 'Desativado'}
-                      </span>
-                    </div>
+                    <h2 className="text-sm font-bold text-stone-900">Horários de Funcionamento</h2>
+                    <p className="text-xs text-stone-500">Defina os dias e turnos em que a loja aceita pedidos online.</p>
                   </div>
                 </div>
 
@@ -740,6 +682,64 @@ export default function SettingsManager({
                         className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-xl text-xs font-medium text-stone-900 focus:bg-white focus:border-[#6a2092] outline-none" 
                         placeholder="Ex: 20 a 30 min"
                       />
+                    </div>
+                  </div>
+
+                  {/* Card de Liga/Desliga do Delivery Próprio (embaixo do tempo de entrega) */}
+                  <div className={`p-4 rounded-2xl border transition-all ${
+                    deliveryEnabled 
+                      ? 'bg-emerald-50/70 border-emerald-200 shadow-2xs' 
+                      : 'bg-amber-50/80 border-amber-300 shadow-2xs'
+                  }`}>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${
+                          deliveryEnabled
+                            ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                            : 'bg-amber-100 text-amber-900 border-amber-300'
+                        }`}>
+                          <Bike className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="text-sm font-bold text-stone-900">Função Entrega (Delivery da Loja)</h3>
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                              deliveryEnabled 
+                                ? 'bg-emerald-600 text-white' 
+                                : 'bg-amber-600 text-white'
+                            }`}>
+                              {deliveryEnabled ? 'LIGADO / ATIVO' : 'DESLIGADO HOJE'}
+                            </span>
+                          </div>
+                          <p className="text-xs text-stone-600 mt-1 max-w-xl">
+                            {deliveryEnabled
+                              ? 'A loja está aceitando entregas normais pelo cardápio digital.'
+                              : 'Entregas suspensas! O cardápio digital exibirá o aviso: "Entregas hoje somente iFood e 99Food" e aceitará apenas pedidos para Retirada no balcão.'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 self-end sm:self-center shrink-0 pt-2 sm:pt-0">
+                        <button
+                          type="button"
+                          disabled={savingDeliveryToggle}
+                          onClick={() => handleToggleDelivery(!deliveryEnabled)}
+                          className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                            deliveryEnabled ? 'bg-emerald-600' : 'bg-stone-300'
+                          } ${savingDeliveryToggle ? 'opacity-50 cursor-wait' : ''}`}
+                          role="switch"
+                          aria-checked={deliveryEnabled}
+                        >
+                          <span
+                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                              deliveryEnabled ? 'translate-x-5' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
+                        <span className="text-xs font-bold text-stone-800 w-16">
+                          {deliveryEnabled ? 'Ativo' : 'Desativado'}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>

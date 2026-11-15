@@ -1022,12 +1022,9 @@ export default function Cart({
                     })}
                   </div>
                   {!deliveryEnabled && (
-                    <div className="mt-2.5 p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-[11.5px] flex items-start gap-2 animate-fade-in">
-                      <Bike className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
-                      <div>
-                        <strong className="font-bold block text-stone-900">Entregas hoje somente iFood e 99Food!</strong>
-                        <span>Pelo nosso cardápio digital aceitamos exclusivamente pedidos para Retirada no balcão.</span>
-                      </div>
+                    <div className="mt-2.5 p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-[11.5px] animate-fade-in">
+                      <strong className="font-bold block text-stone-900">Entregas hoje somente iFood e 99Food!</strong>
+                      <span className="text-stone-600">Pelo nosso cardápio digital aceitamos exclusivamente pedidos para Retirada no balcão.</span>
                     </div>
                   )}
 

@@ -771,13 +771,9 @@ function App({ abrirConta = false }: { abrirConta?: boolean }) {
                   <Clock className="w-3.5 h-3.5 opacity-60 ml-0.5" />
                 </button>
               )}
-              {deliveryEnabled ? (
+              {deliveryEnabled && (
                 <span className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-stone-100 text-stone-700" title="Tempo estimado de entrega">
                   <Bike className="w-3.5 h-3.5" /> Entrega <b className="font-semibold">{tempoEntrega}</b>
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-amber-50 text-amber-900 border border-amber-200/80 text-[12px] font-semibold select-none" title="Entregas hoje apenas via iFood ou 99Food">
-                  <Bike className="w-3.5 h-3.5 text-amber-700" /> Entrega: <b className="font-bold">iFood / 99Food</b>
                 </span>
               )}
               <span className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-stone-100 text-stone-700" title="Tempo estimado para retirar na loja">
@@ -789,25 +785,13 @@ function App({ abrirConta = false }: { abrirConta?: boolean }) {
             </div>
 
             {!deliveryEnabled && (
-              <div className="mt-3.5 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/15 border border-amber-300/90 text-amber-950 shadow-xs flex items-center justify-between gap-3 animate-fade-in">
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-xs">
-                    <Bike className="w-5 h-5" />
-                  </span>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-bold uppercase tracking-wide bg-amber-600 text-white">
-                        Aviso
-                      </span>
-                      <h3 className="font-display text-[14px] sm:text-[15px] font-extrabold text-stone-900 leading-tight">
-                        Entregas hoje somente iFood e 99Food!
-                      </h3>
-                    </div>
-                    <p className="text-[12px] sm:text-[13px] text-stone-600 mt-1 leading-snug">
-                      No cardápio digital estamos atendendo exclusivamente para <strong className="text-stone-900 font-bold">Retirada no Balcão</strong>.
-                    </p>
-                  </div>
-                </div>
+              <div className="mt-3.5 px-4 py-3 rounded-2xl bg-amber-50 border border-amber-300/80 text-amber-950 shadow-2xs animate-fade-in">
+                <p className="font-display text-[14.5px] sm:text-[15.5px] font-extrabold text-stone-900 leading-snug">
+                  Entregas hoje somente iFood e 99Food!
+                </p>
+                <p className="text-[12px] sm:text-[13px] text-stone-600 mt-0.5 leading-snug">
+                  No cardápio digital estamos atendendo exclusivamente para <strong className="text-stone-900 font-semibold">Retirada no Balcão</strong>.
+                </p>
               </div>
             )}
 

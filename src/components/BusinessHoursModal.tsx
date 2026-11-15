@@ -136,9 +136,8 @@ export default function BusinessHoursModal({ isOpen, onClose, businessStatus, de
               </span>
             </div>
           ) : (
-            <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-[11.5px] flex items-center gap-2">
-              <Bike className="w-4 h-4 text-amber-700 shrink-0" />
-              <span>Entregas hoje somente <b>iFood e 99Food</b>. Pelo cardápio, apenas <b>Retirada</b>.</span>
+            <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-[11.5px] text-center">
+              <span>Entregas hoje somente <b>iFood e 99Food</b>. Pelo cardápio, apenas <b>Retirada no Balcão</b>.</span>
             </div>
           )}
 
