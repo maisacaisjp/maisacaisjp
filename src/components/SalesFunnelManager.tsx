@@ -30,6 +30,13 @@ interface FunnelData {
   conversionRate: number;
   cartAbandonmentRate: number;
   checkoutDropRate: number;
+  // Controlador de Calor da Jornada do Cliente
+  heatFrio: number;
+  heatMorno: number;
+  heatQuente: number;
+  heatFervendo: number;
+  heatConvertido: number;
+  totalPdvExcluidos: number;
 }
 
 interface SalesFunnelManagerProps {
@@ -54,6 +61,12 @@ export const SalesFunnelManager: React.FC<SalesFunnelManagerProps> = ({ onNaviga
     conversionRate: 0,
     cartAbandonmentRate: 0,
     checkoutDropRate: 0,
+    heatFrio: 0,
+    heatMorno: 0,
+    heatQuente: 0,
+    heatFervendo: 0,
+    heatConvertido: 0,
+    totalPdvExcluidos: 0,
   });
 
   const fetchFunnelData = async () => {
@@ -118,16 +131,36 @@ export const SalesFunnelManager: React.FC<SalesFunnelManagerProps> = ({ onNaviga
         }
       }
 
-      // 3. Buscar pedidos reais e faturamento verídico na tabela orders
+      // 3. Buscar pedidos reais da tabela orders e filtrar EXCLUSIVAMENTE os que vieram do LINK (Cardápio Digital)
       const { data: ordersData } = await supabase
         .from('orders')
-        .select('id, total_amount, status, created_at')
+        .select('id, total_amount, status, created_at, order_type, notes, customer_phone')
         .gte('created_at', startOfDate.toISOString())
         .lte('created_at', endOfDate.toISOString());
 
-      const activeOrders = (ordersData || []).filter(
-        (o: any) => o.status !== 'Cancelado' && o.status !== 'cancelado'
-      );
+      let countPdv = 0;
+      const onlineOrders = (ordersData || []).filter((o: any) => {
+        if (o.status === 'Cancelado' || o.status === 'cancelado') return false;
+
+        const tipo = String(o.order_type || '').toLowerCase();
+        const notas = String(o.notes || '');
+
+        // Identifica pedidos feitos fisicamente na loja (PDV / Mesa / Sofá / Balcão)
+        const ehPdv = (
+          tipo === 'mesa' ||
+          tipo === 'balcao' ||
+          notas.includes('[PDV]') ||
+          notas.includes('Mesa/Comanda:') ||
+          (tipo === 'retirada' && !o.customer_phone && !notas.includes('Cashback'))
+        );
+
+        if (ehPdv) {
+          countPdv++;
+          return false;
+        }
+
+        return true;
+      });
 
       const uniqueVisitors = new Set<string>();
       const engagedSessions = new Set<string>();
@@ -159,16 +192,23 @@ export const SalesFunnelManager: React.FC<SalesFunnelManagerProps> = ({ onNaviga
         }
       });
 
-      const completedOrdersCount = activeOrders.length;
-      const totalRevenue = activeOrders.reduce((acc: number, o: any) => acc + Number(o.total_amount || 0), 0);
-      const ticketMedio = completedOrdersCount > 0 ? totalRevenue / completedOrdersCount : 0;
+      // Pedidos reais fechados via Link Online
+      const purchases = onlineOrders.length;
+      const totalRevenue = onlineOrders.reduce((acc: number, o: any) => acc + Number(o.total_amount || 0), 0);
+      const ticketMedio = purchases > 0 ? totalRevenue / purchases : 0;
 
-      // Dados 100% reais das sessões medidas em tempo real (mantendo consistência lógica das etapas)
-      const purchases = completedOrdersCount;
+      // Jornada coerente com eventos medidos em tempo real
       const initiatedCheckout = Math.max(initiatedCheckoutSessions.size, purchases);
       const addedToCart = Math.max(addedToCartSessions.size, initiatedCheckout);
       const engaged = Math.max(engagedSessions.size, addedToCart);
       const visitors = Math.max(uniqueVisitors.size, engaged);
+
+      // Controlador de Calor da Jornada: até onde cada grupo foi
+      const heatFrio = Math.max(0, visitors - engaged);        // Parou na tela inicial (sem clicar em produto)
+      const heatMorno = Math.max(0, engaged - addedToCart);     // Explorou sabores/fotos, mas não adicionou
+      const heatQuente = Math.max(0, addedToCart - initiatedCheckout); // Adicionou na sacola, mas não foi pro checkout
+      const heatFervendo = Math.max(0, initiatedCheckout - purchases); // Iniciou checkout e desistiu na hora de pagar
+      const heatConvertido = purchases;                        // Concluiu o pedido no link com sucesso!
 
       const conversionRate = visitors > 0 ? (purchases / visitors) * 100 : 0;
       const cartAbandonmentRate = addedToCart > 0 ? Math.max(0, 100 - (purchases / addedToCart) * 100) : 0;
@@ -184,7 +224,13 @@ export const SalesFunnelManager: React.FC<SalesFunnelManagerProps> = ({ onNaviga
         ticketMedio,
         conversionRate,
         cartAbandonmentRate,
-        checkoutDropRate
+        checkoutDropRate,
+        heatFrio,
+        heatMorno,
+        heatQuente,
+        heatFervendo,
+        heatConvertido,
+        totalPdvExcluidos: countPdv
       });
     } catch (err) {
       console.error('Erro ao buscar dados do funil:', err);
@@ -432,6 +478,94 @@ export const SalesFunnelManager: React.FC<SalesFunnelManagerProps> = ({ onNaviga
             <span>Conversão Total:</span>
             <span className="font-bold text-emerald-400">{data.conversionRate.toFixed(1).replace('.', ',')}%</span>
           </div>
+        </div>
+      </div>
+
+      {/* ────────────────── CONTROLADOR DE CALOR DA JORNADA DO CLIENTE (HEATMAP) ────────────────── */}
+      <div className="bg-white rounded-2xl border border-stone-200/90 p-4 sm:p-5 shadow-2xs space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-base">🌡️</span>
+            <div>
+              <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-stone-900 flex items-center gap-2">
+                Controlador Térmico da Jornada do Cliente
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                  Onde os clientes param
+                </span>
+              </h2>
+              <p className="text-[11px] text-stone-500 font-sans mt-0.5">
+                Temperatura dos acessos ao link: saiba onde o cliente parou ou avançou até a compra
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 text-[11px] font-mono">
+            <span className="px-2 py-1 rounded-lg bg-purple-50 text-[#6a2092] border border-purple-200 font-bold">
+              🔗 {data.purchases} Pedidos via Link
+            </span>
+            {data.totalPdvExcluidos > 0 && (
+              <span className="px-2 py-1 rounded-lg bg-stone-100 text-stone-600 border border-stone-200 font-medium" title="Pedidos de mesa e balcão feitos fisicamente na loja não poluem o funil do link">
+                🏪 {data.totalPdvExcluidos} no Balcão/PDV (isolados)
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Barra de Calor da Jornada */}
+        <div className="space-y-1.5">
+          <div className="h-3 w-full bg-stone-100 rounded-full overflow-hidden flex shadow-inner">
+            {data.visitors > 0 ? (
+              <>
+                <div style={{ width: `${(data.heatFrio / data.visitors) * 100}%` }} className="bg-sky-400 transition-all" title={`Frio (Só visualizou a capa): ${data.heatFrio}`} />
+                <div style={{ width: `${(data.heatMorno / data.visitors) * 100}%` }} className="bg-amber-400 transition-all" title={`Morno (Explorou produtos): ${data.heatMorno}`} />
+                <div style={{ width: `${(data.heatQuente / data.visitors) * 100}%` }} className="bg-orange-500 transition-all" title={`Quente (Colocou na sacola): ${data.heatQuente}`} />
+                <div style={{ width: `${(data.heatFervendo / data.visitors) * 100}%` }} className="bg-rose-500 transition-all" title={`Fervendo (Abriu checkout e desistiu): ${data.heatFervendo}`} />
+                <div style={{ width: `${(data.heatConvertido / data.visitors) * 100}%` }} className="bg-emerald-500 transition-all" title={`Convertido (Comprou): ${data.heatConvertido}`} />
+              </>
+            ) : (
+              <div className="w-full bg-stone-200" />
+            )}
+          </div>
+        </div>
+
+        {/* 5 Zonas Térmicas com Indicadores de Onde Parou */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1 text-center font-mono">
+          
+          {/* Zona 1: Frio */}
+          <div className="p-2.5 rounded-xl bg-sky-50/70 border border-sky-200/80">
+            <span className="text-[10px] font-bold text-sky-800 uppercase block">❄️ Frio (0%)</span>
+            <span className="text-lg font-bold text-sky-950 block tabular-nums my-0.5">{data.heatFrio}</span>
+            <span className="text-[10px] text-sky-700 block leading-tight font-sans">Parou na vitrine</span>
+          </div>
+
+          {/* Zona 2: Morno */}
+          <div className="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/80">
+            <span className="text-[10px] font-bold text-amber-800 uppercase block">🌤️ Morno (25%)</span>
+            <span className="text-lg font-bold text-amber-950 block tabular-nums my-0.5">{data.heatMorno}</span>
+            <span className="text-[10px] text-amber-700 block leading-tight font-sans">Viu copos/fotos</span>
+          </div>
+
+          {/* Zona 3: Quente */}
+          <div className="p-2.5 rounded-xl bg-orange-50/70 border border-orange-200/80">
+            <span className="text-[10px] font-bold text-orange-800 uppercase block">🔥 Quente (50%)</span>
+            <span className="text-lg font-bold text-orange-950 block tabular-nums my-0.5">{data.heatQuente}</span>
+            <span className="text-[10px] text-orange-700 block leading-tight font-sans">Parou no carrinho</span>
+          </div>
+
+          {/* Zona 4: Fervendo */}
+          <div className="p-2.5 rounded-xl bg-rose-50/70 border border-rose-200/80">
+            <span className="text-[10px] font-bold text-rose-800 uppercase block">💥 Fervendo (75%)</span>
+            <span className="text-lg font-bold text-rose-950 block tabular-nums my-0.5">{data.heatFervendo}</span>
+            <span className="text-[10px] text-rose-700 block leading-tight font-sans">Desistiu no checkout</span>
+          </div>
+
+          {/* Zona 5: Convertido */}
+          <div className="col-span-2 sm:col-span-1 p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-300">
+            <span className="text-[10px] font-black text-emerald-800 uppercase block">🏆 Comprou (100%)</span>
+            <span className="text-lg font-black text-emerald-700 block tabular-nums my-0.5">{data.heatConvertido}</span>
+            <span className="text-[10px] text-emerald-800 block leading-tight font-sans font-bold">Pedido Concluído</span>
+          </div>
+
         </div>
       </div>
 

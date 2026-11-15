@@ -788,7 +788,7 @@ export default function PDVModal({
 
       // A tabela orders não tem colunas de mesa, referência, taxa de entrega nem desconto:
       // esses dados vão nas observações, no mesmo padrão do desconto de cashback do cardápio.
-      const notesParts: string[] = [];
+      const notesParts: string[] = ['[PDV]'];
       if (orderType === 'mesa' && tableNumber.trim()) notesParts.push(`Mesa/Comanda: ${tableNumber.trim()}`);
       if (orderType === 'entrega' && deliveryReference.trim()) notesParts.push(`Referência: ${deliveryReference.trim()}`);
       if (orderType === 'entrega' && deliveryFee > 0) notesParts.push(`[Taxa de entrega: ${brl(deliveryFee)}]`);
