@@ -185,12 +185,44 @@ export default function Cart({
           setNif(parsed.nif);
           setShowNifInput(true);
         }
-        if (parsed.orderType) setOrderType(parsed.orderType);
+        if (parsed.orderType) {
+          if (parsed.orderType === "Delivery" && !deliveryEnabled) {
+            setOrderType("Takeaway");
+          } else {
+            setOrderType(parsed.orderType);
+          }
+        }
         if (parsed.pagamento) setPagamento(parsed.pagamento);
       }
     } catch (e) {
       console.warn('[Cart] Error reading localStorage customer data', e);
     }
+  }, [deliveryEnabled]);
+
+  // Checagem direta de segurança do status de entrega na tabela settings
+  useEffect(() => {
+    supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'delivery_enabled')
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.value !== undefined && data?.value !== null) {
+          const val = data.value;
+          const isOff = val === false || val === 'false' || val === 0 || val === '0';
+          if (isOff) {
+            setOrderType("Takeaway");
+            try {
+              const raw = localStorage.getItem('maisacaisjp-customer-data') || localStorage.getItem('pizzeria-customer-data');
+              if (raw) {
+                const parsed = JSON.parse(raw);
+                parsed.orderType = "Takeaway";
+                localStorage.setItem('maisacaisjp-customer-data', JSON.stringify(parsed));
+              }
+            } catch {}
+          }
+        }
+      });
   }, []);
 
   // Entrega só aceita PIX: se escolheu entrega (ou voltou com cartão/dinheiro salvo), troca para PIX
@@ -200,10 +232,11 @@ export default function Cart({
 
   // Se o delivery da loja estiver desativado nas configurações, força a opção para Retirada (Takeaway)
   useEffect(() => {
-    if (!deliveryEnabled && orderType === "Delivery") {
+    if (!deliveryEnabled) {
       setOrderType("Takeaway");
+      saveCustomerData({ orderType: "Takeaway" });
     }
-  }, [deliveryEnabled, orderType]);
+  }, [deliveryEnabled]);
 
   // Save changes to localStorage
   const saveCustomerData = (updates: Partial<{
@@ -308,7 +341,10 @@ export default function Cart({
     }
 
     if (orderType === "Delivery" && !deliveryEnabled) {
-      errors.push("A entrega própria está temporariamente suspensa hoje. Por favor, selecione a opção Retirada.");
+      setOrderType("Takeaway");
+      saveCustomerData({ orderType: "Takeaway" });
+      setFormError("Entregas hoje somente pelo iFood e 99Food! Ajustamos seu pedido para Retirada no balcão.");
+      return;
     }
 
     if (orderType === "Delivery" && subtotal < minDeliveryOrder) {
@@ -990,14 +1026,17 @@ export default function Cart({
                           disabled={disabled}
                           aria-pressed={ativo}
                           onClick={() => {
-                            if (disabled) return;
+                            if (disabled) {
+                              setFormError("Entregas hoje somente pelo iFood e 99Food! No cardápio atendemos apenas Retirada no balcão.");
+                              return;
+                            }
                             setOrderType(valor);
                             saveCustomerData({ orderType: valor });
                             setFormError(null);
                           }}
                           className={`flex items-center gap-2.5 text-left rounded-2xl px-3 py-2.5 transition-all ${
                             disabled
-                              ? "opacity-60 cursor-not-allowed bg-stone-100 ring-1 ring-stone-200"
+                              ? "opacity-40 cursor-not-allowed bg-stone-100 ring-1 ring-stone-200 pointer-events-none select-none"
                               : ativo
                               ? "bg-brand-50 ring-2 ring-brand-700 cursor-pointer"
                               : "bg-white ring-1 ring-stone-200 hover:ring-stone-300 cursor-pointer"

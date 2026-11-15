@@ -272,10 +272,14 @@ function App({ abrirConta = false }: { abrirConta?: boolean }) {
       .in('key', ['delivery_time_estimate', 'pickup_time_estimate', 'delivery_enabled'])
       .then(({ data }) => {
         for (const row of data || []) {
-          if (!row?.value && row?.value !== 'false') continue;
-          if (row.key === 'delivery_time_estimate') setTempoEntrega(String(row.value));
-          if (row.key === 'pickup_time_estimate') setTempoRetirada(String(row.value));
-          if (row.key === 'delivery_enabled') setDeliveryEnabled(row.value !== 'false');
+          if (!row?.key) continue;
+          if (row.key === 'delivery_time_estimate' && row.value) setTempoEntrega(String(row.value));
+          if (row.key === 'pickup_time_estimate' && row.value) setTempoRetirada(String(row.value));
+          if (row.key === 'delivery_enabled') {
+            const val = row.value;
+            const isOff = val === false || val === 'false' || val === 0 || val === '0';
+            setDeliveryEnabled(!isOff);
+          }
         }
       });
 
@@ -285,7 +289,9 @@ function App({ abrirConta = false }: { abrirConta?: boolean }) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, payload => {
         const item = payload.new as any;
         if (item?.key === 'delivery_enabled') {
-          setDeliveryEnabled(item.value !== 'false');
+          const val = item.value;
+          const isOff = val === false || val === 'false' || val === 0 || val === '0';
+          setDeliveryEnabled(!isOff);
         }
         if (item?.key === 'delivery_time_estimate' && item.value) {
           setTempoEntrega(String(item.value));

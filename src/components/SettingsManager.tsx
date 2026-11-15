@@ -129,7 +129,9 @@ export default function SettingsManager({
       ]);
       if (hData) setHours(hData);
       if (dData?.value !== undefined && dData?.value !== null) {
-        setDeliveryEnabled(dData.value !== 'false');
+        const val = dData.value;
+        const isOff = val === false || val === 'false' || val === 0 || val === '0';
+        setDeliveryEnabled(!isOff);
       }
     }
     loadHoursAndDelivery();
