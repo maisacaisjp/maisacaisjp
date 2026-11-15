@@ -34,7 +34,7 @@ export default function Lancamentos() {
           <Vazio>Nenhum lançamento neste mês.</Vazio>
         ) : (
           <>
-          <div ref={pag.ref} className="overflow-x-auto">
+          <div ref={pag.ref} className="overflow-x-auto md:overflow-y-auto md:max-h-[calc(100dvh-300px)] md:min-h-[400px] adm-rolagem">
             <table className="fin-tabela">
               <thead>
                 <tr><th>Data</th><th className="min-w-48">Descrição</th><th>Categoria</th><th className="fin-num">Valor (R$)</th><th>Pagamento</th><th>Fornecedor</th><th /></tr>

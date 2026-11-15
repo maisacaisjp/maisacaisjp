@@ -80,34 +80,30 @@ export function useLinhasQueCabem(
   return linhas;
 }
 
-/** Fatia a lista na página atual e volta para a 1ª quando a lista encolhe. */
-export function usePaginacao<T>(lista: T[], porPagina: number, resetarQuando: unknown[] = []) {
+/** Retorna a lista completa para rolagem contínua (estilo Produtos), sem divisão de páginas. */
+export function usePaginacao<T>(lista: T[], _porPagina?: number, resetarQuando: unknown[] = []) {
   const [pagina, setPagina] = useState(1);
   useEffect(() => setPagina(1), resetarQuando); // eslint-disable-line react-hooks/exhaustive-deps
-  const total = Math.max(1, Math.ceil(lista.length / Math.max(1, porPagina)));
-  const atual = Math.min(pagina, total);
-  const inicio = (atual - 1) * porPagina;
   return {
-    pagina: atual,
-    totalPaginas: total,
-    itens: lista.slice(inicio, inicio + porPagina),
-    inicio,
-    irPara: (p: number) => setPagina(Math.max(1, Math.min(total, p))),
+    pagina: 1,
+    totalPaginas: 1,
+    itens: lista,
+    inicio: 0,
+    irPara: (p: number) => setPagina(p),
   };
 }
 
 /**
- * Atalho: lista que cabe na tela. Devolve o ref para pôr no contêiner da lista,
- * os itens da página atual e as props prontas para <Paginacao>.
+ * Atalho: lista em rolagem contínua livre que cabe na tela com rolagem (estilo Produtos).
+ * Devolve o ref para o contêiner e todos os itens para rolagem direta sem páginas 2, 3, 4.
  */
 export function useListaQueCabe<T>(
   lista: T[],
-  alturaLinha: number,
-  { reserva = 110, min = 3, deps = [] as unknown[], resetar = [] as unknown[] } = {},
+  _alturaLinha?: number,
+  { resetar = [] as unknown[] } = {},
 ) {
-  const ref = useRef<any>(null); // div, ul ou tbody: o contêiner da lista
-  const porPagina = useLinhasQueCabem(ref, alturaLinha, { reserva, min, deps: [lista.length > 0, ...deps] });
-  const pag = usePaginacao(lista, porPagina, resetar);
+  const ref = useRef<any>(null);
+  const pag = usePaginacao(lista, undefined, resetar);
   return {
     ref,
     itens: pag.itens,

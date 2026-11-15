@@ -792,9 +792,9 @@ export default function CaixaManager({ refreshSignal }: CaixaManagerProps = {}) 
             }}
           />
         </div>
-        <div ref={historicoRef} className="overflow-x-auto">
+        <div ref={historicoRef} className="overflow-x-auto overflow-y-auto max-h-[calc(100dvh-295px)] min-h-[300px] adm-rolagem">
           <table className="w-full text-left border-collapse">
-            <thead>
+            <thead className="sticky top-0 bg-stone-50 z-10 shadow-[0_1px_0_rgba(0,0,0,0.06)]">
               <tr className="border-b border-stone-100 text-[11px] uppercase tracking-wider text-stone-400 font-semibold bg-stone-50/60">
                 <th className="h-9 pl-4 pr-3 font-semibold">Dia</th>
                 <th className="h-9 px-3 font-semibold text-right">Fundo inicial</th>

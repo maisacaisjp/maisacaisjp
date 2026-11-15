@@ -204,7 +204,7 @@ export default function Historico() {
           </div>
         }
       >
-        <div ref={pagMeses.ref} className="overflow-x-auto">
+        <div ref={pagMeses.ref} className="overflow-x-auto md:overflow-y-auto md:max-h-[calc(100dvh-300px)] md:min-h-[400px] adm-rolagem">
           <table className="fin-tabela">
             <thead>
               <tr><th>Mês</th><th className="fin-num">Faturamento (R$)</th><th className="fin-num">Pedidos</th><th className="fin-num">Ticket médio</th><th className="fin-num">No sistema</th><th className="fin-num">vs {ano - 1}</th></tr>

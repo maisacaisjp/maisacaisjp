@@ -104,7 +104,7 @@ export default function Fichas() {
             ))}
           </div>
         </div>
-        <ul ref={pagLista.ref} className="space-y-0.5">
+        <ul ref={pagLista.ref} className="space-y-0.5 max-h-[calc(100dvh-320px)] overflow-y-auto adm-rolagem pr-1">
           {pagLista.itens.map((f) => {
             const t = tamanhoRef(f);
             const c = custoFicha(f, t, dados).total;

@@ -2,12 +2,23 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { getStoreDate } from '../utils/date';
 
+export interface DaySchedule {
+  dayOfWeek: number;
+  dayName: string;
+  opensAt: string;
+  closesAt: string;
+  isClosed: boolean;
+  isToday: boolean;
+  timeRangeLabel: string;
+}
+
 export interface BusinessHoursStatus {
   isOpen: boolean;
   loading: boolean;
   todayLabel: string;
   reason: 'loading' | 'closed_today' | 'outside_hours' | 'open' | 'manual_closed' | 'paused' | 'blocked';
   subscriptionStatus: string;
+  weeklySchedule: DaySchedule[];
 }
 
 const DAY_NAMES = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
@@ -19,6 +30,7 @@ export function useBusinessHours(): BusinessHoursStatus {
     todayLabel: '',
     reason: 'loading',
     subscriptionStatus: 'active',
+    weeklySchedule: [],
   });
 
   const checkStatus = async () => {
@@ -35,13 +47,40 @@ export function useBusinessHours(): BusinessHoursStatus {
       const pausedUntil = getSetting('paused_until');
       const subscriptionStatus = getSetting('subscription_status') || 'active';
 
+      // Dia e hora oficiais da loja (São José dos Pinhais / PR)
+      const now = getStoreDate();
+      const currentDayOfWeek = isNaN(now.getDay()) ? 0 : now.getDay();
+
+      const { data, error } = await supabase.from('business_hours').select('*').order('day_of_week');
+      if (error) throw error;
+
+      // Monta escala semanal amigável (ordem de exibição: Seg, Ter, Qua, Qui, Sex, Sáb, Dom)
+      const weekOrder = [1, 2, 3, 4, 5, 6, 0];
+      const weeklySchedule: DaySchedule[] = weekOrder.map((dow) => {
+        const item = data?.find((d: any) => d.day_of_week === dow);
+        const dayName = DAY_NAMES[dow] || `Dia ${dow}`;
+        const isClosed = !item || item.is_closed || !item.opens_at || !item.closes_at;
+        const opensAt = item?.opens_at ? item.opens_at.slice(0, 5) : '';
+        const closesAt = item?.closes_at ? item.closes_at.slice(0, 5) : '';
+        const timeRangeLabel = isClosed ? 'Fechado' : `${opensAt} às ${closesAt}`;
+        return {
+          dayOfWeek: dow,
+          dayName,
+          opensAt,
+          closesAt,
+          isClosed,
+          isToday: dow === currentDayOfWeek,
+          timeRangeLabel,
+        };
+      });
+
       if (subscriptionStatus === 'blocked') {
-        setStatus({ isOpen: false, loading: false, todayLabel: '', reason: 'blocked', subscriptionStatus });
+        setStatus({ isOpen: false, loading: false, todayLabel: '', reason: 'blocked', subscriptionStatus, weeklySchedule });
         return;
       }
 
       if (manualClosed || storeStatus === 'closed') {
-        setStatus({ isOpen: false, loading: false, todayLabel: '', reason: 'manual_closed', subscriptionStatus });
+        setStatus({ isOpen: false, loading: false, todayLabel: '', reason: 'manual_closed', subscriptionStatus, weeklySchedule });
         return;
       }
 
@@ -49,33 +88,26 @@ export function useBusinessHours(): BusinessHoursStatus {
         const pauseEnd = new Date(pausedUntil);
         if (new Date() < pauseEnd) {
            const timeStr = pauseEnd.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
-           setStatus({ isOpen: false, loading: false, todayLabel: `Volta às ${timeStr}`, reason: 'paused', subscriptionStatus });
+           setStatus({ isOpen: false, loading: false, todayLabel: `Volta às ${timeStr}`, reason: 'paused', subscriptionStatus, weeklySchedule });
            return;
-        } else {
-           // Pause expired, continue to normal hours check
         }
       }
 
-      const { data, error } = await supabase.from('business_hours').select('*');
-      if (error) throw error;
       if (!data || data.length === 0) {
-        setStatus({ isOpen: true, loading: false, todayLabel: '', reason: 'open', subscriptionStatus });
+        setStatus({ isOpen: true, loading: false, todayLabel: '', reason: 'open', subscriptionStatus, weeklySchedule });
         return;
       }
 
-      // Dia e hora oficiais da loja (São José dos Pinhais / PR), não importa o fuso do aparelho
-      const now = getStoreDate();
-
-      const dayOfWeek = isNaN(now.getDay()) ? 0 : now.getDay();
-      const today = data.find((d: any) => d.day_of_week === dayOfWeek);
+      const today = data.find((d: any) => d.day_of_week === currentDayOfWeek);
 
       if (!today || today.is_closed || !today.opens_at || !today.closes_at || typeof today.opens_at !== 'string' || typeof today.closes_at !== 'string') {
         setStatus({
           isOpen: false,
           loading: false,
-          todayLabel: DAY_NAMES[dayOfWeek] || 'Fechado',
+          todayLabel: DAY_NAMES[currentDayOfWeek] || 'Fechado',
           reason: 'closed_today',
-          subscriptionStatus
+          subscriptionStatus,
+          weeklySchedule
         });
         return;
       }
@@ -102,11 +134,12 @@ export function useBusinessHours(): BusinessHoursStatus {
         loading: false,
         todayLabel: `${today.opens_at.slice(0,5)} às ${today.closes_at.slice(0,5)}`,
         reason: isOpen ? 'open' : 'outside_hours',
-        subscriptionStatus
+        subscriptionStatus,
+        weeklySchedule
       });
     } catch (err) {
       console.warn('[useBusinessHours] Não foi possível verificar o horário, assumindo loja aberta.', err);
-      setStatus({ isOpen: true, loading: false, todayLabel: '', reason: 'open', subscriptionStatus: 'active' });
+      setStatus({ isOpen: true, loading: false, todayLabel: '', reason: 'open', subscriptionStatus: 'active', weeklySchedule: [] });
     }
   };
 

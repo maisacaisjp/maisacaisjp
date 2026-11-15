@@ -18,7 +18,7 @@ import { CartItem } from "./types";
 import { playVictorySound } from "./utils/sound";
 import { getStoreDate } from "./utils/date";
 import { hapticLight, hapticMedium, hapticSuccess } from "./utils/haptics";
-import { Search, ShoppingBag, X, MapPin, ArrowUp, Bike, Check, ChevronLeft, ChevronRight, Receipt, Star, Store } from "lucide-react";
+import { Search, ShoppingBag, X, MapPin, ArrowUp, Bike, Check, ChevronLeft, ChevronRight, Receipt, Star, Store, Clock, ChevronDown } from "lucide-react";
 import { brl, nomeBonito, tituloCategoria } from "./utils/formatacao";
 import Cart from "./components/Cart";
 import MenuItemCard from "./components/MenuItemCard";
@@ -85,6 +85,7 @@ export default // App principal
 function App({ abrirConta = false }: { abrirConta?: boolean }) {
   const { menuItems, categories: dbCategories, loading: menuLoading, usingFallback } = useMenu();
   const businessStatus = useBusinessHours();
+  const [showHoursPopover, setShowHoursPopover] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -730,14 +731,79 @@ function App({ abrirConta = false }: { abrirConta?: boolean }) {
               </button>}
 
               {!carregandoStatus && (
-                <span
-                  className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-full ${
-                    aberto ? "bg-emerald-50 text-emerald-800" : "bg-rose-50 text-rose-700"
-                  }`}
-                >
-                  <span className={`w-2 h-2 rounded-full ${aberto ? "bg-leaf" : "bg-rose-500"}`} />
-                  {aberto ? "Aberto agora" : "Fechado agora"}
-                </span>
+                <div className="relative group">
+                  <button
+                    type="button"
+                    onClick={() => setShowHoursPopover((v) => !v)}
+                    className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-full border transition cursor-pointer select-none active:scale-95 ${
+                      aberto
+                        ? "bg-emerald-50 text-emerald-800 border-emerald-200/80 hover:bg-emerald-100"
+                        : "bg-rose-50 text-rose-700 border-rose-200/80 hover:bg-rose-100"
+                    }`}
+                    title="Passe o mouse ou toque para ver todos os horários de funcionamento"
+                  >
+                    <span className={`w-2 h-2 rounded-full ${aberto ? "bg-leaf animate-pulse" : "bg-rose-500"}`} />
+                    <span className="font-semibold">{aberto ? "Aberto agora" : "Fechado agora"}</span>
+                    <Clock className="w-3.5 h-3.5 opacity-60 ml-0.5" />
+                    <ChevronDown className="w-3 h-3 opacity-60 group-hover:rotate-180 transition-transform duration-200" />
+                  </button>
+
+                  {/* Popover flutuante: abre no hover (desktop) ou toque/click (mobile) */}
+                  <div
+                    className={`absolute left-0 top-full mt-2 z-50 w-72 sm:w-80 bg-white rounded-2xl shadow-2xl border border-stone-200 p-4 transition-all duration-200 ${
+                      showHoursPopover
+                        ? "opacity-100 visible translate-y-0"
+                        : "opacity-0 invisible group-hover:opacity-100 group-hover:visible translate-y-1 group-hover:translate-y-0 pointer-events-none group-hover:pointer-events-auto"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between pb-3 border-b border-stone-100">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-brand-50 flex items-center justify-center text-brand-700">
+                          <Clock className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h4 className="text-[13px] font-bold text-stone-900 leading-tight">Horários de Atendimento</h4>
+                          <p className="text-[11px] text-stone-500">Delivery e retirada no balcão</p>
+                        </div>
+                      </div>
+                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                        aberto ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"
+                      }`}>
+                        {aberto ? "Aberto hoje" : "Fechado"}
+                      </span>
+                    </div>
+
+                    <div className="py-2.5 space-y-1 text-[12.5px]">
+                      {(businessStatus.weeklySchedule || []).map((s) => (
+                        <div
+                          key={s.dayOfWeek}
+                          className={`flex items-center justify-between py-1 px-2 rounded-lg transition-colors ${
+                            s.isToday
+                              ? "bg-purple-50/80 font-bold text-brand-900 border border-purple-200/60"
+                              : "text-stone-700 hover:bg-stone-50"
+                          }`}
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <span>{s.dayName}</span>
+                            {s.isToday && (
+                              <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.2 bg-brand-600 text-white rounded-md tracking-wider">
+                                Hoje
+                              </span>
+                            )}
+                          </span>
+                          <span className={`font-mono text-[12px] tabular-nums ${s.isClosed ? "text-rose-600 font-semibold" : "text-stone-800"}`}>
+                            {s.timeRangeLabel}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="pt-2.5 border-t border-stone-100 text-[11px] text-stone-500 text-center flex items-center justify-center gap-1">
+                      <MapPin className="w-3 h-3 text-stone-400" />
+                      <span>São José dos Pinhais - PR</span>
+                    </div>
+                  </div>
+                </div>
               )}
               <span className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-stone-100 text-stone-700" title="Tempo estimado de entrega">
                 <Bike className="w-3.5 h-3.5" /> Entrega <b className="font-semibold">{tempoEntrega}</b>
@@ -767,15 +833,6 @@ function App({ abrirConta = false }: { abrirConta?: boolean }) {
                   Acompanhar <ChevronRight className="w-4 h-4" />
                 </span>
               </a>
-            )}
-
-            {!carregandoStatus && !aberto && (
-              <p className="mt-3 text-[13px] leading-relaxed text-stone-600 bg-amber-50 ring-1 ring-amber-200/70 rounded-xl px-3 py-2.5">
-                <strong className="font-semibold text-stone-900">
-                  {businessStatus.todayLabel ? `Hoje abrimos das ${businessStatus.todayLabel}.` : "Hoje não abrimos."}
-                </strong>{" "}
-                Você pode montar seu pedido agora e enviar quando a loja abrir.
-              </p>
             )}
           </div>
         </div>

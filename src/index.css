@@ -252,7 +252,7 @@ body {
     @apply w-full text-sm;
   }
   .fin-tabela th {
-    @apply px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-stone-500 border-b border-stone-200 whitespace-nowrap;
+    @apply px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-stone-500 border-b border-stone-200 whitespace-nowrap sticky top-0 bg-white z-10;
   }
   .fin-tabela td {
     @apply px-2 py-1.5 border-b border-stone-100 align-middle;

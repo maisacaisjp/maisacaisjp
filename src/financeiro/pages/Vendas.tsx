@@ -91,7 +91,7 @@ export default function Vendas() {
           semFicha.length === 0 ? (
             <Vazio>{carregando ? 'Carregando…' : r.pedidos ? 'Todos os itens vendidos têm ficha.' : 'Sem vendas no mês.'}</Vazio>
           ) : (
-            <div ref={pag.ref} className="overflow-x-auto">
+            <div ref={pag.ref} className="overflow-x-auto md:overflow-y-auto md:max-h-[calc(100dvh-300px)] md:min-h-[400px] adm-rolagem">
               <table className="fin-tabela">
                 <thead><tr><th>Item</th><th>Categoria</th><th className="fin-num">Qtd</th><th className="fin-num">Receita</th><th className="fin-num">% das vendas</th><th /></tr></thead>
                 <tbody>
@@ -114,7 +114,7 @@ export default function Vendas() {
         ) : comFicha.length === 0 ? (
           <Vazio>Nenhum item vendido neste mês tem ficha ainda.</Vazio>
         ) : (
-          <div ref={pag.ref} className="overflow-x-auto">
+          <div ref={pag.ref} className="overflow-x-auto md:overflow-y-auto md:max-h-[calc(100dvh-300px)] md:min-h-[400px] adm-rolagem">
             <table className="fin-tabela">
               <thead><tr><th>Item</th><th>Tam.</th><th className="fin-num">Qtd</th><th className="fin-num">Receita</th><th className="fin-num">Custo</th><th className="fin-num">CMV</th><th className="fin-num">Lucro bruto</th></tr></thead>
               <tbody>

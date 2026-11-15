@@ -138,7 +138,7 @@ export default function Impostos() {
             </p>
           )}
           <Card titulo="Apuração mês a mês" acoes={<span className="text-xs text-stone-500">Total estimado em {hoje.slice(0, 4)}: <b>{brl(totalAno)}</b></span>}>
-            <div ref={pagApur.ref} className="-mx-4 overflow-x-auto px-4">
+            <div ref={pagApur.ref} className="-mx-4 overflow-x-auto overflow-y-auto max-h-[calc(100dvh-320px)] px-4 adm-rolagem">
               <table className="w-full min-w-[640px] text-sm">
                 <thead>
                   <tr className="border-b border-stone-200 text-[10px] font-semibold uppercase tracking-wider text-stone-500">

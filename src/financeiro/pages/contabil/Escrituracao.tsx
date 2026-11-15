@@ -52,7 +52,7 @@ function SecaoMapa({
   return (
     <Card titulo={titulo}>
       <p className="mb-2 text-xs text-stone-500">{ajuda}</p>
-      <ul ref={pag.ref} className="divide-y divide-stone-100">
+      <ul ref={pag.ref} className="divide-y divide-stone-100 max-h-[calc(100dvh-320px)] overflow-y-auto adm-rolagem pr-1">
         {pag.itens.map((cat) => {
           const conta = contaDe(c, tipo, cat);
           return (
@@ -170,7 +170,7 @@ export default function Escrituracao() {
 
       {secao === 'plano' && (
         <Card titulo="Plano de contas">
-          <div ref={pagPlano.ref} className="-mx-4 overflow-x-auto px-4">
+          <div ref={pagPlano.ref} className="-mx-4 overflow-x-auto overflow-y-auto max-h-[calc(100dvh-320px)] px-4 adm-rolagem">
             <table className="w-full min-w-[560px] text-sm">
               <thead>
                 <tr className="border-b border-stone-200 text-[10px] font-semibold uppercase tracking-wider text-stone-500">

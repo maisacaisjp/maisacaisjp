@@ -106,23 +106,11 @@ export default function CustomersManager() {
   const [endDate, setEndDate] = useState('');
   const [sortBy, setSortBy] = useState<'recent' | 'spent' | 'orders' | 'ticket' | 'inactive'>('recent');
 
-  // Paginação
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState<number | 'all'>(25);
-  // Padrão: mostra só os clientes que cabem na tela (sem rolar a página); dá para escolher 25, 50, 100 ou todos
+  // Lista contínua estilo Produtos (sem páginas 2, 3, 4)
+  const [pageSize] = useState<number | 'all'>('all');
   const tabelaClientesRef = useRef<HTMLDivElement>(null);
-  const [pageSizeAuto, setPageSizeAuto] = useState(true);
-  const linhasQueCabem = useLinhasQueCabem(tabelaClientesRef, 57, { reserva: 150, min: 3, deps: [loading] });
-  useEffect(() => {
-    if (pageSizeAuto) setPageSize(linhasQueCabem);
-  }, [linhasQueCabem, pageSizeAuto]);
 
   const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
-
-  // Reinicia para a página 1 ao alterar qualquer filtro
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [activeSegment, search, period, sortBy, startDate, endDate]);
 
   const handleClearFilters = useCallback(() => {
     setSearch('');
@@ -131,7 +119,6 @@ export default function CustomersManager() {
     setStartDate('');
     setEndDate('');
     setSortBy('recent');
-    setCurrentPage(1);
   }, []);
 
 
@@ -461,15 +448,8 @@ export default function CustomersManager() {
 
   // Cálculos de Paginação
   const totalFiltered = filteredCustomers.length;
-  const effectivePageSize = pageSize === 'all' ? totalFiltered || 1 : pageSize;
-  const totalPages = Math.max(1, Math.ceil(totalFiltered / effectivePageSize));
-  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
-
-  const paginatedCustomers = useMemo(() => {
-    if (pageSize === 'all') return filteredCustomers;
-    const start = (safeCurrentPage - 1) * pageSize;
-    return filteredCustomers.slice(start, start + pageSize);
-  }, [filteredCustomers, safeCurrentPage, pageSize]);
+  // Rolagem contínua: renderiza todos os clientes filtrados diretamente
+  const paginatedCustomers = filteredCustomers;
 
   const filteredRevenue = useMemo(() => {
     return filteredCustomers.reduce((acc, c) => acc + c.total_spent, 0);
@@ -768,8 +748,8 @@ export default function CustomersManager() {
             3. DUAL-VIEW: TABELA DESKTOP + CARDS ADAPTATIVOS MOBILE
         â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
 
-        {/* 3A. MODO MOBILE (< 768px): CARDS ERGONÔMICOS E DIRETOS */}
-        <div className="block md:hidden space-y-2.5">
+        {/* 3A. MODO MOBILE (< 768px): CARDS ERGONÔMICOS E DIRETOS COM ROLAGEM */}
+        <div className="block md:hidden space-y-2.5 max-h-[calc(100dvh-295px)] overflow-y-auto adm-rolagem pr-1">
           {filteredCustomers.length === 0 ? (
             <div className="py-12 px-4 text-center bg-stone-50/70 rounded-xl border border-stone-200 flex flex-col items-center justify-center">
               <div className="w-12 h-12 rounded-full bg-stone-100 flex items-center justify-center text-stone-400 mb-2.5">
@@ -873,10 +853,10 @@ export default function CustomersManager() {
           )}
         </div>
 
-        {/* 3B. MODO DESKTOP (≥ 768px): TABELA EXECUTIVA DE ALTA DENSIDADE */}
-        <div ref={tabelaClientesRef} className="hidden md:block overflow-x-auto border border-stone-200/90 rounded-xl">
+        {/* 3B. MODO DESKTOP (≥ 768px): TABELA COM ROLAGEM CONTÍNUA E CABEÇALHO FIXO (IGUAL PRODUTOS) */}
+        <div ref={tabelaClientesRef} className="hidden md:block overflow-x-auto overflow-y-auto max-h-[calc(100dvh-295px)] min-h-[400px] border border-stone-200/90 rounded-xl adm-rolagem">
           <table className="min-w-full text-left border-collapse text-xs">
-            <thead>
+            <thead className="sticky top-0 bg-stone-50 z-10 shadow-[0_1px_0_rgba(0,0,0,0.06)]">
               <tr className="border-b border-stone-200 bg-stone-50/90 text-stone-600 font-sans uppercase text-[11px] tracking-wider whitespace-nowrap">
                 <th className="py-3 px-3.5 font-bold">Cliente & Segmento</th>
                 <th className="py-3 px-3 font-bold">Telefone / WhatsApp</th>
@@ -1047,14 +1027,12 @@ export default function CustomersManager() {
           </table>
         </div>
 
-        {/* Barra de Paginação e Totais */}
+        {/* Barra de Totais e Contadores (rolagem contínua livre igual a Produtos, sem páginas) */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-sans text-stone-600 pt-3 border-t border-stone-200">
           {/* Lado Esquerdo: Contador de Clientes e Faturamento */}
           <div className="flex items-center gap-3 flex-wrap">
             <span>
-              Exibindo <strong className="font-semibold text-stone-900 font-mono tabular-nums">
-                {totalFiltered === 0 ? 0 : (safeCurrentPage - 1) * (pageSize === 'all' ? totalFiltered : pageSize) + 1}–{pageSize === 'all' ? totalFiltered : Math.min(safeCurrentPage * pageSize, totalFiltered)}
-              </strong> de <strong className="font-semibold text-stone-900 font-mono tabular-nums">{totalFiltered}</strong> clientes
+              Exibindo <strong className="font-semibold text-stone-900 font-mono tabular-nums">{totalFiltered}</strong> clientes
             </span>
             {totalFiltered > 0 && (
               <>
@@ -1065,68 +1043,9 @@ export default function CustomersManager() {
               </>
             )}
           </div>
-
-          {/* Lado Direito: Seletor de Itens por Página & Controles de Navegação */}
-          <div className="flex items-center gap-2.5">
-            {/* Seletor de Tamanho de Página */}
-            <div className="flex items-center gap-1.5 text-xs text-stone-500">
-              <span className="hidden sm:inline">Exibir:</span>
-              <div className="relative">
-                <select
-                  value={pageSizeAuto ? 'auto' : pageSize}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val === 'auto') {
-                      setPageSizeAuto(true);
-                      setPageSize(linhasQueCabem);
-                    } else {
-                      setPageSizeAuto(false);
-                      setPageSize(val === 'all' ? 'all' : Number(val));
-                    }
-                    setCurrentPage(1);
-                  }}
-                  className="h-8 pl-2 pr-6 border border-stone-200 hover:border-stone-300 bg-white text-stone-700 rounded-lg text-xs font-sans font-medium appearance-none cursor-pointer focus:outline-none focus:border-stone-900"
-                  aria-label="Clientes por página"
-                >
-                  <option value="auto">Cabe na tela ({linhasQueCabem})</option>
-                  <option value={25}>25</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                  <option value="all">Todos</option>
-                </select>
-                <ChevronDown size={11} className="absolute right-2 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" />
-              </div>
-            </div>
-
-            {/* Botões de Navegação (se houver mais de 1 página) */}
-            {pageSize !== 'all' && totalPages > 1 && (
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={safeCurrentPage <= 1}
-                  className="h-8 w-8 flex items-center justify-center rounded-lg border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
-                  title="Página anterior"
-                  aria-label="Página anterior"
-                >
-                  <ChevronLeft size={14} />
-                </button>
-
-                <span className="px-2 text-xs font-sans font-medium text-stone-600 font-mono tabular-nums">
-                  <span className="font-bold text-stone-900">{safeCurrentPage}</span> / {totalPages}
-                </span>
-
-                <button
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={safeCurrentPage >= totalPages}
-                  className="h-8 w-8 flex items-center justify-center rounded-lg border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
-                  title="Próxima página"
-                  aria-label="Próxima página"
-                >
-                  <ChevronRight size={14} />
-                </button>
-              </div>
-            )}
-          </div>
+          <span className="text-[11px] text-stone-400 font-medium">
+            Rolagem contínua · Todos os clientes na mesma lista
+          </span>
         </div>
       </div>
 

@@ -35,7 +35,7 @@ export default function CustosFixos() {
           <Vazio>Nenhum custo fixo cadastrado.</Vazio>
         ) : (
           <>
-          <div ref={pag.ref} className="overflow-x-auto">
+          <div ref={pag.ref} className="overflow-x-auto md:overflow-y-auto md:max-h-[calc(100dvh-300px)] md:min-h-[400px] adm-rolagem">
             <table className="fin-tabela">
               <thead>
                 <tr>
