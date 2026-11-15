@@ -6,9 +6,10 @@ interface BusinessHoursModalProps {
   isOpen: boolean;
   onClose: () => void;
   businessStatus: BusinessHoursStatus;
+  deliveryEnabled?: boolean;
 }
 
-export default function BusinessHoursModal({ isOpen, onClose, businessStatus }: BusinessHoursModalProps) {
+export default function BusinessHoursModal({ isOpen, onClose, businessStatus, deliveryEnabled = true }: BusinessHoursModalProps) {
   if (!isOpen) return null;
 
   const aberto = businessStatus.isOpen;
@@ -35,7 +36,7 @@ export default function BusinessHoursModal({ isOpen, onClose, businessStatus }: 
                 Horários de Atendimento
               </h3>
               <p className="text-[11.5px] text-stone-500 font-sans">
-                Mais Açaí SJP · Delivery e Retirada
+                {deliveryEnabled ? 'Mais Açaí SJP · Delivery e Retirada' : 'Mais Açaí SJP · Retirada (Entregas via Apps)'}
               </p>
             </div>
           </div>
@@ -124,15 +125,22 @@ export default function BusinessHoursModal({ isOpen, onClose, businessStatus }: 
           </div>
 
           {/* Informações adicionais de atendimento */}
-          <div className="flex items-center justify-around gap-2 py-0.5 text-[11.5px] text-stone-600">
-            <span className="inline-flex items-center gap-1.5 font-medium">
-              <Bike className="w-3.5 h-3.5 text-brand-600" /> Entrega Delivery
-            </span>
-            <span className="text-stone-300">•</span>
-            <span className="inline-flex items-center gap-1.5 font-medium">
-              <Store className="w-3.5 h-3.5 text-brand-600" /> Retirada no Balcão
-            </span>
-          </div>
+          {deliveryEnabled ? (
+            <div className="flex items-center justify-around gap-2 py-0.5 text-[11.5px] text-stone-600">
+              <span className="inline-flex items-center gap-1.5 font-medium">
+                <Bike className="w-3.5 h-3.5 text-brand-600" /> Entrega Delivery
+              </span>
+              <span className="text-stone-300">•</span>
+              <span className="inline-flex items-center gap-1.5 font-medium">
+                <Store className="w-3.5 h-3.5 text-brand-600" /> Retirada no Balcão
+              </span>
+            </div>
+          ) : (
+            <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-[11.5px] flex items-center gap-2">
+              <Bike className="w-4 h-4 text-amber-700 shrink-0" />
+              <span>Entregas hoje somente <b>iFood e 99Food</b>. Pelo cardápio, apenas <b>Retirada</b>.</span>
+            </div>
+          )}
 
           <div className="flex items-center justify-center gap-1 text-[11px] text-stone-400">
             <MapPin className="w-3 h-3 text-stone-400" />

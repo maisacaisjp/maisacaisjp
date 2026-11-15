@@ -118,14 +118,41 @@ export default function SettingsManager({
   const DAY_NAMES = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
   const [hours, setHours] = useState<any[]>([]);
   const [savingHours, setSavingHours] = useState(false);
+  const [deliveryEnabled, setDeliveryEnabled] = useState(true);
+  const [savingDeliveryToggle, setSavingDeliveryToggle] = useState(false);
 
   useEffect(() => {
-    async function loadHours() {
-      const { data } = await supabase.from('business_hours').select('*').order('day_of_week');
-      if (data) setHours(data);
+    async function loadHoursAndDelivery() {
+      const [{ data: hData }, { data: dData }] = await Promise.all([
+        supabase.from('business_hours').select('*').order('day_of_week'),
+        supabase.from('settings').select('value').eq('key', 'delivery_enabled').maybeSingle()
+      ]);
+      if (hData) setHours(hData);
+      if (dData?.value !== undefined && dData?.value !== null) {
+        setDeliveryEnabled(dData.value !== 'false');
+      }
     }
-    loadHours();
+    loadHoursAndDelivery();
   }, []);
+
+  const handleToggleDelivery = async (novoStatus: boolean) => {
+    setDeliveryEnabled(novoStatus);
+    setSavingDeliveryToggle(true);
+    try {
+      const { error } = await supabase.from('settings').upsert({
+        key: 'delivery_enabled',
+        value: novoStatus ? 'true' : 'false',
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'key' });
+      if (error) throw error;
+      showSavedFeedback(novoStatus ? "Delivery ativado com sucesso!" : "Delivery desativado! Cardápio exibirá aviso de iFood/99Food.");
+    } catch (err: any) {
+      console.error(err);
+      alert("Erro ao alterar status do delivery: " + err.message);
+    } finally {
+      setSavingDeliveryToggle(false);
+    }
+  };
 
   const updateDay = (dayOfWeek: number, field: string, value: any) => {
     setHours(prev => prev.map(h => h.day_of_week === dayOfWeek ? { ...h, [field]: value } : h));
@@ -473,8 +500,66 @@ export default function SettingsManager({
                     <Clock size={16} />
                   </div>
                   <div>
-                    <h2 className="text-sm font-bold text-stone-900">Horários de Funcionamento</h2>
-                    <p className="text-xs text-stone-500">Defina os dias e turnos em que a loja aceita pedidos online.</p>
+                    <h2 className="text-sm font-bold text-stone-900">Horários de Funcionamento & Delivery</h2>
+                    <p className="text-xs text-stone-500">Defina os dias de atendimento e controle se a loja realiza entregas próprias hoje.</p>
+                  </div>
+                </div>
+
+                {/* Card de Liga/Desliga do Delivery Próprio */}
+                <div className={`p-4 rounded-2xl border transition-all ${
+                  deliveryEnabled 
+                    ? 'bg-emerald-50/70 border-emerald-200 shadow-2xs' 
+                    : 'bg-amber-50/80 border-amber-300 shadow-2xs'
+                }`}>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${
+                        deliveryEnabled
+                          ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                          : 'bg-amber-100 text-amber-900 border-amber-300'
+                      }`}>
+                        <Bike className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="text-sm font-bold text-stone-900">Função Entrega (Delivery da Loja)</h3>
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                            deliveryEnabled 
+                              ? 'bg-emerald-600 text-white' 
+                              : 'bg-amber-600 text-white animate-pulse'
+                          }`}>
+                            {deliveryEnabled ? 'LIGADO / ATIVO' : 'DESLIGADO HOJE'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-stone-600 mt-1 max-w-xl">
+                          {deliveryEnabled
+                            ? 'A loja está aceitando entregas normais pelo cardápio digital.'
+                            : 'Entregas suspensas! O cardápio digital exibirá em destaque: "Entregas hoje somente iFood e 99Food" e aceitará apenas pedidos para Retirada no balcão.'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 self-end sm:self-center shrink-0 pt-2 sm:pt-0">
+                      <button
+                        type="button"
+                        disabled={savingDeliveryToggle}
+                        onClick={() => handleToggleDelivery(!deliveryEnabled)}
+                        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                          deliveryEnabled ? 'bg-emerald-600' : 'bg-stone-300'
+                        } ${savingDeliveryToggle ? 'opacity-50 cursor-wait' : ''}`}
+                        role="switch"
+                        aria-checked={deliveryEnabled}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                            deliveryEnabled ? 'translate-x-5' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
+                      <span className="text-xs font-bold text-stone-800 w-16">
+                        {deliveryEnabled ? 'Ativo' : 'Desativado'}
+                      </span>
+                    </div>
                   </div>
                 </div>
 

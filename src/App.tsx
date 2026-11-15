@@ -263,18 +263,42 @@ function App({ abrirConta = false }: { abrirConta?: boolean }) {
   // Tempos de entrega e de retirada cadastrados no gestor (Configurações → Entregas & Prazos), os mesmos do checkout
   const [tempoEntrega, setTempoEntrega] = useState("45 a 75 min");
   const [tempoRetirada, setTempoRetirada] = useState("20 a 30 min");
+  const [deliveryEnabled, setDeliveryEnabled] = useState(true);
+
   useEffect(() => {
     supabase
       .from('settings')
       .select('key, value')
-      .in('key', ['delivery_time_estimate', 'pickup_time_estimate'])
+      .in('key', ['delivery_time_estimate', 'pickup_time_estimate', 'delivery_enabled'])
       .then(({ data }) => {
         for (const row of data || []) {
-          if (!row?.value) continue;
+          if (!row?.value && row?.value !== 'false') continue;
           if (row.key === 'delivery_time_estimate') setTempoEntrega(String(row.value));
           if (row.key === 'pickup_time_estimate') setTempoRetirada(String(row.value));
+          if (row.key === 'delivery_enabled') setDeliveryEnabled(row.value !== 'false');
         }
       });
+
+    const channelId = `public:settings-delivery-${Math.random().toString(36).substring(7)}`;
+    const channel = supabase
+      .channel(channelId)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, payload => {
+        const item = payload.new as any;
+        if (item?.key === 'delivery_enabled') {
+          setDeliveryEnabled(item.value !== 'false');
+        }
+        if (item?.key === 'delivery_time_estimate' && item.value) {
+          setTempoEntrega(String(item.value));
+        }
+        if (item?.key === 'pickup_time_estimate' && item.value) {
+          setTempoRetirada(String(item.value));
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   useEffect(() => {
@@ -747,9 +771,15 @@ function App({ abrirConta = false }: { abrirConta?: boolean }) {
                   <Clock className="w-3.5 h-3.5 opacity-60 ml-0.5" />
                 </button>
               )}
-              <span className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-stone-100 text-stone-700" title="Tempo estimado de entrega">
-                <Bike className="w-3.5 h-3.5" /> Entrega <b className="font-semibold">{tempoEntrega}</b>
-              </span>
+              {deliveryEnabled ? (
+                <span className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-stone-100 text-stone-700" title="Tempo estimado de entrega">
+                  <Bike className="w-3.5 h-3.5" /> Entrega <b className="font-semibold">{tempoEntrega}</b>
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-amber-50 text-amber-900 border border-amber-200/80 text-[12px] font-semibold select-none" title="Entregas hoje apenas via iFood ou 99Food">
+                  <Bike className="w-3.5 h-3.5 text-amber-700" /> Entrega: <b className="font-bold">iFood / 99Food</b>
+                </span>
+              )}
               <span className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-stone-100 text-stone-700" title="Tempo estimado para retirar na loja">
                 <Store className="w-3.5 h-3.5" /> Retirada <b className="font-semibold">{tempoRetirada}</b>
               </span>
@@ -757,6 +787,29 @@ function App({ abrirConta = false }: { abrirConta?: boolean }) {
                 <MapPin className="w-3.5 h-3.5" /> São José dos Pinhais
               </span>
             </div>
+
+            {!deliveryEnabled && (
+              <div className="mt-3.5 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/15 border border-amber-300/90 text-amber-950 shadow-xs flex items-center justify-between gap-3 animate-fade-in">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-xs">
+                    <Bike className="w-5 h-5" />
+                  </span>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-bold uppercase tracking-wide bg-amber-600 text-white">
+                        Aviso
+                      </span>
+                      <h3 className="font-display text-[14px] sm:text-[15px] font-extrabold text-stone-900 leading-tight">
+                        Entregas hoje somente iFood e 99Food!
+                      </h3>
+                    </div>
+                    <p className="text-[12px] sm:text-[13px] text-stone-600 mt-1 leading-snug">
+                      No cardápio digital estamos atendendo exclusivamente para <strong className="text-stone-900 font-bold">Retirada no Balcão</strong>.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {pedidoAtivo && (
               <a
@@ -981,6 +1034,7 @@ function App({ abrirConta = false }: { abrirConta?: boolean }) {
             onAddToCart={handleAddToCart}
             isOpen={isCartOpen}
             onClose={() => setIsCartOpen(false)}
+            deliveryEnabled={deliveryEnabled}
           />
         </aside>
       </main>
@@ -1078,6 +1132,7 @@ function App({ abrirConta = false }: { abrirConta?: boolean }) {
         isOpen={isHoursModalOpen}
         onClose={() => setIsHoursModalOpen(false)}
         businessStatus={businessStatus}
+        deliveryEnabled={deliveryEnabled}
       />
       <MenuDoDiaModal
         isOpen={isMenuDoDiaOpen}

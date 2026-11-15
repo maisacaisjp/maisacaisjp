@@ -51,6 +51,7 @@ interface CartProps {
   onAddToCart: (item: CartItem) => void;
   isOpen: boolean; // Used for mobile modal
   onClose: () => void; // Used for mobile modal
+  deliveryEnabled?: boolean;
 }
 
 export default function Cart({
@@ -61,6 +62,7 @@ export default function Cart({
   onAddToCart,
   isOpen,
   onClose,
+  deliveryEnabled = true,
 }: CartProps) {
   const { trackEvent } = useAnalytics();
 
@@ -196,6 +198,13 @@ export default function Cart({
     if (orderType === "Delivery" && pagamento !== "PIX") setPagamento("PIX");
   }, [orderType, pagamento]);
 
+  // Se o delivery da loja estiver desativado nas configurações, força a opção para Retirada (Takeaway)
+  useEffect(() => {
+    if (!deliveryEnabled && orderType === "Delivery") {
+      setOrderType("Takeaway");
+    }
+  }, [deliveryEnabled, orderType]);
+
   // Save changes to localStorage
   const saveCustomerData = (updates: Partial<{
     name: string;
@@ -296,6 +305,10 @@ export default function Cart({
 
     if (!businessStatus.isOpen) {
       errors.push("Estamos fechados no momento. Poderá finalizar o pedido durante o nosso horário de funcionamento.");
+    }
+
+    if (orderType === "Delivery" && !deliveryEnabled) {
+      errors.push("A entrega própria está temporariamente suspensa hoje. Por favor, selecione a opção Retirada.");
     }
 
     if (orderType === "Delivery" && subtotal < minDeliveryOrder) {
@@ -952,36 +965,71 @@ export default function Cart({
                   <legend className={rotuloCls}>Como você quer receber?</legend>
                   <div className="grid grid-cols-2 gap-2">
                     {([
-                      { valor: "Delivery", titulo: "Entrega", Icone: Bike, tempo: deliveryTimeEstimate, info: "Taxa por bairro" },
-                      { valor: "Takeaway", titulo: "Retirada", Icone: Store, tempo: pickupTimeEstimate, info: "Sem taxa" },
-                    ] as const).map(({ valor, titulo, Icone, tempo, info }) => {
+                      {
+                        valor: "Delivery",
+                        titulo: "Entrega",
+                        Icone: Bike,
+                        tempo: deliveryEnabled ? deliveryTimeEstimate : "Suspenso hoje",
+                        info: deliveryEnabled ? "Taxa por bairro" : "Somente iFood/99",
+                        disabled: !deliveryEnabled
+                      },
+                      {
+                        valor: "Takeaway",
+                        titulo: "Retirada",
+                        Icone: Store,
+                        tempo: pickupTimeEstimate,
+                        info: "Sem taxa",
+                        disabled: false
+                      },
+                    ] as const).map(({ valor, titulo, Icone, tempo, info, disabled }) => {
                       const ativo = orderType === valor;
                       return (
                         <button
                           key={valor}
                           type="button"
+                          disabled={disabled}
                           aria-pressed={ativo}
                           onClick={() => {
+                            if (disabled) return;
                             setOrderType(valor);
                             saveCustomerData({ orderType: valor });
                             setFormError(null);
                           }}
-                          className={`flex items-center gap-2.5 text-left rounded-2xl px-3 py-2.5 transition-all cursor-pointer ${
-                            ativo ? "bg-brand-50 ring-2 ring-brand-700" : "bg-white ring-1 ring-stone-200 hover:ring-stone-300"
+                          className={`flex items-center gap-2.5 text-left rounded-2xl px-3 py-2.5 transition-all ${
+                            disabled
+                              ? "opacity-60 cursor-not-allowed bg-stone-100 ring-1 ring-stone-200"
+                              : ativo
+                              ? "bg-brand-50 ring-2 ring-brand-700 cursor-pointer"
+                              : "bg-white ring-1 ring-stone-200 hover:ring-stone-300 cursor-pointer"
                           }`}
                         >
-                          <span className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center transition-colors ${ativo ? "bg-brand-700 text-white" : "bg-stone-100 text-stone-600"}`}>
+                          <span className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center transition-colors ${
+                            disabled
+                              ? "bg-stone-200 text-stone-400"
+                              : ativo
+                              ? "bg-brand-700 text-white"
+                              : "bg-stone-100 text-stone-600"
+                          }`}>
                             <Icone className="w-[18px] h-[18px]" />
                           </span>
                           <span className="min-w-0 leading-tight">
-                            <span className="block font-display text-[15px] font-bold text-stone-900">{titulo}</span>
-                            <span className="block mt-0.5 text-[12px] text-stone-500">{tempo}</span>
-                            <span className={`block text-[12px] font-semibold ${valor === "Takeaway" ? "text-leaf" : "text-stone-500"}`}>{info}</span>
+                            <span className={`block font-display text-[15px] font-bold ${disabled ? "text-stone-500" : "text-stone-900"}`}>{titulo}</span>
+                            <span className="block mt-0.5 text-[11.5px] text-stone-500 truncate">{tempo}</span>
+                            <span className={`block text-[11.5px] font-semibold ${disabled ? "text-amber-700 font-bold" : valor === "Takeaway" ? "text-leaf" : "text-stone-500"}`}>{info}</span>
                           </span>
                         </button>
                       );
                     })}
                   </div>
+                  {!deliveryEnabled && (
+                    <div className="mt-2.5 p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-[11.5px] flex items-start gap-2 animate-fade-in">
+                      <Bike className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                      <div>
+                        <strong className="font-bold block text-stone-900">Entregas hoje somente iFood e 99Food!</strong>
+                        <span>Pelo nosso cardápio digital aceitamos exclusivamente pedidos para Retirada no balcão.</span>
+                      </div>
+                    </div>
+                  )}
 
                   {orderType === "Takeaway" && (
                     <div className="mt-2 rounded-xl bg-stone-50 px-3 py-2.5 flex items-start gap-2 text-[13px] leading-snug animate-fade-in">
