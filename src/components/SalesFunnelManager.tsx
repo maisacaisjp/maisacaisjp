@@ -72,6 +72,9 @@ export const SalesFunnelManager: React.FC<SalesFunnelManagerProps> = ({ onNaviga
   const fetchFunnelData = async () => {
     setLoading(true);
     try {
+      // Data oficial de início da contagem do funil em produção (Domingo, 15 de Novembro de 2026)
+      const DATA_INICIO_PRODUCAO = new Date('2026-11-15T00:00:00-03:00');
+
       const now = new Date();
       let startOfDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
       let endOfDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
@@ -93,10 +96,16 @@ export const SalesFunnelManager: React.FC<SalesFunnelManagerProps> = ({ onNaviga
         startOfDate = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0);
         endOfDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
       } else if (period === 'todos') {
-        startOfDate = new Date(2025, 0, 1);
+        startOfDate = DATA_INICIO_PRODUCAO;
       } else if (period === 'customizado' && startDate && endDate) {
         startOfDate = new Date(startDate + 'T00:00:00');
         endOfDate = new Date(endDate + 'T23:59:59.999');
+      }
+
+      // Se a data de início for anterior ao início oficial de produção, trava no dia 15/11/2026
+      // para descartar 100% de qualquer evento ou teste de homologação anterior
+      if (period !== 'ontem' && startOfDate < DATA_INICIO_PRODUCAO) {
+        startOfDate = DATA_INICIO_PRODUCAO;
       }
 
       // 1. Buscar telemetria de eventos na tabela analytics_events
