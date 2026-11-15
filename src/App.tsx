@@ -18,7 +18,7 @@ import { CartItem } from "./types";
 import { playVictorySound } from "./utils/sound";
 import { getStoreDate } from "./utils/date";
 import { hapticLight, hapticMedium, hapticSuccess } from "./utils/haptics";
-import { Search, ShoppingBag, X, MapPin, ArrowUp, Bike, Check, ChevronLeft, ChevronRight, Receipt, Star, Store, Clock, ChevronDown, Camera } from "lucide-react";
+import { Search, ShoppingBag, X, MapPin, ArrowUp, Bike, Check, ChevronLeft, ChevronRight, Receipt, Star, Store, Clock, ChevronDown } from "lucide-react";
 import { brl, nomeBonito, tituloCategoria } from "./utils/formatacao";
 import Cart from "./components/Cart";
 import MenuItemCard from "./components/MenuItemCard";
@@ -747,13 +747,6 @@ function App({ abrirConta = false }: { abrirConta?: boolean }) {
                   <Clock className="w-3.5 h-3.5 opacity-60 ml-0.5" />
                 </button>
               )}
-              <span
-                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-emerald-50 text-emerald-900 border border-emerald-200/80 text-[12px] font-semibold select-none shadow-2xs"
-                title="Garantia Mais Açaí: todas as fotos do cardápio são fotos reais dos nossos produtos"
-              >
-                <Camera className="w-3.5 h-3.5 text-emerald-700" />
-                <span>Fotos 100% Reais</span>
-              </span>
               <span className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-stone-100 text-stone-700" title="Tempo estimado de entrega">
                 <Bike className="w-3.5 h-3.5" /> Entrega <b className="font-semibold">{tempoEntrega}</b>
               </span>

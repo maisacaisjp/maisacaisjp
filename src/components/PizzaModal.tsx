@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MenuItem, ExtraIngredient } from '../data/menu';
 import { CartItem, ProductSize, SIZE_LABELS } from '../types';
-import { X, Check, Minus, Plus, ArrowLeft, Camera } from 'lucide-react';
+import { X, Check, Minus, Plus, ArrowLeft } from 'lucide-react';
 import { useExtras } from '../hooks/useExtras';
 import { useCremes } from '../hooks/useCremes';
 import { hapticLight } from '../utils/haptics';
@@ -189,9 +189,6 @@ export default function PizzaModal({
                 onError={() => setFotoOk(false)}
                 className="relative h-full mx-auto object-contain drop-shadow-[0_12px_24px_rgba(0,0,0,0.25)]"
               />
-              <span className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-stone-950/75 backdrop-blur-xs text-white text-[11px] font-semibold px-2.5 py-1 shadow-md border border-white/10 select-none">
-                <Camera className="w-3 h-3 text-amber-300" /> Foto Real do Produto
-              </span>
               <span className="sm:hidden absolute top-2 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-white/70" aria-hidden="true" />
             </div>
           ) : (
