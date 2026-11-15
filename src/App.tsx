@@ -379,6 +379,11 @@ function App({ abrirConta = false }: { abrirConta?: boolean }) {
   }, [pausedItems, maisPedidosIds]);
 
   const handleSelectItem = (item: MenuItem) => {
+    trackEvent('view_item', {
+      item_id: item.id,
+      item_name: item.name,
+      category: item.category,
+    });
     setSelectedItem(item);
     setIsModalOpen(true);
     try {

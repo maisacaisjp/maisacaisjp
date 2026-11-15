@@ -89,11 +89,11 @@ export const SalesFunnelManager: React.FC<SalesFunnelManagerProps> = ({ onNaviga
       // 1. Buscar telemetria de eventos na tabela analytics_events
       let { data: eventsData, error: evError } = await supabase
         .from('analytics_events')
-        .select('event_name, session_id, created_at, event_data')
+        .select('event_name, session_id, payload, created_at, event_data')
         .gte('created_at', startOfDate.toISOString())
         .lte('created_at', endOfDate.toISOString());
 
-      // 2. Fallback resiliente na tabela settings
+      // 2. Fallback resiliente na tabela settings (caso existam eventos antigos lá)
       if (evError || !eventsData || eventsData.length === 0) {
         const { data: settingsRows } = await supabase
           .from('settings')
@@ -103,7 +103,7 @@ export const SalesFunnelManager: React.FC<SalesFunnelManagerProps> = ({ onNaviga
         let allFallbackEvents: any[] = [];
         settingsRows?.forEach(row => {
           try {
-            const parsed = JSON.parse(row.value);
+            const parsed = typeof row.value === 'string' ? JSON.parse(row.value) : row.value;
             if (Array.isArray(parsed)) allFallbackEvents.push(...parsed);
           } catch (e) {}
         });
@@ -130,49 +130,45 @@ export const SalesFunnelManager: React.FC<SalesFunnelManagerProps> = ({ onNaviga
       );
 
       const uniqueVisitors = new Set<string>();
+      const engagedSessions = new Set<string>();
       const addedToCartSessions = new Set<string>();
       const initiatedCheckoutSessions = new Set<string>();
       const purchasedSessions = new Set<string>();
 
       eventsData?.forEach((ev: any) => {
-        const sId = ev.session_id;
+        const sId = ev.session_id || ev.payload?.session_id;
         if (!sId) return;
         uniqueVisitors.add(sId);
-        if (ev.event_name === 'add_to_cart') addedToCartSessions.add(sId);
-        if (ev.event_name === 'initiate_checkout') initiatedCheckoutSessions.add(sId);
-        if (ev.event_name === 'purchase') purchasedSessions.add(sId);
+        if (ev.event_name === 'view_item' || ev.event_name === 'engaged') {
+          engagedSessions.add(sId);
+        }
+        if (ev.event_name === 'add_to_cart') {
+          engagedSessions.add(sId);
+          addedToCartSessions.add(sId);
+        }
+        if (ev.event_name === 'initiate_checkout') {
+          engagedSessions.add(sId);
+          addedToCartSessions.add(sId);
+          initiatedCheckoutSessions.add(sId);
+        }
+        if (ev.event_name === 'purchase') {
+          engagedSessions.add(sId);
+          addedToCartSessions.add(sId);
+          initiatedCheckoutSessions.add(sId);
+          purchasedSessions.add(sId);
+        }
       });
 
-      const completedOrdersCount = Math.max(purchasedSessions.size, activeOrders.length);
+      const completedOrdersCount = activeOrders.length;
       const totalRevenue = activeOrders.reduce((acc: number, o: any) => acc + Number(o.total_amount || 0), 0);
       const ticketMedio = completedOrdersCount > 0 ? totalRevenue / completedOrdersCount : 0;
 
-      // Base verídica de visitantes com fallback proporcional quando telemetria recente
-      const rawVisitors = uniqueVisitors.size;
-      const visitors = Math.max(
-        rawVisitors,
-        completedOrdersCount > 0 ? Math.round(completedOrdersCount * 3.8) : (period === 'hoje' ? 14 : 45)
-      );
-
-      // Engajados: exploraram itens do cardápio
-      const engaged = Math.max(
-        Math.round(visitors * 0.72),
-        Math.round(addedToCartSessions.size * 1.35)
-      );
-
-      // Leads no Carrinho
-      const addedToCart = Math.max(
-        addedToCartSessions.size,
-        completedOrdersCount > 0 ? Math.round(completedOrdersCount * 2.2) : Math.round(visitors * 0.35)
-      );
-
-      // Oportunidades no Checkout
-      const initiatedCheckout = Math.max(
-        initiatedCheckoutSessions.size,
-        completedOrdersCount > 0 ? Math.round(completedOrdersCount * 1.35) : Math.round(addedToCart * 0.6)
-      );
-
+      // Dados 100% reais das sessões medidas em tempo real (mantendo consistência lógica das etapas)
       const purchases = completedOrdersCount;
+      const initiatedCheckout = Math.max(initiatedCheckoutSessions.size, purchases);
+      const addedToCart = Math.max(addedToCartSessions.size, initiatedCheckout);
+      const engaged = Math.max(engagedSessions.size, addedToCart);
+      const visitors = Math.max(uniqueVisitors.size, engaged);
 
       const conversionRate = visitors > 0 ? (purchases / visitors) * 100 : 0;
       const cartAbandonmentRate = addedToCart > 0 ? Math.max(0, 100 - (purchases / addedToCart) * 100) : 0;
@@ -199,6 +195,21 @@ export const SalesFunnelManager: React.FC<SalesFunnelManagerProps> = ({ onNaviga
 
   useEffect(() => {
     fetchFunnelData();
+
+    // Escuta eventos e pedidos em tempo real para atualizar o Funil ao vivo no Gestor
+    const channel = supabase
+      .channel('realtime-sales-funnel')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'analytics_events' }, () => {
+        fetchFunnelData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
+        fetchFunnelData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [period, startDate, endDate]);
 
   // PALETA DA MARCA MAIS AÇAÍ (Amarelo Ouro, Âmbar, Caramelo e Dourado Institucional)
