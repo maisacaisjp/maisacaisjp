@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Flame } from 'lucide-react';
+import { Plus, Flame, Camera } from 'lucide-react';
 import { MenuItem } from '../types';
 import { findImageForProduct } from '../utils/imageResolver';
 import { hapticLight } from '../utils/haptics';
@@ -128,12 +128,19 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
               <Flame className="w-3 h-3 fill-current" /> Mais pedido
             </span>
           )}
+          {hasPhoto && (
+            <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-stone-950/75 backdrop-blur-xs text-white text-[9px] font-bold tracking-wider uppercase px-2 py-0.5 shadow-sm border border-white/10 select-none">
+              <Camera className="w-2.5 h-2.5 text-amber-300" /> Foto Real
+            </span>
+          )}
           <span className="absolute bottom-2 right-2">{botaoMais}</span>
         </div>
-        <div className="p-3 flex flex-col flex-1 gap-1">
-          <h3 className="font-display text-[14px] sm:text-[15px] font-bold leading-snug text-stone-900 line-clamp-2">{nome}</h3>
-          {descricao && <p className="text-[12px] leading-relaxed text-stone-500 line-clamp-2">{descricao}</p>}
-          <div className="mt-auto pt-2">{preco}</div>
+        <div className="p-3 flex flex-col flex-1 gap-1 text-center items-center justify-between">
+          <div className="w-full flex flex-col items-center">
+            <h3 className="font-display text-[14px] sm:text-[15px] font-bold leading-snug text-stone-900 line-clamp-2 text-center w-full">{nome}</h3>
+            {descricao && <p className="text-[12px] leading-relaxed text-stone-500 line-clamp-2 text-center mt-1">{descricao}</p>}
+          </div>
+          <div className="mt-auto pt-2 flex flex-col items-center justify-center text-center w-full">{preco}</div>
         </div>
       </article>
     );
@@ -162,6 +169,9 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
       {hasPhoto && (
         <div className="relative w-[116px] h-[116px] sm:w-[128px] sm:h-[128px] lg:w-[108px] lg:h-[108px] xl:w-[116px] xl:h-[116px] shrink-0 self-center rounded-xl overflow-hidden bg-brand-50">
           {imagem('absolute inset-0 w-full h-full object-cover')}
+          <span className="absolute top-1.5 left-1.5 inline-flex items-center gap-1 rounded-md bg-stone-950/75 backdrop-blur-xs text-white text-[8.5px] font-bold uppercase tracking-wider px-1.5 py-0.5 border border-white/10 select-none">
+            <Camera className="w-2.5 h-2.5 text-amber-300" /> Real
+          </span>
           <span className="absolute bottom-1.5 right-1.5">{botaoMais}</span>
         </div>
       )}

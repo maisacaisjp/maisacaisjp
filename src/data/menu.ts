@@ -248,7 +248,7 @@ export const pizzaExtras = acaiExtras;
 export const menuData: MenuItem[] = [
   {
     "id": "acai-54163",
-    "name": "COMBO NEVADO",
+    "name": "Combos",
     "ingredients": "Açaí com leite condensado e leite em pó.",
     "category": "mais-vendidos",
     "priceSingle": 22,
@@ -262,7 +262,7 @@ export const menuData: MenuItem[] = [
   },
   {
     "id": "acai-54181",
-    "name": "COMBO FAVORITO",
+    "name": "Creme de Cupuaçu",
     "ingredients": "Açaí com banana, morango, leite condensado e leite em pó.",
     "category": "mais-vendidos",
     "priceSingle": 24,
@@ -276,7 +276,7 @@ export const menuData: MenuItem[] = [
   },
   {
     "id": "acai-54176",
-    "name": "COMBO TROPICAL",
+    "name": "MilkShakes",
     "ingredients": "Açaí com banana, kiwi e morango.",
     "category": "mais-vendidos",
     "priceSingle": 24,
@@ -290,7 +290,7 @@ export const menuData: MenuItem[] = [
   },
   {
     "id": "acai-54151",
-    "name": "COMBO BRANCA DE NEVE",
+    "name": "Combo Magnífico",
     "ingredients": "Açaí com mousse de ninho, leite condensado e leite em pó.",
     "category": "mais-vendidos",
     "priceSingle": 26,
@@ -304,7 +304,7 @@ export const menuData: MenuItem[] = [
   },
   {
     "id": "acai-439358",
-    "name": "COMBO SENSAÇÃO AVELÃ",
+    "name": "Energia todo dia",
     "ingredients": "Açaí com nutella, leite condensado e leite em pó.",
     "category": "mais-vendidos",
     "priceSingle": 30,
